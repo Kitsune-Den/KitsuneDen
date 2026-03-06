@@ -1,5 +1,13 @@
 # 🦊 KitsuneDen
 
+[![Tests](https://github.com/AdaInTheLab/KitsuneDen/actions/workflows/test.yml/badge.svg)](https://github.com/AdaInTheLab/KitsuneDen/actions/workflows/test.yml)
+[![Build](https://github.com/AdaInTheLab/KitsuneDen/actions/workflows/build.yml/badge.svg)](https://github.com/AdaInTheLab/KitsuneDen/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
+[![Fox Approved](https://img.shields.io/badge/🦊_fox-approved-orange)](https://github.com/AdaInTheLab/KitsuneDen)
+[![Lore Documented](https://img.shields.io/badge/📜_lore-documented-purple)](src/den-operators-manual/00-preface.md)
+[![Powered by Coffee](https://img.shields.io/badge/powered_by-coffee-6f4e37)](https://en.wikipedia.org/wiki/Coffee)
+
 A warm, unified dashboard for managing your home game servers.
 
 KitsuneDen treats your servers like living things — each one with its own personality, its own logs, its own place in the Den. It's built for the kind of person who runs a Minecraft server for their friends, a 7 Days to Die world for the weekend, and wants one clean interface to watch over all of it.
