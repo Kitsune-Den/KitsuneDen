@@ -1,0 +1,49 @@
+{
+  "servers": [
+    {
+      "id": "fabric",
+      "name": "Fabric",
+      "type": "minecraft",
+      "dir": "C:\\GameServers\\fabric-server",
+      "loader": "Fabric",
+      "version": "1.21.4",
+      "jar": "fabric-server-launch.jar",
+      "launchMode": "jar",
+      "gamePort": 25565,
+      "rconPort": 25575,
+      "rconPassword": "your-rcon-password"
+    },
+    {
+      "id": "neoforge",
+      "name": "NeoForge",
+      "type": "minecraft",
+      "dir": "C:\\GameServers\\neoforge-server",
+      "loader": "NeoForge",
+      "version": "1.21.1",
+      "jar": "",
+      "launchMode": "argfile",
+      "argFiles": [
+        "user_jvm_args.txt",
+        "libraries/net/neoforged/neoforge/21.1.172/win_args.txt"
+      ],
+      "javaPath": "C:\\Program Files\\Eclipse Adoptium\\jdk-21\\bin\\java.exe",
+      "gamePort": 25566,
+      "rconPort": 25576,
+      "rconPassword": "your-rcon-password"
+    },
+    {
+      "id": "7d2d",
+      "name": "7 Days to Die",
+      "type": "7d2d",
+      "dir": "C:\\GameServers\\7DaysToDieServer",
+      "configFile": "serverconfig.xml",
+      "modsDir": "Mods",
+      "gamePort": 26900,
+      "telnetPort": 8081,
+      "telnetPassword": "your-telnet-password"
+    }
+  ],
+  "dashboard": {
+    "port": 3000
+  }
+}

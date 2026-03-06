@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Courier New", monospace;
+
+  /* Hytale-inspired deep blue palette */
+  --color-den-bg: #0b0e1a;
+  --color-den-base: #0f1323;
+  --color-den-surface: #151a30;
+  --color-den-card: #1a2040;
+  --color-den-card-hover: #1e2650;
+  --color-den-elevated: #222a4a;
+
+  --color-den-border: #2a3355;
+  --color-den-border-light: #353f65;
+
+  --color-den-text: #e8ecf4;
+  --color-den-text-muted: #8b95b0;
+  --color-den-text-dim: #5a6380;
+
+  /* Accent colors */
+  --color-den-cyan: #4fc3f7;
+  --color-den-cyan-dim: #2a7da8;
+  --color-den-cyan-glow: rgba(79, 195, 247, 0.15);
+
+  --color-den-purple: #ab47bc;
+  --color-den-purple-dim: #8e24aa;
+
+  --color-den-green: #66bb6a;
+  --color-den-green-dim: #2e7d32;
+  --color-den-green-glow: rgba(102, 187, 106, 0.15);
+
+  --color-den-amber: #ffa726;
+  --color-den-amber-dim: #e65100;
+
+  --color-den-red: #ef5350;
+  --color-den-red-dim: #c62828;
+
+  --color-den-lantern: #e8944e;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-den-bg);
+  color: var(--color-den-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-den-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-den-border-light);
+}
+
+/* Ambient particles */
+@keyframes particleFloat {
+  0% { opacity: 0; transform: translateY(100vh) scale(0); }
+  20% { opacity: 0.4; }
+  80% { opacity: 0.2; }
+  100% { opacity: 0; transform: translateY(-20vh) scale(1); }
+}
+
+/* Status pulse */
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(102, 187, 106, 0.4); }
+  50% { box-shadow: 0 0 12px rgba(102, 187, 106, 0.8); }
+}
+
+/* Page transition */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Toast animation */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Modal animation */
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
