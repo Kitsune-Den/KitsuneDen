@@ -12,14 +12,19 @@ function formatBytes(bytes: number): string {
 }
 
 function formatLabel(key: string): string {
-  const label = key
+  // Strip Unreal Engine boolean prefix (bSomething → Something)
+  let cleaned = key;
+  if (/^b[A-Z]/.test(cleaned)) {
+    cleaned = cleaned.slice(1);
+  }
+  const label = cleaned
     // camelCase: insert space before uppercase letter preceded by lowercase
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     // ACRONYMS: insert space before uppercase+lowercase preceded by multiple uppercase
     .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
     .replace(/[-_]+/g, " ")
     .replace(/\b\w/g, (match) => match.toUpperCase());
-  return label.replace(/\bPvp\b/g, "PVP");
+  return label.replace(/\bPvp\b/g, "PVP").replace(/\bHp\b/g, "HP");
 }
 
 export default function ConfigEditor() {
@@ -49,7 +54,78 @@ export default function ConfigEditor() {
     };
   }, [message]);
 
+  const palworldFieldHelp: Record<string, string> = {
+    ServerName: "The name shown in the server browser.",
+    ServerDescription: "Description shown when players view your server.",
+    AdminPassword: "Password for admin access. Also used for RCON authentication.",
+    ServerPassword: "Password players must enter to join. Leave empty for no password.",
+    ServerPlayerMaxNum: "Maximum number of players allowed on the server (1–32).",
+    DayTimeSpeedRate: "Multiplier for daytime speed. 1.0 is normal, 2.0 is twice as fast.",
+    NightTimeSpeedRate: "Multiplier for nighttime speed. 1.0 is normal, 0.5 makes nights longer.",
+    ExpRate: "Experience gain multiplier. Higher = faster leveling.",
+    PalCaptureRate: "Multiplier for Pal capture chance. 2.0 doubles the base rate.",
+    PalSpawnNumRate: "Multiplier for number of Pals spawned in the world.",
+    PalDamageRateAttack: "Multiplier for damage dealt by Pals.",
+    PalDamageRateDefense: "Multiplier for damage received by Pals. Higher = less damage taken.",
+    PlayerDamageRateAttack: "Multiplier for damage dealt by players.",
+    PlayerDamageRateDefense: "Multiplier for damage received by players. Higher = less damage taken.",
+    PlayerStomachDecreaceRate: "Rate at which player hunger decreases. Lower = slower hunger.",
+    PlayerStaminaDecreaceRate: "Rate at which player stamina decreases. Lower = slower drain.",
+    PlayerAutoHPRegeneRate: "Rate of automatic HP regeneration while awake.",
+    PlayerAutoHpRegeneRateInSleep: "Rate of HP regeneration while sleeping.",
+    PalStomachDecreaceRate: "Rate at which Pal hunger decreases.",
+    PalStaminaDecreaceRate: "Rate at which Pal stamina decreases.",
+    PalAutoHPRegeneRate: "Rate of automatic Pal HP regeneration.",
+    PalAutoHpRegeneRateInSleep: "Rate of Pal HP regeneration in Palbox.",
+    BuildObjectHpRate: "Multiplier for building HP. Higher = tougher structures.",
+    BuildObjectDamageRate: "Multiplier for damage to buildings.",
+    BuildObjectDeteriorationDamageRate: "Rate of building deterioration over time. 0 disables decay.",
+    CollectionDropRate: "Multiplier for resources dropped from gathering.",
+    CollectionObjectHpRate: "HP of gatherable objects like trees and rocks.",
+    CollectionObjectRespawnSpeedRate: "How quickly gathered resources respawn. Higher = faster.",
+    EnemyDropItemRate: "Multiplier for items dropped by enemies.",
+    DeathPenalty: "What happens when a player dies.",
+    bEnablePlayerToPlayerDamage: "Allow players to damage each other.",
+    bEnableFriendlyFire: "Allow damage to players in the same guild.",
+    bEnableInvaderEnemy: "Enable enemy raids on player bases.",
+    DropItemMaxNum: "Max number of dropped items in the world at once.",
+    BaseCampMaxNum: "Max total bases across all guilds on the server.",
+    BaseCampWorkerMaxNum: "Max Pals working at a single base (1–20).",
+    GuildPlayerMaxNum: "Max players per guild.",
+    BaseCampMaxNumInGuild: "Max bases per guild.",
+    PalEggDefaultHatchingTime: "Default egg hatch time in hours. 72 = 3 real days.",
+    WorkSpeedRate: "Multiplier for Pal work speed at bases.",
+    AutoSaveSpan: "Minutes between auto-saves.",
+    bIsMultiplay: "Must be True for dedicated servers.",
+    bIsPvP: "Enable PvP mode.",
+    bEnableFastTravel: "Allow fast travel via Eagle Statues.",
+    bExistPlayerAfterLogout: "Keep player character in world after logout.",
+    bEnableNonLoginPenalty: "Apply penalties to Pals when owner is offline.",
+    ServerPlayerMaxNum_desc: "Max players that can be online simultaneously.",
+    CoopPlayerMaxNum: "Max players in a co-op session (only for listen servers).",
+    PublicPort: "UDP port the server listens on. Default 8211.",
+    PublicIP: "Your public IP. Leave empty for LAN-only.",
+    RCONEnabled: "Enable remote console access for admin commands.",
+    RCONPort: "Port for RCON connections. Default 25575.",
+    RESTAPIEnabled: "Enable the REST API for server management.",
+    RESTAPIPort: "Port for REST API. Default 8212.",
+    bShowPlayerList: "Show player list in server info.",
+    bUseAuth: "Require Steam authentication. Should stay enabled.",
+    ChatPostLimitPerMinute: "Max chat messages per player per minute.",
+    bIsUseBackupSaveData: "Enable automatic backup saves.",
+    SupplyDropSpan: "Minutes between supply drops.",
+    EnablePredatorBossPal: "Enable alpha/boss Pals spawning in the world.",
+    bAllowClientMod: "Allow players to use client-side mods.",
+    bHardcore: "Enable hardcore mode (permanent death).",
+    bPalLost: "Pals are permanently lost on death in hardcore.",
+    bAllowGlobalPalboxExport: "Allow exporting Pals via global Palbox.",
+    bAllowGlobalPalboxImport: "Allow importing Pals via global Palbox.",
+    ItemWeightRate: "Multiplier for item weight. Lower = items weigh less.",
+    MaxBuildingLimitNum: "Max building pieces per base. 0 = unlimited.",
+  };
+
   const fieldHelp = {
+    ...(currentServer?.type === "palworld" ? palworldFieldHelp : {}),
     ...(currentServer?.type === "hytale"
       ? {
           DisplayTmpTagsInStrings:
@@ -66,7 +142,7 @@ export default function ConfigEditor() {
       "Percentage chance to get an empty jar back after drinking. 0% means jars are consumed, 100% always returns the jar.",
     "max-world-size": "Range 1-29999984 (in blocks). Default is 29999984.",
     LootAbundance: "Percentage of loot (0-200%). Default is 100%.",
-    WorldGenSize: "Map size in meters. Must be between 2048 and 16384.",
+    WorldGenSize: "Map size in meters. Must be between 2048 and 16384. Must be a multiple of 2048.",
     QuestProgressionDailyLimit: "Max quests per day. Set to 0 or -1 to remove the limit.",
     BiomeProgression: "When enabled, biome difficulty increases as you move further from spawn. Disable for uniform difficulty everywhere.",
     StormFreq: "Controls storm frequency. 0 disables storms, 100 is default. Higher values (up to 500) mean more frequent storms.",
@@ -75,7 +151,40 @@ export default function ConfigEditor() {
     TelnetFailedLoginLimit: "Max failed telnet login attempts before blocking.",
     TelnetFailedLoginsBlocktime: "Block time in seconds after exceeding failed login limit.",
     LootRespawnDays: "Crossplay requires 0 (disabled) or 5+. Values 1-4 will prevent server start.",
-    WorldGenSize: "Must be a multiple of 2048. Non-standard values will crash world generation.",
+    BloodMoonFrequency: "Blood moon horde every N days.",
+    BloodMoonRange: "Random +/- days added to blood moon schedule (0 = exact).",
+    BloodMoonWarning: "Hours before blood moon the warning appears.",
+    XPMultiplier: "XP gain multiplier (%). Higher values = faster leveling.",
+    DeathPenalty: "XP penalty when a player dies.",
+    PlayerSafeZoneLevel: "Player level at which safe zone protection ends.",
+    PlayerSafeZoneHours: "Hours of safe zone protection for new players.",
+    PartySharedKillRange: "Distance in meters for party members to share XP from kills.",
+    BedrollAllowSpawnNearBackpack: "Allow players to spawn near their dropped backpack after death.",
+    AllowSpawnNearFriend: "Can new players select to join near a friend on first connect?",
+    ZombieFeralSense: "Feral zombies can sense players through walls and obstacles.",
+    AISmellMode: "How fast zombies move when tracking players by scent. Zombies can smell blood, food, and forges.",
+    LandClaimCount: "Maximum allowed land claims per player.",
+    LandClaimOfflineDelay: "Minutes after logout before land claim switches from online to offline hardness.",
+    BedrollExpiryTime: "Real-world days a bedroll stays active after owner was last online.",
+    EACEnabled: "Easy Anti-Cheat — disabling allows modded clients to connect.",
+    ServerAllowCrossplay: "Enable crossplay between platforms.",
+    IgnoreEOSSanctions: "Ignore EOS sanctions when allowing players to join.",
+    CameraRestrictionMode: "Restrict which camera perspective players can use.",
+    TwitchServerPermission: "Permission level required to use Twitch integration on the server.",
+    TwitchBloodMoonAllowed: "Allow Twitch actions during blood moon. Can cause lag from extra zombie spawns.",
+    ServerMaxAllowedViewDistance: "Max view distance a client may request (6-12). High impact on memory and performance.",
+    EnableMapRendering: "Render the map to tile images while exploring. Used by the web dashboard.",
+    DynamicMeshEnabled: "Enable the dynamic mesh system for improved visuals.",
+    DynamicMeshLandClaimOnly: "Only use dynamic mesh in land claim areas.",
+    DynamicMeshLandClaimBuffer: "Dynamic mesh land claim chunk radius.",
+    DynamicMeshMaxItemCache: "Max items processed concurrently. Higher values use more RAM.",
+    MaxChunkAge: "In-game days before unvisited/unprotected chunks reset. -1 = never.",
+    SaveDataLimit: "Max disk space per save in MB. -1 = no limit.",
+    MaxQueuedMeshLayers: "Max chunk mesh layers queued during generation.",
+    UserDataFolder: "Override path for all user data, saves, and RWG worlds. Leave blank for default.",
+    ServerDisabledNetworkProtocols: "Protocols to disable. Dedicated servers should disable SteamNetworking if port-forwarding is set up.",
+    ServerReservedSlotsPermission: "Permission level required to use reserved slots.",
+    PersistentPlayerProfiles: "If enabled, players always join with the last profile they used.",
   };
 
   function syncFormFromObject(nextConfig: Record<string, unknown>) {
@@ -105,13 +214,52 @@ export default function ConfigEditor() {
       // Inject defaults for 7D2D fields that may not exist in the XML yet
       if (currentServer?.type === "7d2d") {
         const defaults7d2d: Record<string, string> = {
-          QuestProgressionDailyLimit: "3",
+          // Block Damage
           BlockDamagePlayer: "100",
           BlockDamageAI: "100",
           BlockDamageAIBM: "100",
-          JarRefund: "0",
+          // Gameplay
+          BloodMoonFrequency: "7",
+          BloodMoonRange: "0",
+          BloodMoonWarning: "8",
+          BloodMoonEnemyCount: "8",
           BiomeProgression: "true",
           StormFreq: "100",
+          QuestProgressionDailyLimit: "10",
+          // Player
+          XPMultiplier: "100",
+          DeathPenalty: "1",
+          JarRefund: "0",
+          PlayerSafeZoneLevel: "5",
+          PlayerSafeZoneHours: "5",
+          PartySharedKillRange: "100",
+          BedrollAllowSpawnNearBackpack: "true",
+          AllowSpawnNearFriend: "2",
+          BedrollExpiryTime: "45",
+          // Zombies
+          ZombieFeralSense: "0",
+          AISmellMode: "3",
+          // Land Claims
+          LandClaimCount: "5",
+          LandClaimOfflineDelay: "0",
+          // Admin
+          IgnoreEOSSanctions: "false",
+          CameraRestrictionMode: "0",
+          TwitchServerPermission: "90",
+          TwitchBloodMoonAllowed: "false",
+          // World
+          ServerAllowCrossplay: "false",
+          // Advanced
+          ServerMaxAllowedViewDistance: "12",
+          EnableMapRendering: "false",
+          DynamicMeshEnabled: "true",
+          DynamicMeshLandClaimOnly: "true",
+          DynamicMeshLandClaimBuffer: "3",
+          DynamicMeshMaxItemCache: "3",
+          MaxChunkAge: "-1",
+          SaveDataLimit: "-1",
+          MaxQueuedMeshLayers: "1000",
+          UserDataFolder: "",
         };
         for (const [key, value] of Object.entries(defaults7d2d)) {
           if (!Object.prototype.hasOwnProperty.call(nextConfig, key)) {
@@ -247,9 +395,11 @@ export default function ConfigEditor() {
 
   const renderField = (key: string) => {
     const value = formValues[key];
+    const isPalworld = currentServer?.type === "palworld";
     const isBoolean =
       typeof value === "boolean" ||
-      (format === "properties" && (value === "true" || value === "false"));
+      (format === "properties" && (value === "true" || value === "false")) ||
+      (isPalworld && (value === "True" || value === "False"));
     const isNumber = typeof value === "number";
     const isObject = value && typeof value === "object";
     const error = formErrors[key];
@@ -259,6 +409,7 @@ export default function ConfigEditor() {
 
     const isMinecraft = currentServer?.type === "minecraft";
     const is7d2d = currentServer?.type === "7d2d";
+    const pwSelectOptions = isPalworld ? palworldSelectOptions[key] : undefined;
     const mcSelectOptions: Record<string, string[]> = {
       difficulty: ["peaceful", "easy", "normal", "hard"],
       gamemode: ["survival", "creative", "adventure", "spectator"],
@@ -281,6 +432,25 @@ export default function ConfigEditor() {
             spellCheck={false}
             className="w-full min-h-[120px] p-3 bg-den-bg text-den-text font-mono text-[12px] leading-6 rounded-lg border border-den-border focus:border-den-border-light outline-none"
           />
+        ) : pwSelectOptions ? (
+          <select
+            value={String(value ?? "")}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, [key]: e.target.value }))}
+            className="w-full max-w-[280px] px-3 py-2 bg-den-bg text-den-text text-[13px] rounded-lg border border-den-border focus:border-den-border-light outline-none"
+          >
+            {Array.from(
+              new Map<string, string>([
+                ...(pwSelectOptions.find((o: { value: string }) => o.value === String(value ?? ""))
+                  ? []
+                  : ([[String(value ?? ""), String(value ?? "")]] as [string, string][])),
+                ...pwSelectOptions.map((o: { value: string; label: string }) => [o.value, o.label] as [string, string]),
+              ])
+            ).map(([val, lbl]) => (
+              <option key={val} value={val}>
+                {lbl}
+              </option>
+            ))}
+          </select>
         ) : sdSelectOptions ? (
           <select
             value={String(value ?? "")}
@@ -288,10 +458,10 @@ export default function ConfigEditor() {
             className="w-full max-w-[280px] px-3 py-2 bg-den-bg text-den-text text-[13px] rounded-lg border border-den-border focus:border-den-border-light outline-none"
           >
             {Array.from(
-              new Map([
+              new Map<string, string>([
                 ...(sdSelectOptions.find((o) => o.value === String(value ?? ""))
                   ? []
-                  : [[String(value ?? ""), String(value ?? "")]]),
+                  : ([[String(value ?? ""), String(value ?? "")]] as [string, string][])),
                 ...sdSelectOptions.map((o) => [o.value, o.label] as [string, string]),
               ])
             ).map(([val, lbl]) => (
@@ -312,6 +482,34 @@ export default function ConfigEditor() {
               </option>
             ))}
           </select>
+        ) : isBoolean && isPalworld ? (
+          <button
+            type="button"
+            onClick={() =>
+              setFormValues((prev) => ({
+                ...prev,
+                [key]: value === "True" ? "False" : "True",
+              }))
+            }
+            className="flex items-center gap-3 w-fit"
+          >
+            <div
+              className={`relative w-10 h-[22px] rounded-full transition-colors duration-200 ${
+                value === "True"
+                  ? "bg-den-cyan"
+                  : "bg-den-border"
+              }`}
+            >
+              <div
+                className={`absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-transform duration-200 ${
+                  value === "True" ? "translate-x-[20px]" : "translate-x-[2px]"
+                }`}
+              />
+            </div>
+            <span className="text-[12px] text-den-text-muted">
+              {value === "True" ? "Enabled" : "Disabled"}
+            </span>
+          </button>
         ) : isBoolean ? (
           <select
             value={String(value)}
@@ -360,7 +558,10 @@ export default function ConfigEditor() {
         "GameName",
         "GameMode",
         "BedrollDeadZoneSize",
+        "BedrollExpiryTime",
         "MaxUncoveredMapChunksPerPlayer",
+        "EACEnabled",
+        "ServerAllowCrossplay",
       ],
     },
     {
@@ -378,15 +579,28 @@ export default function ConfigEditor() {
         "DayNightLength",
         "DayLightLength",
         "BuildCreate",
+        "BloodMoonFrequency",
+        "BloodMoonRange",
+        "BloodMoonWarning",
+        "BloodMoonEnemyCount",
+        "BiomeProgression",
+        "StormFreq",
+        "QuestProgressionDailyLimit",
+      ],
+    },
+    {
+      title: "Player",
+      keys: [
+        "XPMultiplier",
         "PlayerKillingMode",
-        "PersistentPlayerProfiles",
         "PlayerSafeZoneLevel",
         "PlayerSafeZoneHours",
         "PartySharedKillRange",
-        "QuestProgressionDailyLimit",
+        "DeathPenalty",
         "JarRefund",
-        "BiomeProgression",
-        "StormFreq",
+        "BedrollAllowSpawnNearBackpack",
+        "AllowSpawnNearFriend",
+        "PersistentPlayerProfiles",
       ],
     },
     {
@@ -396,9 +610,10 @@ export default function ConfigEditor() {
         "ZombieMoveNight",
         "ZombieFeralMove",
         "ZombieBMMove",
+        "ZombieFeralSense",
+        "AISmellMode",
         "EnemySpawnMode",
         "EnemyDifficulty",
-        "BloodMoonEnemyCount",
         "MaxSpawnedZombies",
         "MaxSpawnedAnimals",
       ],
@@ -423,10 +638,12 @@ export default function ConfigEditor() {
         "LandClaimDecayMode",
         "LandClaimOnlineDurabilityModifier",
         "LandClaimOfflineDurabilityModifier",
+        "LandClaimCount",
+        "LandClaimOfflineDelay",
       ],
     },
     {
-      title: "Network & Slots",
+      title: "Network",
       keys: [
         "ServerPort",
         "ServerVisibility",
@@ -440,26 +657,41 @@ export default function ConfigEditor() {
     {
       title: "Admin",
       keys: [
-        "AdminFileName",
-        "ServerAdminSlots",
-        "ServerAdminSlotsPermission",
-        "HideCommandExecutionLog",
         "TelnetEnabled",
         "TelnetPort",
         "TelnetPassword",
         "TelnetFailedLoginLimit",
         "TelnetFailedLoginsBlocktime",
+        "AdminFileName",
+        "ServerAdminSlots",
+        "ServerAdminSlotsPermission",
+        "ServerReservedSlotsPermission",
+        "HideCommandExecutionLog",
+        "IgnoreEOSSanctions",
+        "PersistentPlayerProfiles",
+        "CameraRestrictionMode",
+        "TwitchServerPermission",
+        "TwitchBloodMoonAllowed",
       ],
     },
     {
-      title: "Server",
+      title: "Advanced",
       keys: [
         "ServerWebsiteURL",
+        "ServerMaxAllowedViewDistance",
         "TerminalWindowEnabled",
         "WebDashboardEnabled",
         "WebDashboardPort",
         "WebDashboardUrl",
-        "EACEnabled",
+        "EnableMapRendering",
+        "DynamicMeshEnabled",
+        "DynamicMeshLandClaimOnly",
+        "DynamicMeshLandClaimBuffer",
+        "DynamicMeshMaxItemCache",
+        "MaxChunkAge",
+        "SaveDataLimit",
+        "MaxQueuedMeshLayers",
+        "UserDataFolder",
       ],
     },
   ];
@@ -632,6 +864,80 @@ export default function ConfigEditor() {
       { value: "true", label: "Enabled" },
       { value: "false", label: "Disabled" },
     ],
+    DeathPenalty: [
+      { value: "0", label: "0 - None" },
+      { value: "1", label: "1 - Default" },
+      { value: "2", label: "2 - Injured" },
+      { value: "3", label: "3 - Permanent Death" },
+    ],
+    XPMultiplier: [
+      { value: "25", label: "25%" },
+      { value: "50", label: "50%" },
+      { value: "75", label: "75%" },
+      { value: "100", label: "100%" },
+      { value: "125", label: "125%" },
+      { value: "150", label: "150%" },
+      { value: "200", label: "200%" },
+      { value: "300", label: "300%" },
+    ],
+    BedrollAllowSpawnNearBackpack: [
+      { value: "true", label: "On" },
+      { value: "false", label: "Off" },
+    ],
+    AllowSpawnNearFriend: [
+      { value: "0", label: "0 - Disabled" },
+      { value: "1", label: "1 - Always" },
+      { value: "2", label: "2 - Only Near Friends in Forest" },
+    ],
+    ZombieFeralSense: [
+      { value: "0", label: "0 - Off" },
+      { value: "1", label: "1 - Day Only" },
+      { value: "2", label: "2 - Night Only" },
+      { value: "3", label: "3 - All" },
+    ],
+    AISmellMode: [
+      { value: "0", label: "0 - Off" },
+      { value: "1", label: "1 - Walk" },
+      { value: "2", label: "2 - Jog" },
+      { value: "3", label: "3 - Run" },
+      { value: "4", label: "4 - Sprint" },
+      { value: "5", label: "5 - Nightmare" },
+    ],
+    ServerAllowCrossplay: [
+      { value: "true", label: "On" },
+      { value: "false", label: "Off" },
+    ],
+    IgnoreEOSSanctions: [
+      { value: "true", label: "Yes" },
+      { value: "false", label: "No" },
+    ],
+    CameraRestrictionMode: [
+      { value: "0", label: "0 - Free (1st & 3rd)" },
+      { value: "1", label: "1 - First Person Only" },
+      { value: "2", label: "2 - Third Person Only" },
+    ],
+    TwitchBloodMoonAllowed: [
+      { value: "true", label: "Yes" },
+      { value: "false", label: "No" },
+    ],
+    EnableMapRendering: [
+      { value: "true", label: "Yes" },
+      { value: "false", label: "No" },
+    ],
+    DynamicMeshEnabled: [
+      { value: "true", label: "Yes" },
+      { value: "false", label: "No" },
+    ],
+    DynamicMeshLandClaimOnly: [
+      { value: "true", label: "Yes" },
+      { value: "false", label: "No" },
+    ],
+    ServerDisabledNetworkProtocols: [
+      { value: "", label: "None" },
+      { value: "SteamNetworking", label: "SteamNetworking" },
+      { value: "LiteNetLib", label: "LiteNetLib" },
+      { value: "SteamNetworking,LiteNetLib", label: "Both" },
+    ],
     LootRespawnDays: [
       { value: "0", label: "0 - Disabled" },
       { value: "5", label: "5 Days" },
@@ -649,6 +955,109 @@ export default function ConfigEditor() {
       { value: "10240", label: "10240 - Very Large" },
       { value: "12288", label: "12288 - Huge" },
       { value: "16384", label: "16384 - Maximum" },
+    ],
+  };
+
+  // ---- Palworld config layout ----
+
+  const palworldCoreKeys = ["ServerName", "ServerDescription", "AdminPassword", "ServerPassword"];
+
+  const palworldGroups = [
+    {
+      title: "Rates & Multipliers",
+      keys: [
+        "ExpRate", "WorkSpeedRate", "DayTimeSpeedRate", "NightTimeSpeedRate",
+        "PalCaptureRate", "PalSpawnNumRate", "CollectionDropRate",
+        "CollectionObjectHpRate", "CollectionObjectRespawnSpeedRate", "EnemyDropItemRate",
+        "ItemWeightRate",
+      ],
+    },
+    {
+      title: "Player Stats",
+      keys: [
+        "PlayerDamageRateAttack", "PlayerDamageRateDefense",
+        "PlayerStomachDecreaceRate", "PlayerStaminaDecreaceRate",
+        "PlayerAutoHPRegeneRate", "PlayerAutoHpRegeneRateInSleep",
+      ],
+    },
+    {
+      title: "Pal Stats",
+      keys: [
+        "PalDamageRateAttack", "PalDamageRateDefense",
+        "PalStomachDecreaceRate", "PalStaminaDecreaceRate",
+        "PalAutoHPRegeneRate", "PalAutoHpRegeneRateInSleep",
+        "PalEggDefaultHatchingTime",
+      ],
+    },
+    {
+      title: "Building",
+      keys: [
+        "BuildObjectHpRate", "BuildObjectDamageRate", "BuildObjectDeteriorationDamageRate",
+        "bBuildAreaLimit", "MaxBuildingLimitNum",
+      ],
+    },
+    {
+      title: "Combat & PvP",
+      keys: [
+        "bEnablePlayerToPlayerDamage", "bEnableFriendlyFire", "bIsPvP",
+        "bEnableInvaderEnemy", "EnablePredatorBossPal", "bHardcore", "bPalLost",
+        "DeathPenalty",
+      ],
+    },
+    {
+      title: "Base & Guild",
+      keys: [
+        "BaseCampMaxNum", "BaseCampWorkerMaxNum", "BaseCampMaxNumInGuild",
+        "GuildPlayerMaxNum",
+        "bAutoResetGuildNoOnlinePlayers", "AutoResetGuildTimeNoOnlinePlayers",
+      ],
+    },
+    {
+      title: "Gameplay",
+      keys: [
+        "bIsMultiplay", "ServerPlayerMaxNum", "CoopPlayerMaxNum",
+        "bEnableFastTravel", "bEnableFastTravelOnlyBaseCamp",
+        "bIsStartLocationSelectByMap", "bExistPlayerAfterLogout",
+        "bEnableNonLoginPenalty", "AutoSaveSpan",
+        "DropItemMaxNum", "DropItemAliveMaxHours",
+        "SupplyDropSpan", "bIsUseBackupSaveData",
+      ],
+    },
+    {
+      title: "Network & Admin",
+      keys: [
+        "PublicPort", "PublicIP", "Region",
+        "RCONEnabled", "RCONPort",
+        "RESTAPIEnabled", "RESTAPIPort",
+        "bUseAuth", "bShowPlayerList",
+        "ChatPostLimitPerMinute",
+      ],
+    },
+    {
+      title: "Crossplay & Mods",
+      keys: [
+        "bAllowClientMod",
+        "bAllowGlobalPalboxExport", "bAllowGlobalPalboxImport",
+      ],
+    },
+  ];
+
+  const palworldSelectOptions: Record<string, { value: string; label: string }[]> = {
+    Difficulty: [
+      { value: "None", label: "None (Custom)" },
+      { value: "Normal", label: "Normal" },
+      { value: "Difficult", label: "Difficult" },
+      { value: "Easy", label: "Casual" },
+    ],
+    DeathPenalty: [
+      { value: "None", label: "None — Keep everything" },
+      { value: "Item", label: "Drop Items only" },
+      { value: "ItemAndEquipment", label: "Drop Items & Equipment" },
+      { value: "All", label: "Drop All (Items, Equipment, Pals)" },
+    ],
+    LogFormatType: [
+      { value: "Text", label: "Text" },
+      { value: "Json", label: "JSON" },
     ],
   };
 
@@ -719,9 +1128,11 @@ export default function ConfigEditor() {
             <span className="ml-2 text-den-text-dim text-xs font-normal">
               ({currentServer?.type === "7d2d"
                 ? "serverconfig.xml"
-                : format === "properties"
-                  ? "server.properties"
-                  : "config.json"})
+                : currentServer?.type === "palworld"
+                  ? "PalWorldSettings.ini"
+                  : format === "properties"
+                    ? "server.properties"
+                    : "config.json"})
             </span>
           </h3>
           <div className="flex gap-2 items-center">
@@ -875,6 +1286,64 @@ export default function ConfigEditor() {
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      {groups.map((group) => (
+                        <div
+                          key={group.title}
+                          className="bg-den-surface/40 border border-den-border rounded-xl p-4 space-y-3"
+                        >
+                          <div className="text-[12px] uppercase tracking-widest text-den-text-dim font-semibold">
+                            {group.title}
+                          </div>
+                          <div className="grid grid-cols-1 gap-3">
+                            {group.keys.map((key) => renderField(key))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()
+            ) : currentServer?.type === "palworld" ? (
+              (() => {
+                const usedKeys = new Set<string>([
+                  ...palworldCoreKeys,
+                  ...palworldGroups.flatMap((group) => group.keys),
+                ]);
+                const remainingKeys = Object.keys(formValues)
+                  .filter((key) => !usedKeys.has(key))
+                  .sort((a, b) => a.localeCompare(b));
+                const groups = palworldGroups
+                  .filter((group) =>
+                    group.keys.some((key) => Object.prototype.hasOwnProperty.call(formValues, key))
+                  )
+                  .map((group) => ({
+                    ...group,
+                    keys: group.keys.filter((key) =>
+                      Object.prototype.hasOwnProperty.call(formValues, key)
+                    ),
+                  }));
+
+                if (remainingKeys.length > 0) {
+                  groups.push({ title: "Other", keys: remainingKeys });
+                }
+
+                return (
+                  <>
+                    {/* Core Settings */}
+                    <div className="bg-gradient-to-r from-den-surface/60 to-transparent border border-den-border rounded-xl p-5 space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-1 h-5 rounded-full bg-gradient-to-b from-den-cyan to-[#29b6f6]" />
+                        <h4 className="text-sm font-bold tracking-wide uppercase text-den-text">Core Settings</h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {palworldCoreKeys.map((key) =>
+                          Object.prototype.hasOwnProperty.call(formValues, key) ? renderField(key) : null
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Categorized Groups */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                       {groups.map((group) => (
                         <div

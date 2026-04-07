@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
 import { HytaleAdapter } from "@/lib/adapters/hytale-adapter";
+import { PalworldAdapter } from "@/lib/adapters/palworld-adapter";
 
 function getServerId(request: NextRequest): string {
   return request.nextUrl.searchParams.get("server") || getDefaultServerId();
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
   }
 
   let status = adapter.getStatus();
-  if (adapter instanceof HytaleAdapter) {
+  if (adapter instanceof HytaleAdapter || adapter instanceof PalworldAdapter) {
     const stats = await adapter.getStats();
     status = stats.process ? "running" : "stopped";
   }

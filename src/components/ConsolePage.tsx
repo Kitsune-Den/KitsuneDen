@@ -54,6 +54,8 @@ export default function ConsolePage() {
               }
             }
             read();
+          }).catch(() => {
+            // Stream aborted on cleanup — expected
           });
         }
         read();

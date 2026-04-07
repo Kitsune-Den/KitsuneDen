@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ServerProvider } from "@/contexts/ServerContext";
+import { ServerProvider, useServer } from "@/contexts/ServerContext";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import ServerSwitcher from "@/components/ServerSwitcher";
@@ -15,7 +15,17 @@ import WorldViewer from "@/components/hytale/WorldViewer";
 import BackupManager from "@/components/hytale/BackupManager";
 import ModsPage from "@/components/ModsPage";
 import ModPacks from "@/components/minecraft/ModPacks";
+import AirdropManager from "@/components/hytale/AirdropManager";
 import DocsPage from "@/components/DocsPage";
+import PalworldUpdateManager from "@/components/palworld/UpdateManager";
+import HytaleUpdateManager from "@/components/hytale/UpdateManager";
+import ServersPage from "@/components/ServersPage";
+
+function UpdatePage() {
+  const { currentServer } = useServer();
+  if (currentServer?.type === "hytale") return <HytaleUpdateManager />;
+  return <PalworldUpdateManager />;
+}
 
 export default function Home() {
   const [activePage, setActivePage] = useState("dashboard");
@@ -49,12 +59,15 @@ export default function Home() {
             <div className="animate-[pageIn_0.2s_ease-out]" key={activePage}>
               {activePage === "dashboard" && <DashboardPage />}
               {activePage === "console" && <ConsolePage />}
+              {activePage === "servers" && <ServersPage />}
               {activePage === "config" && <ConfigEditor />}
               {activePage === "players" && <PlayerManager />}
               {activePage === "worlds" && <WorldViewer />}
               {activePage === "backups" && <BackupManager />}
               {activePage === "mods" && <ModsPage />}
               {activePage === "modpacks" && <ModPacks />}
+              {activePage === "airdrops" && <AirdropManager />}
+              {activePage === "update" && <UpdatePage />}
               {activePage === "docs" && <DocsPage docKey={docsKey} onSelect={setDocsKey} />}
             </div>
           </div>

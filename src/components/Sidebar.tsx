@@ -5,12 +5,15 @@ import { useState } from "react";
 import {
   LayoutDashboard,
   Terminal,
+  Server,
   Settings,
   Users,
   Globe,
   HardDrive,
   Package,
   Boxes,
+  Crosshair,
+  Download,
 } from "lucide-react";
 
 interface NavItem {
@@ -24,12 +27,15 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} />, section: "overview" },
   { id: "console", label: "Console", icon: <Terminal size={18} />, section: "overview" },
+  { id: "servers", label: "Servers", icon: <Server size={18} />, section: "overview" },
   { id: "config", label: "Configuration", icon: <Settings size={18} />, section: "management" },
   { id: "players", label: "Players", icon: <Users size={18} />, section: "management" },
   { id: "worlds", label: "Worlds", icon: <Globe size={18} />, section: "management", requireCapability: "hasWorlds" },
   { id: "backups", label: "Backups", icon: <HardDrive size={18} />, section: "management", requireCapability: "hasBackups" },
   { id: "mods", label: "Mods", icon: <Package size={18} />, section: "management", requireCapability: "hasMods" },
   { id: "modpacks", label: "Mod Packs", icon: <Boxes size={18} />, section: "management", requireCapability: "hasModPacks" },
+  { id: "airdrops", label: "Airdrops", icon: <Crosshair size={18} />, section: "management", requireCapability: "hasKitsuneCommand" },
+  { id: "update", label: "Update", icon: <Download size={18} />, section: "management", requireCapability: "hasSteamUpdate||hasLauncherUpdate" },
 ];
 
 interface SidebarProps {
@@ -46,7 +52,8 @@ export default function Sidebar({ activePage, onNavigate, onSelectDocs }: Sideba
   const isVisible = (item: NavItem) => {
     if (!item.requireCapability) return true;
     if (!caps) return false;
-    return caps[item.requireCapability as keyof typeof caps] === true;
+    const keys = item.requireCapability.split("||");
+    return keys.some((key) => caps[key.trim() as keyof typeof caps] === true);
   };
 
   const overviewItems = NAV_ITEMS.filter((i) => i.section === "overview" && isVisible(i));
@@ -117,6 +124,21 @@ export default function Sidebar({ activePage, onNavigate, onSelectDocs }: Sideba
       <div className="mt-auto px-4 py-4 border-t border-den-border max-[900px]:hidden">
         <div className="text-[11px] text-den-text-dim font-mono">
           {currentServer ? `${currentServer.name} ${currentServer.version || ""}` : "No server"}
+        </div>
+        <div className="mt-1 text-[10px] text-den-text-dim opacity-50">
+          <span>v{process.env.APP_VERSION || "0.0.0"}</span>
+          <span className="mx-1">|</span>
+          <a
+            href="https://github.com/AdaInTheLab/KitsuneDen"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-den-text transition-colors underline decoration-dotted"
+          >
+            GitHub
+          </a>
+        </div>
+        <div className="mt-1 text-[9px] text-den-text-dim opacity-40">
+          Personal use only. No warranty. Not affiliated with TFP or Valve.
         </div>
         <div className="mt-3">
           <button

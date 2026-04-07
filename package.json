@@ -1,6 +1,6 @@
 {
   "name": "kitsune-den",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Unified game server dashboard for the Kitsune Den",
   "scripts": {
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
+    "better-sqlite3": "^12.6.2",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
     "rcon-client": "^4.2.5",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/adm-zip": "^0.5.7",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

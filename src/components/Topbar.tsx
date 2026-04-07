@@ -7,12 +7,14 @@ import { useState } from "react";
 const PAGE_TITLES: Record<string, string> = {
   dashboard: "Dashboard",
   console: "Live Console",
+  servers: "Servers",
   config: "Configuration",
   players: "Players",
   worlds: "Worlds",
   backups: "Backups",
   mods: "Mods",
   modpacks: "Mod Packs",
+  airdrops: "Airdrops",
 };
 
 interface TopbarProps {

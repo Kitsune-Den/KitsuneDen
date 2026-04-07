@@ -348,6 +348,10 @@ export class SevenDaysAdapter implements ServerAdapter {
     hasWarps: false,
     hasServerProperties: true,
     hasJsonConfig: false,
+    hasKitsuneCommand: false,
+    hasRestApi: false,
+    hasSteamUpdate: false,
+    hasLauncherUpdate: false,
   };
 
   private get configPath(): string {

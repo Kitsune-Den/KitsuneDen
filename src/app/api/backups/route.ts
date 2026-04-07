@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unknown server" }, { status: 404 });
   }
 
-  if (adapter.def.type === "hytale") {
+  if (adapter.def.type === "hytale" || adapter.def.type === "palworld") {
     const backups = await (adapter as unknown as { getBackups: () => Promise<unknown> }).getBackups();
     return NextResponse.json(backups);
   }
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const type = body.type === "daily" ? "daily" : "hourly";
 
-  if (adapter.def.type === "hytale") {
+  if (adapter.def.type === "hytale" || adapter.def.type === "palworld") {
     const result = await (adapter as unknown as { runBackup: (type: string) => Promise<unknown> }).runBackup(type);
     return NextResponse.json(result);
   }

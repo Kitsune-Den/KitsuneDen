@@ -60,19 +60,27 @@ function execAsync(cmd: string, timeout = 8000): Promise<string> {
 
 export class HytaleAdapter implements ServerAdapter {
   readonly def: ServerDefinition;
-  readonly capabilities: ServerCapabilities = {
-    hasRcon: false,
-    hasMods: true,
-    hasModPacks: false,
-    hasBackups: true,
-    hasWorlds: true,
-    hasWarps: true,
-    hasServerProperties: false,
-    hasJsonConfig: true,
-  };
+  capabilities: ServerCapabilities;
 
   constructor(def: ServerDefinition) {
     this.def = def;
+
+    // Auto-detect KitsuneCommand by checking for its database
+    const kitsuneDbPath = path.join(def.dir, "mods", "KitsuneCommand_KitsuneCommand", "kitsunecommand.db");
+    this.capabilities = {
+      hasRcon: false,
+      hasMods: true,
+      hasModPacks: false,
+      hasBackups: true,
+      hasWorlds: true,
+      hasWarps: true,
+      hasServerProperties: false,
+      hasJsonConfig: true,
+      hasKitsuneCommand: fs.existsSync(kitsuneDbPath),
+      hasRestApi: false,
+      hasSteamUpdate: false,
+      hasLauncherUpdate: true,
+    };
     this.initLogWatcher();
   }
 
@@ -406,6 +414,124 @@ export class HytaleAdapter implements ServerAdapter {
       return { success: true, message: output };
     } catch (e) {
       return { success: false, message: (e as Error).message };
+    }
+  }
+
+  private getLauncherPaths() {
+    const launcherBase = path.join(process.env.APPDATA || "", "Hytale", "install", "release", "package", "game", "latest");
+    return {
+      jarSrc: path.join(launcherBase, "Server", "HytaleServer.jar"),
+      assetsSrc: path.join(launcherBase, "Assets.zip"),
+      jarDest: path.join(this.def.dir, "HytaleServer.jar"),
+      assetsDest: path.join(this.def.dir, "Assets.zip"),
+    };
+  }
+
+  async getUpdateInfo(): Promise<{
+    serverVersion: string;
+    launcherFilesFound: boolean;
+    updateAvailable: boolean;
+  }> {
+    const paths = this.getLauncherPaths();
+    const launcherFilesFound = fs.existsSync(paths.jarSrc) && fs.existsSync(paths.assetsSrc);
+
+    let updateAvailable = false;
+    if (launcherFilesFound) {
+      const srcTime = fs.statSync(paths.jarSrc).mtimeMs;
+      const destTime = fs.existsSync(paths.jarDest) ? fs.statSync(paths.jarDest).mtimeMs : 0;
+      updateAvailable = srcTime > destTime;
+    }
+
+    // Get server version from logs
+    let serverVersion = "Unknown";
+    try {
+      const logsDir = path.join(this.def.dir, "logs");
+      const logs = fs.readdirSync(logsDir).filter((f) => f.endsWith(".log")).sort().reverse();
+      if (logs.length > 0) {
+        const logContent = fs.readFileSync(path.join(logsDir, logs[0]), "utf8");
+        const versionMatch = logContent.match(/Version:\s*([\w.\-]+)/);
+        if (versionMatch) serverVersion = versionMatch[1];
+      }
+    } catch {
+      // ignore
+    }
+
+    return { serverVersion, launcherFilesFound, updateAvailable };
+  }
+
+  async updateServer(): Promise<ActionResult> {
+    const running = await this.isServerRunning();
+    if (running) {
+      return { success: false, message: "Server must be stopped before updating" };
+    }
+
+    const paths = this.getLauncherPaths();
+
+    // Check launcher files exist
+    if (!fs.existsSync(paths.jarSrc) || !fs.existsSync(paths.assetsSrc)) {
+      return { success: false, message: "Launcher files not found. Open the Hytale Launcher first to download the latest update." };
+    }
+
+    // Check if launcher files are actually newer
+    const srcJarTime = fs.statSync(paths.jarSrc).mtimeMs;
+    const destJarTime = fs.existsSync(paths.jarDest) ? fs.statSync(paths.jarDest).mtimeMs : 0;
+    if (srcJarTime <= destJarTime) {
+      return { success: true, message: "Server is already up to date." };
+    }
+
+    // Backup current files
+    this.addLog("[Dashboard] Backing up current server files...");
+    try {
+      if (fs.existsSync(paths.jarDest)) fs.copyFileSync(paths.jarDest, paths.jarDest + ".bak");
+      if (fs.existsSync(paths.assetsDest)) fs.copyFileSync(paths.assetsDest, paths.assetsDest + ".bak");
+    } catch (e) {
+      return { success: false, message: "Failed to create backups: " + (e as Error).message };
+    }
+
+    // Copy from launcher using PowerShell for large file reliability
+    this.addLog("[Dashboard] Copying new server files from launcher... This may take a few minutes.");
+    const scriptPath = path.join(this.def.dir, "_update_server.ps1");
+    const scriptContent = `$ErrorActionPreference = "Stop"
+try {
+  Copy-Item "${paths.jarSrc}" "${paths.jarDest}" -Force
+  Copy-Item "${paths.assetsSrc}" "${paths.assetsDest}" -Force
+  $jar = (Get-Item "${paths.jarDest}").Length
+  $assets = (Get-Item "${paths.assetsDest}").Length
+  Write-Output "OK|$jar|$assets"
+} catch {
+  Write-Output "FAIL|$($_.Exception.Message)"
+}
+`;
+
+    try {
+      fs.writeFileSync(scriptPath, scriptContent);
+    } catch (e) {
+      return { success: false, message: "Failed to write update script: " + (e as Error).message };
+    }
+
+    try {
+      const output = await execAsync(
+        `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}"`,
+        600000
+      );
+      try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
+
+      if (output.startsWith("OK|")) {
+        const parts = output.split("|");
+        const jarSize = formatBytes(parseInt(parts[1]) || 0);
+        const assetsSize = formatBytes(parseInt(parts[2]) || 0);
+        this.addLog(`[Dashboard] Update complete! JAR: ${jarSize}, Assets: ${assetsSize}`);
+        return { success: true, message: `Update complete! JAR: ${jarSize}, Assets: ${assetsSize}` };
+      } else {
+        const errMsg = output.replace("FAIL|", "") || "Copy failed";
+        this.addLog(`[Dashboard] Update failed: ${errMsg}`);
+        return { success: false, message: errMsg };
+      }
+    } catch (e) {
+      try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
+      const msg = (e as Error).message;
+      this.addLog(`[Dashboard] Update failed: ${msg}`);
+      return { success: false, message: msg };
     }
   }
 

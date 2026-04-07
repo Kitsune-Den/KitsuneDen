@@ -5,7 +5,7 @@ import { ChildProcess } from "child_process";
 export interface ServerDefinition {
   id: string;
   name: string;
-  type: "minecraft" | "hytale" | "7d2d";
+  type: "minecraft" | "hytale" | "7d2d" | "palworld";
   dir: string;
 
   // Minecraft-specific
@@ -32,6 +32,12 @@ export interface ServerDefinition {
   controlPanelPassword?: string;
   adminFilePath?: string;
 
+  // Palworld-specific
+  steamCmdPath?: string;
+  steamAppId?: number;
+  restApiPort?: number;
+  restApiPassword?: string;
+
   // Shared optional
   modsDir?: string;
 }
@@ -54,6 +60,10 @@ export interface ServerCapabilities {
   hasWarps: boolean;
   hasServerProperties: boolean;
   hasJsonConfig: boolean;
+  hasKitsuneCommand: boolean;
+  hasRestApi: boolean;
+  hasSteamUpdate: boolean;
+  hasLauncherUpdate: boolean;
 }
 
 // ---- Runtime types ----

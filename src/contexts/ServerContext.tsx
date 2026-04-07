@@ -12,7 +12,7 @@ import {
 interface ServerInfo {
   id: string;
   name: string;
-  type: "minecraft" | "hytale" | "7d2d";
+  type: "minecraft" | "hytale" | "7d2d" | "palworld";
   status: string;
   loader?: string;
   version?: string;
@@ -26,6 +26,10 @@ interface ServerInfo {
     hasWarps: boolean;
     hasServerProperties: boolean;
     hasJsonConfig: boolean;
+    hasKitsuneCommand: boolean;
+    hasRestApi: boolean;
+    hasSteamUpdate: boolean;
+    hasLauncherUpdate: boolean;
   };
 }
 
@@ -34,6 +38,7 @@ interface ServerContextType {
   setServerId: (id: string) => void;
   servers: ServerInfo[];
   currentServer: ServerInfo | null;
+  refreshServers: () => void;
 }
 
 const ServerContext = createContext<ServerContextType>({
@@ -41,6 +46,7 @@ const ServerContext = createContext<ServerContextType>({
   setServerId: () => {},
   servers: [],
   currentServer: null,
+  refreshServers: () => {},
 });
 
 export function ServerProvider({ children }: { children: ReactNode }) {
@@ -73,7 +79,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const currentServer = servers.find((s) => s.id === serverId) || null;
 
   return (
-    <ServerContext.Provider value={{ serverId, setServerId, servers, currentServer }}>
+    <ServerContext.Provider value={{ serverId, setServerId, servers, currentServer, refreshServers: fetchServers }}>
       {children}
     </ServerContext.Provider>
   );

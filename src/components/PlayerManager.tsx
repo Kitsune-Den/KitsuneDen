@@ -73,6 +73,11 @@ export default function PlayerManager() {
   const [addBan, setAddBan] = useState(false);
   const [busyAction, setBusyAction] = useState("");
 
+  // Palworld admin state
+  const [pwAdmins, setPwAdmins] = useState<string[]>([]);
+  const [pwAdminPassword, setPwAdminPassword] = useState("");
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+
   // 7D2D admin state
   const [adminData, setAdminData] = useState<AdminData | null>(null);
   const [adminSteamId, setAdminSteamId] = useState("");
@@ -91,6 +96,8 @@ export default function PlayerManager() {
       const res = await fetch(`/api/players?server=${serverId}`);
       const json = await res.json();
       setData(json);
+      if (json.admins) setPwAdmins(json.admins);
+      if (json.adminPassword !== undefined) setPwAdminPassword(json.adminPassword);
       if (json.adminData) {
         setAdminData(json.adminData);
       }
@@ -129,6 +136,7 @@ export default function PlayerManager() {
   const isHytale = currentServer?.type === "hytale";
   const isMinecraft = currentServer?.type === "minecraft";
   const is7d2d = currentServer?.type === "7d2d";
+  const isPalworld = currentServer?.type === "palworld";
 
   const post7d2dAction = async (action: string, payload: Record<string, unknown>) => {
     setBusyAction(action);
@@ -297,14 +305,61 @@ export default function PlayerManager() {
         </div>
       )}
 
+      {isPalworld && (
+        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-den-border">
+            <h3 className="text-sm font-bold">Quick Actions</h3>
+          </div>
+          <div className="p-5 flex flex-wrap gap-3">
+            <button
+              onClick={loadPlayers}
+              className="px-3 py-2 text-xs font-semibold text-den-text-muted border border-den-border rounded-lg hover:bg-den-surface transition-colors"
+            >
+              Refresh Players
+            </button>
+            <button
+              onClick={async () => {
+                setBusyAction("save");
+                const result = await postAction("save", {});
+                setMessage(result.success ? "World saved!" : result.message);
+                setBusyAction("");
+              }}
+              disabled={busyAction === "save"}
+              className="px-3 py-2 text-xs font-semibold text-den-cyan border border-den-cyan/30 rounded-lg hover:bg-den-cyan/10 transition-colors"
+            >
+              {busyAction === "save" ? "Saving..." : "Save World"}
+            </button>
+            <button
+              onClick={async () => {
+                const msg = prompt("Broadcast message to all players:");
+                if (!msg) return;
+                setBusyAction("broadcast");
+                const result = await postAction("broadcast", { message: msg });
+                setMessage(result.success ? "Broadcast sent!" : result.message);
+                setBusyAction("");
+              }}
+              disabled={busyAction === "broadcast"}
+              className="px-3 py-2 text-xs font-semibold text-den-amber border border-den-amber/30 rounded-lg hover:bg-den-amber/10 transition-colors"
+            >
+              {busyAction === "broadcast" ? "Sending..." : "Broadcast Message"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-den-border">
-          <h3 className="text-sm font-bold">Registered Players</h3>
+        <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
+          <h3 className="text-sm font-bold">{isPalworld ? "Online Players" : "Registered Players"}</h3>
+          {isPalworld && (
+            <span className="text-[11px] text-den-text-dim font-medium">
+              {players.length} online
+            </span>
+          )}
         </div>
         <div className="p-5">
           {players.length === 0 ? (
             <div className="text-center py-10 text-den-text-dim text-[13px]">
-              No players found
+              {isPalworld ? "No players online" : "No players found"}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -428,6 +483,64 @@ export default function PlayerManager() {
                         </button>
                       </div>
                     )}
+                    {isPalworld && (
+                      <div className="flex flex-col gap-1.5 ml-3 shrink-0 text-[11px]">
+                        <button
+                          onClick={async () => {
+                            const action = player.isOp ? "demote" : "promote";
+                            setBusyAction(`${action}-${player.uuid}`);
+                            try {
+                              const result = await postAction(action, { steamId: player.uuid });
+                              setMessage(result.success
+                                ? (player.isOp ? `Demoted ${player.name || player.uuid}` : `Promoted ${player.name || player.uuid} to Admin`)
+                                : result.message);
+                              if (result.success) loadPlayers();
+                            } catch { setMessage("Action failed"); }
+                            finally { setBusyAction(""); }
+                          }}
+                          disabled={busyAction === `promote-${player.uuid}` || busyAction === `demote-${player.uuid}`}
+                          className={`px-2.5 py-1.5 rounded-md border font-medium transition-colors ${
+                            player.isOp
+                              ? "border-den-text-dim/30 text-den-text-muted bg-den-surface hover:bg-den-surface/80"
+                              : "border-den-cyan/30 text-den-cyan bg-den-cyan/5 hover:bg-den-cyan/15"
+                          }`}
+                        >
+                          {player.isOp ? "Demote" : "Admin"}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Kick ${player.name || player.uuid}?`)) return;
+                            setBusyAction(`kick-${player.uuid}`);
+                            try {
+                              const result = await postAction("kick", { steamId: player.uuid });
+                              setMessage(result.success ? `Kicked ${player.name || player.uuid}` : result.message);
+                              if (result.success) loadPlayers();
+                            } catch { setMessage("Kick failed"); }
+                            finally { setBusyAction(""); }
+                          }}
+                          disabled={busyAction === `kick-${player.uuid}`}
+                          className="px-2.5 py-1.5 rounded-md border border-den-amber/30 text-den-amber bg-den-amber/5 hover:bg-den-amber/15 transition-colors font-medium"
+                        >
+                          {busyAction === `kick-${player.uuid}` ? "Kicking..." : "Kick"}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Ban ${player.name || player.uuid}? This will immediately remove them from the server.`)) return;
+                            setBusyAction(`ban-${player.uuid}`);
+                            try {
+                              const result = await postAction("ban", { steamId: player.uuid });
+                              setMessage(result.success ? `Banned ${player.name || player.uuid}` : result.message);
+                              if (result.success) loadPlayers();
+                            } catch { setMessage("Ban failed"); }
+                            finally { setBusyAction(""); }
+                          }}
+                          disabled={busyAction === `ban-${player.uuid}`}
+                          className="px-2.5 py-1.5 rounded-md border border-den-red/30 text-den-red bg-den-red/5 hover:bg-den-red/15 transition-colors font-medium"
+                        >
+                          {busyAction === `ban-${player.uuid}` ? "Banning..." : "Ban"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -435,6 +548,79 @@ export default function PlayerManager() {
           )}
         </div>
       </div>
+
+      {isPalworld && pwAdmins.length > 0 && (
+        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
+            <h3 className="text-sm font-bold">Admin Whitelist</h3>
+            <span className="text-[11px] text-den-text-dim font-medium">
+              {pwAdmins.length} {pwAdmins.length === 1 ? "admin" : "admins"}
+            </span>
+          </div>
+          <div className="p-5 space-y-3">
+            {pwAdminPassword && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-den-surface/60 border border-den-border">
+                <span className="text-[11px] text-den-text-dim shrink-0">Admin Password:</span>
+                <code className="text-[12px] text-den-text font-mono">
+                  {showAdminPassword ? pwAdminPassword : "\u2022".repeat(pwAdminPassword.length)}
+                </code>
+                <button
+                  onClick={() => setShowAdminPassword((prev) => !prev)}
+                  className="ml-auto px-2 py-0.5 text-[10px] font-semibold text-den-text-muted border border-den-border rounded hover:bg-den-surface transition-colors"
+                >
+                  {showAdminPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+            )}
+            <div className="text-[11px] text-den-text-dim">
+              Share the admin password with trusted players below. They use <code className="text-den-cyan">/AdminPassword</code> in-game to gain admin.
+            </div>
+            <div className="space-y-2">
+              {pwAdmins.map((steamId) => {
+                const onlinePlayer = players.find((p) => p.uuid === steamId);
+                return (
+                  <div
+                    key={steamId}
+                    className="flex items-center justify-between p-3 rounded-lg border border-[rgba(255,167,38,0.2)] bg-[rgba(255,167,38,0.04)]"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-md flex items-center justify-center text-sm font-extrabold bg-gradient-to-br from-den-amber to-[#ff7043] text-den-bg shadow-[0_0_12px_rgba(255,167,38,0.3)]">
+                        {"\u2B50"}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-bold truncate">
+                          {onlinePlayer?.name || "Offline"}
+                        </div>
+                        <div className="text-[10px] text-den-text-dim font-mono">{steamId}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3 shrink-0">
+                      {onlinePlayer && (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-den-green/10 text-den-green border-den-green/30">
+                          Online
+                        </span>
+                      )}
+                      <button
+                        onClick={async () => {
+                          setBusyAction(`demote-${steamId}`);
+                          const result = await postAction("demote", { steamId });
+                          setMessage(result.success ? "Admin removed" : result.message);
+                          if (result.success) loadPlayers();
+                          setBusyAction("");
+                        }}
+                        disabled={busyAction === `demote-${steamId}`}
+                        className="px-2 py-1 text-[11px] rounded-md border border-den-border text-den-text-muted hover:bg-den-surface transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {isMinecraft && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

@@ -45,6 +45,10 @@ export class MinecraftAdapter implements ServerAdapter {
     hasWarps: false,
     hasServerProperties: true,
     hasJsonConfig: false,
+    hasKitsuneCommand: false,
+    hasRestApi: false,
+    hasSteamUpdate: false,
+    hasLauncherUpdate: false,
   };
 
   constructor(def: ServerDefinition) {

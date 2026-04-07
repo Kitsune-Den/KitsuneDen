@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
 import { SevenDaysAdapter } from "@/lib/adapters/seven-days-adapter";
+import { PalworldAdapter } from "@/lib/adapters/palworld-adapter";
 import fs from "fs";
 import path from "path";
 
@@ -37,6 +38,13 @@ export async function GET(request: NextRequest) {
       // ignore
     }
     return NextResponse.json({ ...players, userCache });
+  }
+  if (adapter.def.type === "palworld" && adapter instanceof PalworldAdapter) {
+    return NextResponse.json({
+      ...players,
+      admins: adapter.getAdmins(),
+      adminPassword: adapter.def.rconPassword || "",
+    });
   }
   return NextResponse.json(players);
 }
@@ -321,6 +329,58 @@ export async function POST(request: NextRequest) {
       }
       default:
         return NextResponse.json({ success: false, message: "Unknown action" }, { status: 400 });
+    }
+  }
+
+  // Palworld player actions (RCON-based, immediate effect)
+  if (adapter.def.type === "palworld" && adapter instanceof PalworldAdapter) {
+    switch (playerAction) {
+      case "kick": {
+        const steamId = body.steamId || uuid;
+        if (!steamId) {
+          return NextResponse.json({ success: false, message: "Steam ID required" }, { status: 400 });
+        }
+        const result = await adapter.kickPlayer(steamId);
+        return NextResponse.json(result);
+      }
+      case "ban": {
+        const steamId = body.steamId || uuid;
+        if (!steamId) {
+          return NextResponse.json({ success: false, message: "Steam ID required" }, { status: 400 });
+        }
+        const result = await adapter.banPlayer(steamId);
+        return NextResponse.json(result);
+      }
+      case "save": {
+        const result = await adapter.saveWorld();
+        return NextResponse.json(result);
+      }
+      case "broadcast": {
+        const msg = body.message;
+        if (!msg) {
+          return NextResponse.json({ success: false, message: "Message required" }, { status: 400 });
+        }
+        const result = await adapter.broadcast(msg);
+        return NextResponse.json(result);
+      }
+      case "promote": {
+        const steamId = body.steamId || uuid;
+        if (!steamId) {
+          return NextResponse.json({ success: false, message: "Steam ID required" }, { status: 400 });
+        }
+        const result = adapter.addAdmin(steamId);
+        return NextResponse.json(result);
+      }
+      case "demote": {
+        const steamId = body.steamId || uuid;
+        if (!steamId) {
+          return NextResponse.json({ success: false, message: "Steam ID required" }, { status: 400 });
+        }
+        const result = adapter.removeAdmin(steamId);
+        return NextResponse.json(result);
+      }
+      default:
+        return NextResponse.json({ success: false, message: "Unknown Palworld action" }, { status: 400 });
     }
   }
 
