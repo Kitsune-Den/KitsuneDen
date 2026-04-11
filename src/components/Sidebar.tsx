@@ -129,7 +129,7 @@ export default function Sidebar({ activePage, onNavigate, onSelectDocs }: Sideba
           <span>v{process.env.APP_VERSION || "0.0.0"}</span>
           <span className="mx-1">|</span>
           <a
-            href="https://github.com/AdaInTheLab/KitsuneDen"
+            href="https://github.com/Kitsune-Den/KitsuneDen"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-den-text transition-colors underline decoration-dotted"
