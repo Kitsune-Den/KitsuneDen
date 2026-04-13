@@ -42,6 +42,19 @@
       "telnetPort": 8081,
       "telnetPassword": "your-telnet-password"
     }
+    ,
+    {
+      "id": "palworld",
+      "name": "Palworld",
+      "type": "palworld",
+      "dir": "C:\\GameServers\\PalworldServer",
+      "gamePort": 8211,
+      "rconPort": 25575,
+      "rconPassword": "your-rcon-password",
+      "restApiPort": 8212,
+      "restApiPassword": "your-admin-password",
+      "steamCmdPath": "C:\\SteamCMD\\steamcmd.exe"
+    }
   ],
   "dashboard": {
     "port": 3000

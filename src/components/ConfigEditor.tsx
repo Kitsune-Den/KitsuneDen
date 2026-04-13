@@ -1,7 +1,8 @@
 "use client";
 
 import { useServer } from "@/contexts/ServerContext";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { resolveDayNightConfig, reverseDayNightConfig } from "@/lib/day-night";
 
 function formatBytes(bytes: number): string {
   if (!bytes) return "0 B";
@@ -393,7 +394,101 @@ export default function ConfigEditor() {
     });
   };
 
+  // ---- Day/Night friendly widget ----
+  const dayNightFriendly = useMemo(() => {
+    const dnl = Number(formValues["DayNightLength"]) || 60;
+    const dll = Number(formValues["DayLightLength"]) || 18;
+    return reverseDayNightConfig(dnl, dll);
+  }, [formValues["DayNightLength"], formValues["DayLightLength"]]);
+
+  const setDayNight = useCallback((dayMinutes: number, nightMinutes: number) => {
+    if (dayMinutes <= 0 || nightMinutes <= 0) return;
+    const { DayNightLength, DayLightLength } = resolveDayNightConfig({ dayMinutes, nightMinutes });
+    setFormValues((prev) => ({
+      ...prev,
+      DayNightLength: String(DayNightLength),
+      DayLightLength: String(DayLightLength),
+    }));
+  }, []);
+
+  const renderDayNightWidget = () => {
+    const { dayMinutes, nightMinutes } = dayNightFriendly;
+    const total = dayMinutes + nightMinutes;
+    const dayPct = Math.round((dayMinutes / total) * 100);
+    return (
+      <div key="__DayNightWidget__" className="flex flex-col gap-3">
+        <label className="text-[13px] text-den-text-muted">Day / Night Cycle</label>
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-1 flex-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-den-text-dim uppercase tracking-wider">Day</span>
+              <span className="text-[12px] text-den-text-muted">{dayMinutes} min</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={total - 1}
+              value={dayMinutes}
+              onChange={(e) => {
+                const newDay = Number(e.target.value);
+                setDayNight(newDay, total - newDay);
+              }}
+              className="w-full accent-amber-400"
+            />
+          </div>
+          <div className="flex flex-col gap-1 flex-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-den-text-dim uppercase tracking-wider">Night</span>
+              <span className="text-[12px] text-den-text-muted">{nightMinutes} min</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={total - 1}
+              value={nightMinutes}
+              onChange={(e) => {
+                const newNight = Number(e.target.value);
+                setDayNight(total - newNight, newNight);
+              }}
+              className="w-full accent-indigo-400"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-2 rounded-full overflow-hidden bg-den-border">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-200"
+              style={{ width: `${dayPct}%` }}
+            />
+          </div>
+          <span className="text-[11px] text-den-text-dim whitespace-nowrap">{total} min total</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-[12px] text-den-text-dim">Total cycle:</label>
+          <input
+            type="number"
+            min={10}
+            max={240}
+            value={total}
+            onChange={(e) => {
+              const newTotal = Math.max(10, Math.min(240, Number(e.target.value)));
+              const ratio = dayMinutes / total;
+              const newDay = Math.max(1, Math.min(newTotal - 1, Math.round(ratio * newTotal)));
+              setDayNight(newDay, newTotal - newDay);
+            }}
+            className="w-20 px-2 py-1 bg-den-bg text-den-text text-[12px] rounded-lg border border-den-border focus:border-den-border-light outline-none"
+          />
+          <span className="text-[11px] text-den-text-dim">min</span>
+        </div>
+        <div className="text-[11px] text-den-text-dim">
+          Replaces DayNightLength ({String(formValues["DayNightLength"])}) and DayLightLength ({String(formValues["DayLightLength"])})
+        </div>
+      </div>
+    );
+  };
+
   const renderField = (key: string) => {
+    if (key === "__DayNightWidget__") return renderDayNightWidget();
     const value = formValues[key];
     const isPalworld = currentServer?.type === "palworld";
     const isBoolean =
@@ -576,8 +671,7 @@ export default function ConfigEditor() {
       title: "Gameplay",
       keys: [
         "GameDifficulty",
-        "DayNightLength",
-        "DayLightLength",
+        "__DayNightWidget__",
         "BuildCreate",
         "BloodMoonFrequency",
         "BloodMoonRange",
@@ -1200,19 +1294,22 @@ export default function ConfigEditor() {
                 const usedKeys = new Set<string>([
                   ...sevenDaysCoreKeys,
                   ...sevenDaysGroups.flatMap((group) => group.keys),
+                  "DayNightLength", "DayLightLength",
                 ]);
                 const remainingKeys = Object.keys(formValues)
                   .filter((key) => !usedKeys.has(key))
                   .sort((a, b) => a.localeCompare(b));
+                const hasKey = (key: string) =>
+                  key === "__DayNightWidget__"
+                    ? Object.prototype.hasOwnProperty.call(formValues, "DayNightLength")
+                    : Object.prototype.hasOwnProperty.call(formValues, key);
                 const groups = sevenDaysGroups
                   .filter((group) =>
-                    group.keys.some((key) => Object.prototype.hasOwnProperty.call(formValues, key))
+                    group.keys.some(hasKey)
                   )
                   .map((group) => ({
                     ...group,
-                    keys: group.keys.filter((key) =>
-                      Object.prototype.hasOwnProperty.call(formValues, key)
-                    ),
+                    keys: group.keys.filter(hasKey),
                   }));
 
                 if (remainingKeys.length > 0) {

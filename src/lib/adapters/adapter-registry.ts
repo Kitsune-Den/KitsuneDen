@@ -65,6 +65,31 @@ export function getConfig(): ServersConfig {
   return loadConfig();
 }
 
+/** Add a new server to servers.json and create its adapter. */
+export async function addServer(
+  def: ServerDefinition
+): Promise<{ success: boolean; message: string }> {
+  if (!def.id || !def.name || !def.type || !def.dir) {
+    return { success: false, message: "Missing required fields: id, name, type, dir" };
+  }
+
+  const config = loadConfig();
+
+  if (config.servers.some((s) => s.id === def.id)) {
+    return { success: false, message: `Server with id "${def.id}" already exists` };
+  }
+
+  config.servers.push(def);
+  const configPath = path.join(process.cwd(), "servers.json");
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+  const map = getAdapterMap();
+  map.set(def.id, createAdapter(def));
+  globalForRegistry.__denConfig = undefined;
+
+  return { success: true, message: `Server "${def.name}" added` };
+}
+
 /** Update a server's config fields in servers.json and rebuild its adapter. */
 export async function updateServer(
   serverId: string,
