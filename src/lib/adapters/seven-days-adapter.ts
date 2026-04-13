@@ -252,7 +252,7 @@ function writeXmlConfig(
   const added: string[] = [];
   for (const [key, value] of Object.entries(changes)) {
     const re = new RegExp(
-      `(<property\\s+name="${key}"\\s+value=")([^"]*)("/>)`,
+      `(<property\\s+name="${key}"\\s+value=")([^"]*)("\\s*/>)`,
       "g"
     );
     if (re.test(xml)) {
