@@ -151,6 +151,29 @@ describe("7D2D log parsing", () => {
   });
 });
 
+// Extract the writeXmlConfig function to test it
+function writeXmlConfig(filePath: string, changes: Record<string, string>): void {
+  let xml = fs.readFileSync(filePath, "utf8");
+  const added: string[] = [];
+  for (const [key, value] of Object.entries(changes)) {
+    const re = new RegExp(
+      `(<property\\s+name="${key}"\\s+value=")([^"]*)("\\s*/>)`,
+      "g"
+    );
+    if (re.test(xml)) {
+      re.lastIndex = 0;
+      xml = xml.replace(re, `$1${value}$3`);
+    } else {
+      added.push(`\t<property name="${key}"\t\t\t\tvalue="${value}"/>`);
+    }
+  }
+  if (added.length > 0) {
+    const insertBlock = "\n\t<!-- Added by Dashboard -->\n" + added.join("\n") + "\n";
+    xml = xml.replace(/([\t ]*<\/ServerSettings>)/, insertBlock + "$1");
+  }
+  fs.writeFileSync(filePath, xml, "utf8");
+}
+
 describe("7D2D config write", () => {
   let tmpDir: string;
   let configPath: string;
@@ -166,9 +189,53 @@ describe("7D2D config write", () => {
   });
 
   it("does not corrupt config when reading after write", () => {
-    // Read, "modify" by rewriting, read again
     const original = parseXmlConfig(configPath);
     expect(original.ServerName).toBe("Test Server");
     expect(Object.keys(original).length).toBe(14);
+  });
+
+  it("updates existing properties in-place with space before />", () => {
+    // SAMPLE_CONFIG uses ' />' (space before closing), the regex must handle this
+    writeXmlConfig(configPath, { ServerName: "Updated Name" });
+    const config = parseXmlConfig(configPath);
+    expect(config.ServerName).toBe("Updated Name");
+
+    // Must NOT create duplicates
+    const xml = fs.readFileSync(configPath, "utf8");
+    const matches = xml.match(/name="ServerName"/g);
+    expect(matches).toHaveLength(1);
+  });
+
+  it("updates existing properties in-place with no space before />", () => {
+    // Rewrite config with no-space style: value="x"/>
+    const noSpaceConfig = SAMPLE_CONFIG.replace(/"\s*\/>/g, '"/>');
+    fs.writeFileSync(configPath, noSpaceConfig);
+
+    writeXmlConfig(configPath, { ServerName: "NoSpace Update" });
+    const config = parseXmlConfig(configPath);
+    expect(config.ServerName).toBe("NoSpace Update");
+
+    const xml = fs.readFileSync(configPath, "utf8");
+    const matches = xml.match(/name="ServerName"/g);
+    expect(matches).toHaveLength(1);
+  });
+
+  it("adds new properties that don't exist", () => {
+    writeXmlConfig(configPath, { NewProperty: "new-value" });
+    const config = parseXmlConfig(configPath);
+    expect(config.NewProperty).toBe("new-value");
+  });
+
+  it("does not duplicate properties on multiple writes", () => {
+    writeXmlConfig(configPath, { ServerName: "First" });
+    writeXmlConfig(configPath, { ServerName: "Second" });
+    writeXmlConfig(configPath, { ServerName: "Third" });
+
+    const config = parseXmlConfig(configPath);
+    expect(config.ServerName).toBe("Third");
+
+    const xml = fs.readFileSync(configPath, "utf8");
+    const matches = xml.match(/name="ServerName"/g);
+    expect(matches).toHaveLength(1);
   });
 });
