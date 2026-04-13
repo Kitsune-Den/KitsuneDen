@@ -402,6 +402,10 @@ export default function PlayerManager() {
                               className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
                                 g === "OP"
                                   ? "bg-[rgba(255,167,38,0.15)] text-den-amber border-[rgba(255,167,38,0.3)]"
+                                  : g === "online"
+                                  ? "bg-[rgba(102,187,106,0.15)] text-den-green border-[rgba(102,187,106,0.3)]"
+                                  : g === "offline"
+                                  ? "bg-[rgba(107,114,128,0.15)] text-gray-400 border-[rgba(107,114,128,0.3)]"
                                   : "bg-[rgba(79,195,247,0.1)] text-den-cyan border-[rgba(79,195,247,0.2)]"
                               }`}
                             >
