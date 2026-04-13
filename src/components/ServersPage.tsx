@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useServer } from "@/contexts/ServerContext";
-import { Trash2, Pencil } from "lucide-react";
+import { Trash2, Pencil, Plus, FolderOpen } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
 
 const STATUS_DOT: Record<string, string> = {
@@ -30,39 +30,40 @@ interface FieldDef {
   key: string;
   label: string;
   type: "text" | "number" | "password";
+  hint?: string;
 }
 
 const SHARED_FIELDS: FieldDef[] = [
-  { key: "name", label: "Server Name", type: "text" },
-  { key: "dir", label: "Install Directory", type: "text" },
-  { key: "gamePort", label: "Game Port", type: "number" },
+  { key: "name", label: "Server Name", type: "text", hint: "Display name shown in the dashboard" },
+  { key: "dir", label: "Install Directory", type: "text", hint: "Full path to the server's root folder" },
+  { key: "gamePort", label: "Game Port", type: "number", hint: "Port players connect to (e.g. 26900, 25565)" },
 ];
 
 const TYPE_FIELDS: Record<string, FieldDef[]> = {
   "7d2d": [
-    { key: "telnetPort", label: "Telnet Port", type: "number" },
-    { key: "telnetPassword", label: "Telnet Password", type: "password" },
-    { key: "configFile", label: "Config File", type: "text" },
-    { key: "modsDir", label: "Mods Directory", type: "text" },
+    { key: "telnetPort", label: "Telnet Port", type: "number", hint: "Telnet port for server commands (default 8081)" },
+    { key: "telnetPassword", label: "Telnet Password", type: "password", hint: "Password set in serverconfig.xml under TelnetPassword" },
+    { key: "configFile", label: "Config File", type: "text", hint: "Config filename (e.g. serverconfig.xml or serverconfig-custom.xml)" },
+    { key: "modsDir", label: "Mods Directory", type: "text", hint: "Mods folder name relative to install dir (default: Mods)" },
   ],
   minecraft: [
-    { key: "rconPort", label: "RCON Port", type: "number" },
-    { key: "rconPassword", label: "RCON Password", type: "password" },
-    { key: "javaPath", label: "Java Path", type: "text" },
-    { key: "loader", label: "Loader", type: "text" },
-    { key: "version", label: "Version", type: "text" },
+    { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port from server.properties (default 25575)" },
+    { key: "rconPassword", label: "RCON Password", type: "password", hint: "RCON password from server.properties" },
+    { key: "javaPath", label: "Java Path", type: "text", hint: "Full path to java.exe (e.g. C:\\Program Files\\Java\\bin\\java.exe)" },
+    { key: "loader", label: "Loader", type: "text", hint: "Mod loader type (Fabric, NeoForge, Paper, Vanilla, etc.)" },
+    { key: "version", label: "Version", type: "text", hint: "Minecraft version (e.g. 1.21.4)" },
   ],
   hytale: [
-    { key: "startScript", label: "Start Script", type: "text" },
-    { key: "backupScript", label: "Backup Script", type: "text" },
-    { key: "processFilter", label: "Process Filter", type: "text" },
+    { key: "startScript", label: "Start Script", type: "text", hint: "Bat file to launch the server (e.g. start.bat)" },
+    { key: "backupScript", label: "Backup Script", type: "text", hint: "PowerShell script for backups (optional)" },
+    { key: "processFilter", label: "Process Filter", type: "text", hint: "Process name to detect if server is running" },
   ],
   palworld: [
-    { key: "rconPort", label: "RCON Port", type: "number" },
-    { key: "rconPassword", label: "RCON Password", type: "password" },
-    { key: "steamCmdPath", label: "SteamCMD Path", type: "text" },
-    { key: "restApiPort", label: "REST API Port", type: "number" },
-    { key: "restApiPassword", label: "REST API Password", type: "password" },
+    { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port (default 25575)" },
+    { key: "rconPassword", label: "RCON Password", type: "password", hint: "RCON password from PalWorldSettings.ini" },
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates" },
+    { key: "restApiPort", label: "REST API Port", type: "number", hint: "REST API port (default 8212)" },
+    { key: "restApiPassword", label: "REST API Password", type: "password", hint: "Admin password for the REST API" },
   ],
 };
 
@@ -81,6 +82,87 @@ export default function ServersPage() {
   const [editDraft, setEditDraft] = useState<Record<string, string | number>>({});
   const [saving, setSaving] = useState(false);
   const [editMessage, setEditMessage] = useState<{ text: string; error: boolean } | null>(null);
+
+  // Add flow state
+  const [showAdd, setShowAdd] = useState(false);
+  const [addType, setAddType] = useState<string>("7d2d");
+  const [addDraft, setAddDraft] = useState<Record<string, string | number>>({});
+  const [addSaving, setAddSaving] = useState(false);
+  const [addMessage, setAddMessage] = useState<{ text: string; error: boolean } | null>(null);
+
+  const openAdd = () => {
+    setAddType("7d2d");
+    setAddDraft({});
+    setAddMessage(null);
+    setShowAdd(true);
+  };
+
+  const handleSaveAdd = async () => {
+    const name = String(addDraft.name || "").trim();
+    const dir = String(addDraft.dir || "").trim();
+    if (!name || !dir) {
+      setAddMessage({ text: "Name and Install Directory are required", error: true });
+      return;
+    }
+
+    // Auto-generate ID from name
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    if (!id) {
+      setAddMessage({ text: "Could not generate a valid ID from the name", error: true });
+      return;
+    }
+
+    setAddSaving(true);
+    setAddMessage(null);
+
+    try {
+      const fields = [...SHARED_FIELDS, ...(TYPE_FIELDS[addType] || [])];
+      const server: Record<string, unknown> = { id, type: addType };
+      for (const f of fields) {
+        const val = addDraft[f.key];
+        if (f.type === "number" && val !== "" && val !== undefined) {
+          server[f.key] = Number(val);
+        } else if (val !== undefined) {
+          server[f.key] = val;
+        }
+      }
+
+      const res = await fetch("/api/servers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ server }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setAddMessage({ text: data.message, error: false });
+        refreshServers();
+        setTimeout(() => {
+          setShowAdd(false);
+          setAddMessage(null);
+        }, 1200);
+      } else {
+        setAddMessage({ text: data.message, error: true });
+      }
+    } catch (err) {
+      setAddMessage({ text: `Request failed: ${err}`, error: true });
+    } finally {
+      setAddSaving(false);
+    }
+  };
+
+  const [browsing, setBrowsing] = useState(false);
+  const browseFolder = useCallback(async (setter: (fn: (prev: Record<string, string | number>) => Record<string, string | number>) => void) => {
+    setBrowsing(true);
+    try {
+      const res = await fetch("/api/browse-folder");
+      const data = await res.json();
+      if (data.path && !data.cancelled) {
+        setter((prev) => ({ ...prev, dir: data.path }));
+      }
+    } catch { /* ignore */ }
+    finally { setBrowsing(false); }
+  }, []);
 
   const openDelete = (server: DeleteTarget) => {
     setDeleteTarget(server);
@@ -209,6 +291,17 @@ export default function ServersPage() {
         </div>
       )}
 
+      {/* Add server button */}
+      <div className="flex justify-end">
+        <button
+          onClick={openAdd}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg hover:brightness-110 transition-all"
+        >
+          <Plus size={16} />
+          Add Server
+        </button>
+      </div>
+
       {/* Server cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {servers.map((s) => {
@@ -327,7 +420,7 @@ export default function ServersPage() {
 
       {servers.length === 0 && (
         <div className="text-center py-16 text-den-text-dim text-[14px]">
-          No servers configured. Add servers to <code className="text-den-text-muted">servers.json</code> to get started.
+          No servers configured. Click &quot;Add Server&quot; above to get started.
         </div>
       )}
 
@@ -420,6 +513,79 @@ export default function ServersPage() {
         )}
       </ConfirmModal>
 
+      {/* Add server modal */}
+      <ConfirmModal
+        open={showAdd}
+        title="Add Server"
+        confirmLabel="Add Server"
+        onConfirm={handleSaveAdd}
+        onCancel={() => { setShowAdd(false); setAddMessage(null); }}
+        loading={addSaving}
+      >
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+          <div>
+            <label className="block text-[11px] text-den-text-muted font-medium mb-1">
+              Server Type
+            </label>
+            <select
+              value={addType}
+              onChange={(e) => { setAddType(e.target.value); setAddDraft({}); }}
+              className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text focus:outline-none focus:border-[rgba(79,195,247,0.5)] transition-colors"
+            >
+              <option value="7d2d">7 Days to Die</option>
+              <option value="minecraft">Minecraft</option>
+              <option value="hytale">Hytale</option>
+              <option value="palworld">Palworld</option>
+            </select>
+          </div>
+
+          <div className="text-[10px] font-bold text-den-text-dim tracking-widest pt-2 pb-1">
+            CONNECTION
+          </div>
+          {[...SHARED_FIELDS, ...(TYPE_FIELDS[addType] || [])].map((field) => (
+            <div key={field.key}>
+              <label className="block text-[11px] text-den-text-muted font-medium mb-1">
+                {field.label}
+              </label>
+              <div className={field.key === "dir" ? "flex gap-2" : ""}>
+                <input
+                  type={field.type === "password" ? "password" : field.type === "number" ? "number" : "text"}
+                  value={addDraft[field.key] ?? ""}
+                  onChange={(e) =>
+                    setAddDraft((prev) => ({ ...prev, [field.key]: e.target.value }))
+                  }
+                  className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text font-mono focus:outline-none focus:border-[rgba(79,195,247,0.5)] transition-colors"
+                />
+                {field.key === "dir" && (
+                  <button
+                    type="button"
+                    onClick={() => browseFolder(setAddDraft)}
+                    disabled={browsing}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-den-surface border border-den-border rounded-lg text-[12px] text-den-text-muted hover:text-den-text hover:border-den-border-hover transition-colors whitespace-nowrap disabled:opacity-50"
+                    title="Browse for folder"
+                  >
+                    <FolderOpen size={14} />
+                    Browse
+                  </button>
+                )}
+              </div>
+              {field.hint && <div className="text-[11px] text-den-text-dim mt-1">{field.hint}</div>}
+            </div>
+          ))}
+          {addMessage && (
+            <div
+              className={`px-3 py-2 rounded-lg text-[12px] border ${
+                addMessage.error
+                  ? "bg-red-500/10 text-red-400 border-red-500/20"
+                  : "bg-den-green/10 text-den-green border-den-green/20"
+              }`}
+            >
+              {addMessage.text}
+            </div>
+          )}
+        </div>
+      </ConfirmModal>
+
       {/* Edit server settings modal */}
       <ConfirmModal
         open={!!editTarget}
@@ -439,14 +605,29 @@ export default function ServersPage() {
                 <label className="block text-[11px] text-den-text-muted font-medium mb-1">
                   {field.label}
                 </label>
-                <input
-                  type={field.type === "password" ? "password" : field.type === "number" ? "number" : "text"}
-                  value={editDraft[field.key] ?? ""}
-                  onChange={(e) =>
-                    setEditDraft((prev) => ({ ...prev, [field.key]: e.target.value }))
-                  }
-                  className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text font-mono focus:outline-none focus:border-[rgba(79,195,247,0.5)] transition-colors"
-                />
+                <div className={field.key === "dir" ? "flex gap-2" : ""}>
+                  <input
+                    type={field.type === "password" ? "password" : field.type === "number" ? "number" : "text"}
+                    value={editDraft[field.key] ?? ""}
+                    onChange={(e) =>
+                      setEditDraft((prev) => ({ ...prev, [field.key]: e.target.value }))
+                    }
+                    className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text font-mono focus:outline-none focus:border-[rgba(79,195,247,0.5)] transition-colors"
+                  />
+                  {field.key === "dir" && (
+                    <button
+                      type="button"
+                      onClick={() => browseFolder(setEditDraft)}
+                      disabled={browsing}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-den-surface border border-den-border rounded-lg text-[12px] text-den-text-muted hover:text-den-text hover:border-den-border-hover transition-colors whitespace-nowrap disabled:opacity-50"
+                      title="Browse for folder"
+                    >
+                      <FolderOpen size={14} />
+                      Browse
+                    </button>
+                  )}
+                </div>
+                {field.hint && <div className="text-[11px] text-den-text-dim mt-1">{field.hint}</div>}
               </div>
             ))}
             {editMessage && (

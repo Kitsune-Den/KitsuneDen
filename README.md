@@ -1,10 +1,10 @@
 # 🦊 KitsuneDen
 
-[![Tests](https://github.com/AdaInTheLab/KitsuneDen/actions/workflows/test.yml/badge.svg)](https://github.com/AdaInTheLab/KitsuneDen/actions/workflows/test.yml)
-[![Build](https://github.com/AdaInTheLab/KitsuneDen/actions/workflows/build.yml/badge.svg)](https://github.com/AdaInTheLab/KitsuneDen/actions/workflows/build.yml)
+[![Tests](https://github.com/Kitsune-Den/KitsuneDen/actions/workflows/test.yml/badge.svg)](https://github.com/Kitsune-Den/KitsuneDen/actions/workflows/test.yml)
+[![Build](https://github.com/Kitsune-Den/KitsuneDen/actions/workflows/build.yml/badge.svg)](https://github.com/Kitsune-Den/KitsuneDen/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
-[![Fox Approved](https://img.shields.io/badge/🦊_fox-approved-orange)](https://github.com/AdaInTheLab/KitsuneDen)
+[![Fox Approved](https://img.shields.io/badge/🦊_fox-approved-orange)](https://github.com/Kitsune-Den/KitsuneDen)
 [![Lore Documented](https://img.shields.io/badge/📜_lore-documented-purple)](src/den-operators-manual/00-preface.md)
 [![Powered by Coffee](https://img.shields.io/badge/powered_by-coffee-6f4e37)](https://en.wikipedia.org/wiki/Coffee)
 
@@ -17,11 +17,12 @@ KitsuneDen treats your servers like living things — each one with its own pers
 ## What it does
 
 - **Multi-server switcher** — manage multiple game servers from one dashboard, with live status indicators
+- **Add servers from the UI** — no more editing config files by hand; add, edit, and remove servers with a native folder picker
 - **Live console** — real-time log streaming with command input and history
-- **Server controls** — start, stop, restart, memory allocation
+- **Server controls** — start, stop, restart from the top bar with one click
 - **Player management** — whitelist, op, ban, and kick controls
 - **Mod & modpack management** — upload, organize, and activate mod sets
-- **Config editor** — structured editing for server properties and JSON configs
+- **Config editor** — structured editing with friendly widgets (like the day/night cycle slider for 7D2D)
 - **World & backup views** — browse worlds, trigger and manage backups
 - **Connection info** — LAN and public IP display with click-to-copy
 
@@ -36,6 +37,7 @@ KitsuneDen treats your servers like living things — each one with its own pers
 | Minecraft (Vanilla/other) | `minecraft` | ✅ Full support |
 | 7 Days to Die | `7d2d` | ✅ Full support |
 | Hytale | `hytale` | ✅ Full support |
+| Palworld | `palworld` | ✅ Full support |
 | Others | — | 🔧 Add your own adapter |
 
 Adding a new game type means writing one adapter class. See [Adding a new game](#adding-a-new-game).
@@ -52,20 +54,22 @@ Adding a new game type means writing one adapter class. See [Adding a new game](
 ### Install
 
 ```bash
-git clone https://github.com/yourusername/KitsuneDen.git
+git clone https://github.com/Kitsune-Den/KitsuneDen.git
 cd KitsuneDen
 npm install
 ```
 
 ### Configure
 
-Copy the example config and edit it to match your setup:
+You can add servers directly from the dashboard UI — click **Add Server** on the Servers page, pick your game type, browse to the install directory, and fill in the connection details.
+
+Or if you prefer, copy the example config and edit it manually:
 
 ```bash
 cp servers.example.json servers.json
 ```
 
-Edit `servers.json` with your server paths, ports, and credentials. See [Configuration](#configuration) for full details.
+See [Configuration](#configuration) for field details.
 
 ### Run
 
@@ -81,7 +85,7 @@ Open `http://localhost:3000` (or whatever port you set in `servers.json`).
 
 ## Configuration
 
-`servers.json` is your Den's map. It tells KitsuneDen where your servers live and how to talk to them.
+`servers.json` is your Den's map. It tells KitsuneDen where your servers live and how to talk to them. You can edit it through the dashboard UI or by hand.
 
 ```json
 {
@@ -106,7 +110,7 @@ Open `http://localhost:3000` (or whatever port you set in `servers.json`).
 }
 ```
 
-See `servers.example.json` for full examples including NeoForge (argfile launch), Hytale, and 7 Days to Die.
+See `servers.example.json` for full examples including NeoForge (argfile launch), Hytale, 7 Days to Die, and Palworld.
 
 ### Server types
 
@@ -142,6 +146,18 @@ See `servers.example.json` for full examples including NeoForge (argfile launch)
 | `backupScript` | Optional | Backup script path |
 | `processFilter` | Optional | Process name filter |
 | `gamePort` | ✅ | Port players connect to |
+
+**`palworld`** — Palworld
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `dir` | ✅ | Path to server directory |
+| `steamCmdPath` | Optional | Path to steamcmd.exe for updates |
+| `gamePort` | Optional | Game port (default 8211) |
+| `rconPort` | Optional | RCON port |
+| `rconPassword` | Optional | RCON password |
+| `restApiPort` | Optional | REST API port (default 8212) |
+| `restApiPassword` | Optional | REST API password |
 
 ---
 

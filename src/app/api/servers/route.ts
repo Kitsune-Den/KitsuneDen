@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllAdapters, removeServer, updateServer } from "@/lib/adapters/adapter-registry";
+import { getAllAdapters, addServer, removeServer, updateServer } from "@/lib/adapters/adapter-registry";
 
 export async function GET() {
   const adapters = getAllAdapters();
@@ -55,6 +55,41 @@ export async function PUT(request: NextRequest) {
   } catch (err) {
     return NextResponse.json(
       { success: false, message: `Failed to update server: ${err}` },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { server } = body as { server?: Record<string, unknown> };
+
+    if (!server) {
+      return NextResponse.json(
+        { success: false, message: "Missing server definition" },
+        { status: 400 }
+      );
+    }
+
+    const { id, name, type, dir } = server as { id?: string; name?: string; type?: string; dir?: string };
+    if (!id || !name || !type || !dir) {
+      return NextResponse.json(
+        { success: false, message: "Missing required fields: id, name, type, dir" },
+        { status: 400 }
+      );
+    }
+
+    const result = await addServer(server as never);
+
+    if (!result.success) {
+      return NextResponse.json(result, { status: 400 });
+    }
+
+    return NextResponse.json(result);
+  } catch (err) {
+    return NextResponse.json(
+      { success: false, message: `Failed to add server: ${err}` },
       { status: 500 }
     );
   }
