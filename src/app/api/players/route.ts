@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
-import { SevenDaysAdapter } from "@/lib/adapters/seven-days-adapter";
-import { PalworldAdapter } from "@/lib/adapters/palworld-adapter";
 import fs from "fs";
 import path from "path";
 
@@ -16,13 +14,12 @@ export async function GET(request: NextRequest) {
   }
 
   const players = await adapter.getPlayers();
-  if (adapter.def.type === "7d2d" && adapter instanceof SevenDaysAdapter) {
-    const adminData = adapter.getAdminData();
-    const adminFilePath = adapter.getAdminFilePath();
+  if (adapter.def.type === "7d2d" && "getAdminData" in adapter) {
+    const a = adapter as { getAdminData: () => unknown; getAdminFilePath: () => string | null };
     return NextResponse.json({
       ...players,
-      adminData,
-      adminFilePath: adminFilePath || null,
+      adminData: a.getAdminData(),
+      adminFilePath: a.getAdminFilePath() || null,
     });
   }
   if (adapter.def.type === "minecraft") {
@@ -39,11 +36,12 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json({ ...players, userCache });
   }
-  if (adapter.def.type === "palworld" && adapter instanceof PalworldAdapter) {
+  if (adapter.def.type === "palworld" && "getAdmins" in adapter) {
+    const a = adapter as { getAdmins: () => unknown; def: { rconPassword?: string } };
     return NextResponse.json({
       ...players,
-      admins: adapter.getAdmins(),
-      adminPassword: adapter.def.rconPassword || "",
+      admins: a.getAdmins(),
+      adminPassword: a.def.rconPassword || "",
     });
   }
   return NextResponse.json(players);
@@ -59,8 +57,10 @@ export async function POST(request: NextRequest) {
   const { action: playerAction, uuid, op, name } = body;
 
   // 7D2D admin operations
-  if (adapter.def.type === "7d2d" && adapter instanceof SevenDaysAdapter) {
-    const adminData = adapter.getAdminData();
+  if (adapter.def.type === "7d2d" && "getAdminData" in adapter) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sdAdapter = adapter as any;
+    const adminData = sdAdapter.getAdminData();
 
     switch (playerAction) {
       case "admin-add": {
@@ -83,13 +83,13 @@ export async function POST(request: NextRequest) {
             existing.permissionLevel = permissionLevel ?? existing.permissionLevel;
           }
         }
-        const result = adapter.saveAdminData(adminData);
+        const result = sdAdapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "admin-remove": {
         const { userId } = body;
         adminData.users = adminData.users.filter((u) => u.userId !== userId);
-        const result = adapter.saveAdminData(adminData);
+        const result = sdAdapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "whitelist-add": {
@@ -104,13 +104,13 @@ export async function POST(request: NextRequest) {
             name: name || "",
           });
         }
-        const result = adapter.saveAdminData(adminData);
+        const result = sdAdapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "whitelist-remove": {
         const { userId } = body;
         adminData.whitelist = adminData.whitelist.filter((w) => w.userId !== userId);
-        const result = adapter.saveAdminData(adminData);
+        const result = sdAdapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "blacklist-add": {
@@ -127,13 +127,13 @@ export async function POST(request: NextRequest) {
             reason: reason || "Banned via Dashboard",
           });
         }
-        const result = adapter.saveAdminData(adminData);
+        const result = sdAdapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "blacklist-remove": {
         const { userId } = body;
         adminData.blacklist = adminData.blacklist.filter((b) => b.userId !== userId);
-        const result = adapter.saveAdminData(adminData);
+        const result = sdAdapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "command-update": {
@@ -147,13 +147,13 @@ export async function POST(request: NextRequest) {
         } else {
           adminData.commands.push({ cmd, permissionLevel: permissionLevel ?? 0 });
         }
-        const result = adapter.saveAdminData(adminData);
+        const result = sdAdapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "command-remove": {
         const { cmd } = body;
         adminData.commands = adminData.commands.filter((c) => c.cmd !== cmd);
-        const result = adapter.saveAdminData(adminData);
+        const result = sdAdapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       default:
@@ -333,14 +333,16 @@ export async function POST(request: NextRequest) {
   }
 
   // Palworld player actions (RCON-based, immediate effect)
-  if (adapter.def.type === "palworld" && adapter instanceof PalworldAdapter) {
+  if (adapter.def.type === "palworld" && "kickPlayer" in adapter) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pwAdapter = adapter as any;
     switch (playerAction) {
       case "kick": {
         const steamId = body.steamId || uuid;
         if (!steamId) {
           return NextResponse.json({ success: false, message: "Steam ID required" }, { status: 400 });
         }
-        const result = await adapter.kickPlayer(steamId);
+        const result = await pwAdapter.kickPlayer(steamId);
         return NextResponse.json(result);
       }
       case "ban": {
@@ -348,11 +350,11 @@ export async function POST(request: NextRequest) {
         if (!steamId) {
           return NextResponse.json({ success: false, message: "Steam ID required" }, { status: 400 });
         }
-        const result = await adapter.banPlayer(steamId);
+        const result = await pwAdapter.banPlayer(steamId);
         return NextResponse.json(result);
       }
       case "save": {
-        const result = await adapter.saveWorld();
+        const result = await pwAdapter.saveWorld();
         return NextResponse.json(result);
       }
       case "broadcast": {
@@ -360,7 +362,7 @@ export async function POST(request: NextRequest) {
         if (!msg) {
           return NextResponse.json({ success: false, message: "Message required" }, { status: 400 });
         }
-        const result = await adapter.broadcast(msg);
+        const result = await pwAdapter.broadcast(msg);
         return NextResponse.json(result);
       }
       case "promote": {
@@ -368,7 +370,7 @@ export async function POST(request: NextRequest) {
         if (!steamId) {
           return NextResponse.json({ success: false, message: "Steam ID required" }, { status: 400 });
         }
-        const result = adapter.addAdmin(steamId);
+        const result = pwAdapter.addAdmin(steamId);
         return NextResponse.json(result);
       }
       case "demote": {
@@ -376,7 +378,7 @@ export async function POST(request: NextRequest) {
         if (!steamId) {
           return NextResponse.json({ success: false, message: "Steam ID required" }, { status: 400 });
         }
-        const result = adapter.removeAdmin(steamId);
+        const result = pwAdapter.removeAdmin(steamId);
         return NextResponse.json(result);
       }
       default:
