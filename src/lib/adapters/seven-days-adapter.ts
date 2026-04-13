@@ -689,9 +689,25 @@ export class SevenDaysAdapter implements ServerAdapter {
   }
 
   async getPlayers(): Promise<PlayerData> {
-    const players: PlayerEntry[] = [];
+    // Build known players from log (persistent across sessions)
+    const knownPlayers = new Map<string, { name: string; steamId: string; eosId: string }>();
+    const logFile = path.join(this.def.dir, "logs", "7d2d-server.log");
+    try {
+      const log = fs.readFileSync(logFile, "utf8");
+      const authRe = /\[Auth\] PlayerName authorization successful:.*?PltfmId='(Steam_\d+)',\s*CrossId='(EOS_[^']+)'.*?PlayerName='([^']+)'/g;
+      let m;
+      while ((m = authRe.exec(log)) !== null) {
+        const steamId = m[1];
+        const eosId = m[2];
+        const name = m[3];
+        knownPlayers.set(eosId, { name, steamId, eosId });
+      }
+    } catch {
+      // log may not exist
+    }
 
-    // Try to get online players via telnet
+    // Check which players are currently online via telnet
+    const onlineIds = new Set<string>();
     if (this.getState().status === "running") {
       try {
         const response = await telnetCommand(
@@ -700,25 +716,49 @@ export class SevenDaysAdapter implements ServerAdapter {
           this.telnetPassword,
           "listplayers"
         );
-        // Parse lines like: "1. id=171, Player Name, pos=(...), ...""
         const lines = response.split("\n");
         for (const line of lines) {
           const match = line.match(
             /\d+\.\s+id=(\d+),\s+(.+?),\s+pos=/
           );
           if (match) {
-            players.push({
-              uuid: match[1],
-              name: match[2].trim(),
-              groups: [],
-              isOp: false,
-            });
+            // Mark as online — use entity ID to find the player
+            const playerName = match[2].trim();
+            for (const [eosId, info] of knownPlayers) {
+              if (info.name === playerName) {
+                onlineIds.add(eosId);
+                break;
+              }
+            }
           }
         }
       } catch {
         // Telnet may not be available
       }
     }
+
+    // Get admin data to check op status
+    const adminData = this.getAdminData();
+    const adminIds = new Set(adminData.users.map(u => u.userId));
+
+    // Build player list from known players
+    const players: PlayerEntry[] = Array.from(knownPlayers.values()).map(info => ({
+      uuid: info.eosId,
+      name: info.name,
+      groups: [
+        onlineIds.has(info.eosId) ? "online" : "offline",
+        info.steamId,
+      ],
+      isOp: adminIds.has(info.steamId) || adminIds.has(info.eosId),
+    }));
+
+    // Sort: online first, then alphabetically
+    players.sort((a, b) => {
+      const aOnline = a.groups.includes("online") ? 0 : 1;
+      const bOnline = b.groups.includes("online") ? 0 : 1;
+      if (aOnline !== bOnline) return aOnline - bOnline;
+      return (a.name || "").localeCompare(b.name || "");
+    });
 
     return { players, whitelist: null, bans: null };
   }
