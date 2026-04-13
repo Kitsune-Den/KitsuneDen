@@ -14,6 +14,10 @@ KitsuneDen treats your servers like living things — each one with its own pers
 
 ---
 
+![Dashboard](docs/dashboard.png)
+
+---
+
 ## What it does
 
 - **Multi-server switcher** — manage multiple game servers from one dashboard, with live status indicators
@@ -25,6 +29,9 @@ KitsuneDen treats your servers like living things — each one with its own pers
 - **Config editor** — structured editing with friendly widgets (like the day/night cycle slider for 7D2D)
 - **World & backup views** — browse worlds, trigger and manage backups
 - **Connection info** — LAN and public IP display with click-to-copy
+
+![Configuration](docs/configuration.png)
+![Players](docs/players.png)
 
 ---
 
