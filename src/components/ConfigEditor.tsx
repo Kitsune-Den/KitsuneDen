@@ -160,7 +160,6 @@ export default function ConfigEditor() {
     PlayerSafeZoneLevel: "Player level at which safe zone protection ends.",
     PlayerSafeZoneHours: "Hours of safe zone protection for new players.",
     PartySharedKillRange: "Distance in meters for party members to share XP from kills.",
-    BedrollAllowSpawnNearBackpack: "Allow players to spawn near their dropped backpack after death.",
     AllowSpawnNearFriend: "Can new players select to join near a friend on first connect?",
     ZombieFeralSense: "Feral zombies can sense players through walls and obstacles.",
     AISmellMode: "How fast zombies move when tracking players by scent. Zombies can smell blood, food, and forges.",
@@ -182,7 +181,6 @@ export default function ConfigEditor() {
     MaxChunkAge: "In-game days before unvisited/unprotected chunks reset. -1 = never.",
     SaveDataLimit: "Max disk space per save in MB. -1 = no limit.",
     MaxQueuedMeshLayers: "Max chunk mesh layers queued during generation.",
-    UserDataFolder: "Override path for all user data, saves, and RWG worlds. Leave blank for default.",
     ServerDisabledNetworkProtocols: "Protocols to disable. Dedicated servers should disable SteamNetworking if port-forwarding is set up.",
     ServerReservedSlotsPermission: "Permission level required to use reserved slots.",
     PersistentPlayerProfiles: "If enabled, players always join with the last profile they used.",
@@ -234,7 +232,6 @@ export default function ConfigEditor() {
           PlayerSafeZoneLevel: "5",
           PlayerSafeZoneHours: "5",
           PartySharedKillRange: "100",
-          BedrollAllowSpawnNearBackpack: "true",
           AllowSpawnNearFriend: "2",
           BedrollExpiryTime: "45",
           // Zombies
@@ -260,7 +257,6 @@ export default function ConfigEditor() {
           MaxChunkAge: "-1",
           SaveDataLimit: "-1",
           MaxQueuedMeshLayers: "1000",
-          UserDataFolder: "",
         };
         for (const [key, value] of Object.entries(defaults7d2d)) {
           if (!Object.prototype.hasOwnProperty.call(nextConfig, key)) {
@@ -692,7 +688,6 @@ export default function ConfigEditor() {
         "PartySharedKillRange",
         "DeathPenalty",
         "JarRefund",
-        "BedrollAllowSpawnNearBackpack",
         "AllowSpawnNearFriend",
         "PersistentPlayerProfiles",
       ],
@@ -785,7 +780,6 @@ export default function ConfigEditor() {
         "MaxChunkAge",
         "SaveDataLimit",
         "MaxQueuedMeshLayers",
-        "UserDataFolder",
       ],
     },
   ];
@@ -973,10 +967,6 @@ export default function ConfigEditor() {
       { value: "150", label: "150%" },
       { value: "200", label: "200%" },
       { value: "300", label: "300%" },
-    ],
-    BedrollAllowSpawnNearBackpack: [
-      { value: "true", label: "On" },
-      { value: "false", label: "Off" },
     ],
     AllowSpawnNearFriend: [
       { value: "0", label: "0 - Disabled" },
