@@ -12,7 +12,7 @@ import {
 interface ServerInfo {
   id: string;
   name: string;
-  type: "minecraft" | "hytale" | "7d2d" | "palworld";
+  type: "minecraft" | "hytale" | "7d2d" | "palworld" | "enshrouded";
   status: string;
   loader?: string;
   version?: string;

@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   let status = adapter.getStatus();
-  if (adapter.def.type === "hytale" || adapter.def.type === "palworld") {
+  if (adapter.def.type === "hytale" || adapter.def.type === "palworld" || adapter.def.type === "enshrouded") {
     const stats = await adapter.getStats();
     status = stats.process ? "running" : "stopped";
   }

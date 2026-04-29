@@ -19,11 +19,13 @@ import AirdropManager from "@/components/hytale/AirdropManager";
 import DocsPage from "@/components/DocsPage";
 import PalworldUpdateManager from "@/components/palworld/UpdateManager";
 import HytaleUpdateManager from "@/components/hytale/UpdateManager";
+import EnshroudedUpdateManager from "@/components/enshrouded/UpdateManager";
 import ServersPage from "@/components/ServersPage";
 
 function UpdatePage() {
   const { currentServer } = useServer();
   if (currentServer?.type === "hytale") return <HytaleUpdateManager />;
+  if (currentServer?.type === "enshrouded") return <EnshroudedUpdateManager />;
   return <PalworldUpdateManager />;
 }
 

@@ -8,7 +8,7 @@ export async function GET() {
     adapters.map(async (a) => {
       // For Hytale, check process status dynamically
       let status = a.getStatus();
-      if (a.def.type === "hytale" || a.def.type === "palworld") {
+      if (a.def.type === "hytale" || a.def.type === "palworld" || a.def.type === "enshrouded") {
         const stats = await a.getStats();
         status = stats.process ? "running" : "stopped";
       }
