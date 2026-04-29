@@ -10,7 +10,7 @@
 
 A warm, unified dashboard for managing your home game servers.
 
-KitsuneDen treats your servers like living things — each one with its own personality, its own logs, its own place in the Den. It's built for the kind of person who runs a Minecraft server for their friends, a 7 Days to Die world for the weekend, and wants one clean interface to watch over all of it.
+KitsuneDen treats your servers like living things, each one with its own personality, its own logs, its own place in the Den. It's built for the kind of person who runs a Minecraft server for their friends, a 7 Days to Die world for the weekend, and wants one clean interface to watch over all of it.
 
 ---
 
@@ -20,15 +20,15 @@ KitsuneDen treats your servers like living things — each one with its own pers
 
 ## What it does
 
-- **Multi-server switcher** — manage multiple game servers from one dashboard, with live status indicators
-- **Add servers from the UI** — no more editing config files by hand; add, edit, and remove servers with a native folder picker
-- **Live console** — real-time log streaming with command input and history
-- **Server controls** — start, stop, restart from the top bar with one click
-- **Player management** — whitelist, op, ban, and kick controls
-- **Mod & modpack management** — upload, organize, and activate mod sets
-- **Config editor** — structured editing with friendly widgets (like the day/night cycle slider for 7D2D)
-- **World & backup views** — browse worlds, trigger and manage backups
-- **Connection info** — LAN and public IP display with click-to-copy
+- **Multi-server switcher**: manage multiple game servers from one dashboard, with live status indicators
+- **Add servers from the UI**: no more editing config files by hand; add, edit, and remove servers with a native folder picker
+- **Live console**: real-time log streaming with command input and history
+- **Server controls**: start, stop, restart from the top bar with one click
+- **Player management**: whitelist, op, ban, and kick controls
+- **Mod & modpack management**: upload, organize, and activate mod sets
+- **Config editor**: structured editing with friendly widgets (like the day/night cycle slider for 7D2D)
+- **World & backup views**: browse worlds, trigger and manage backups
+- **Connection info**: LAN and public IP display with click-to-copy
 
 ![Configuration](docs/configuration.png)
 ![Players](docs/players.png)
@@ -46,7 +46,7 @@ KitsuneDen treats your servers like living things — each one with its own pers
 | Hytale | `hytale` | ✅ Full support |
 | Palworld | `palworld` | ✅ Full support |
 | Enshrouded | `enshrouded` | ✅ Full support |
-| Others | — | 🔧 Add your own adapter |
+| Others | - | 🔧 Add your own adapter |
 
 Adding a new game type means writing one adapter class. See [Adding a new game](#adding-a-new-game).
 
@@ -69,7 +69,7 @@ npm install
 
 ### Configure
 
-You can add servers directly from the dashboard UI — click **Add Server** on the Servers page, pick your game type, browse to the install directory, and fill in the connection details.
+You can add servers directly from the dashboard UI. Click **Add Server** on the Servers page, pick your game type, browse to the install directory, and fill in the connection details.
 
 Or if you prefer, copy the example config and edit it manually:
 
@@ -122,7 +122,7 @@ See `servers.example.json` for full examples including NeoForge (argfile launch)
 
 ### Server types
 
-**`minecraft`** — Fabric, NeoForge, Vanilla, and most other loaders
+**`minecraft`**: Fabric, NeoForge, Vanilla, and most other loaders
 
 | Field | Required | Description |
 |-------|----------|-------------|
@@ -135,7 +135,7 @@ See `servers.example.json` for full examples including NeoForge (argfile launch)
 | `rconPort` | Optional | RCON port for commands |
 | `rconPassword` | Optional | RCON password |
 
-**`7d2d`** — 7 Days to Die
+**`7d2d`**: 7 Days to Die
 
 | Field | Required | Description |
 |-------|----------|-------------|
@@ -145,7 +145,7 @@ See `servers.example.json` for full examples including NeoForge (argfile launch)
 | `telnetPassword` | Optional | Telnet password |
 | `modsDir` | Optional | Mods directory name |
 
-**`hytale`** — Hytale
+**`hytale`**: Hytale
 
 | Field | Required | Description |
 |-------|----------|-------------|
@@ -155,7 +155,7 @@ See `servers.example.json` for full examples including NeoForge (argfile launch)
 | `processFilter` | Optional | Process name filter |
 | `gamePort` | ✅ | Port players connect to |
 
-**`palworld`** — Palworld
+**`palworld`**: Palworld
 
 | Field | Required | Description |
 |-------|----------|-------------|
@@ -167,7 +167,7 @@ See `servers.example.json` for full examples including NeoForge (argfile launch)
 | `restApiPort` | Optional | REST API port (default 8212) |
 | `restApiPassword` | Optional | REST API password |
 
-**`enshrouded`** — Enshrouded
+**`enshrouded`**: Enshrouded
 
 | Field | Required | Description |
 |-------|----------|-------------|
@@ -192,7 +192,7 @@ KitsuneDen uses an adapter pattern. Every game type is an adapter class that imp
 3. Register it in `adapter-registry.ts`
 4. Add the type to `ServerDefinition` in `types.ts`
 
-The interface covers lifecycle (start/stop/restart), logs, stats, config, and players. Implement what your game supports — capabilities flags tell the UI what to show.
+The interface covers lifecycle (start/stop/restart), logs, stats, config, and players. Implement what your game supports; capabilities flags tell the UI what to show.
 
 ```ts
 export const capabilities: ServerCapabilities = {
@@ -227,21 +227,21 @@ KitsuneDen runs best as a scheduled task rather than a startup script (antivirus
 
 KitsuneDen is built with a philosophy: your servers aren't cold infrastructure, they're creatures worth tending. Dashboards are companions. Logs are journals. Ports are doorways.
 
-The [Operator's Manual](src/den-operators-manual/00-preface.md) covers everything about the Den's architecture, spirits, and care — written to be understood, maintained, and enjoyed.
+The [Operator's Manual](src/den-operators-manual/00-preface.md) covers everything about the Den's architecture, spirits, and care, written to be understood, maintained, and enjoyed.
 
 ---
 
 ## Stack
 
-- [Next.js](https://nextjs.org/) — App Router, TypeScript
-- [Tailwind CSS](https://tailwindcss.com/) — utility-first styling
-- [Lucide](https://lucide.dev/) — icons
+- [Next.js](https://nextjs.org/): App Router, TypeScript
+- [Tailwind CSS](https://tailwindcss.com/): utility-first styling
+- [Lucide](https://lucide.dev/): icons
 
 ---
 
 ## Contributing
 
-Pull requests welcome. If you've written an adapter for a new game, please share it — the Den grows when more spirits join.
+Pull requests welcome. If you've written an adapter for a new game, please share it. The Den grows when more spirits join.
 
 ---
 
