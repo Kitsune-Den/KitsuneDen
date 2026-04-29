@@ -125,8 +125,24 @@ export default function ConfigEditor() {
     MaxBuildingLimitNum: "Max building pieces per base. 0 = unlimited.",
   };
 
+  const enshroudedFieldHelp: Record<string, string> = {
+    name: "Server name shown in the Enshrouded server browser.",
+    serverPassword: "Optional join password. Leave empty for no password (group passwords still apply).",
+    slotCount: "Maximum players that can be online at once (1-16 supported).",
+    gamePort: "UDP port players connect to (default 15637). Forward this on the router.",
+    queryPort: "UDP port for Steam server queries (default 15638). Forward this on the router.",
+    ip: "Bind address. Leave 0.0.0.0 to listen on all network interfaces.",
+    saveDirectory: "Folder (relative to the install dir) where the world is saved.",
+    logDirectory: "Folder (relative to the install dir) where logs are written.",
+    voiceChatMode: "Proximity = positional/area voice. Disabled = voice off entirely.",
+    enableVoiceChat: "Master toggle for in-game voice chat.",
+    enableTextChat: "Master toggle for in-game text chat.",
+    userGroups: "Per-group permissions and passwords (Admin/Friend/Guest etc.). Edit as raw JSON.",
+  };
+
   const fieldHelp = {
     ...(currentServer?.type === "palworld" ? palworldFieldHelp : {}),
+    ...(currentServer?.type === "enshrouded" ? enshroudedFieldHelp : {}),
     ...(currentServer?.type === "hytale"
       ? {
           DisplayTmpTagsInStrings:
@@ -500,6 +516,7 @@ export default function ConfigEditor() {
 
     const isMinecraft = currentServer?.type === "minecraft";
     const is7d2d = currentServer?.type === "7d2d";
+    const isEnshrouded = currentServer?.type === "enshrouded";
     const pwSelectOptions = isPalworld ? palworldSelectOptions[key] : undefined;
     const mcSelectOptions: Record<string, string[]> = {
       difficulty: ["peaceful", "easy", "normal", "hard"],
@@ -510,6 +527,7 @@ export default function ConfigEditor() {
       ? Array.from(new Set([String(value ?? ""), ...selectOptions].filter(Boolean)))
       : null;
     const sdSelectOptions = is7d2d ? sevenDaysSelectOptions[key] : undefined;
+    const enSelectOptions = isEnshrouded ? enshroudedSelectOptions[key] : undefined;
 
     return (
       <div key={key} className="flex flex-col gap-2">
@@ -554,6 +572,25 @@ export default function ConfigEditor() {
                   ? []
                   : ([[String(value ?? ""), String(value ?? "")]] as [string, string][])),
                 ...sdSelectOptions.map((o) => [o.value, o.label] as [string, string]),
+              ])
+            ).map(([val, lbl]) => (
+              <option key={val} value={val}>
+                {lbl}
+              </option>
+            ))}
+          </select>
+        ) : enSelectOptions ? (
+          <select
+            value={String(value ?? "")}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, [key]: e.target.value }))}
+            className="w-full max-w-[280px] px-3 py-2 bg-den-bg text-den-text text-[13px] rounded-lg border border-den-border focus:border-den-border-light outline-none"
+          >
+            {Array.from(
+              new Map<string, string>([
+                ...(enSelectOptions.find((o) => o.value === String(value ?? ""))
+                  ? []
+                  : ([[String(value ?? ""), String(value ?? "")]] as [string, string][])),
+                ...enSelectOptions.map((o) => [o.value, o.label] as [string, string]),
               ])
             ).map(([val, lbl]) => (
               <option key={val} value={val}>
@@ -1145,6 +1182,36 @@ export default function ConfigEditor() {
     ],
   };
 
+  // ---- Enshrouded config layout ----
+
+  const enshroudedCoreKeys = ["name", "serverPassword", "slotCount", "ip"];
+
+  const enshroudedGroups = [
+    {
+      title: "Network",
+      keys: ["gamePort", "queryPort"],
+    },
+    {
+      title: "Storage",
+      keys: ["saveDirectory", "logDirectory"],
+    },
+    {
+      title: "Chat & Voice",
+      keys: ["voiceChatMode", "enableVoiceChat", "enableTextChat"],
+    },
+    {
+      title: "Groups & Permissions",
+      keys: ["userGroups"],
+    },
+  ];
+
+  const enshroudedSelectOptions: Record<string, { value: string; label: string }[]> = {
+    voiceChatMode: [
+      { value: "Proximity", label: "Proximity (positional)" },
+      { value: "Disabled", label: "Disabled" },
+    ],
+  };
+
   const minecraftCoreKeys = ["server-name", "level-seed", "motd"];
   const minecraftGroups = [
     {
@@ -1214,9 +1281,11 @@ export default function ConfigEditor() {
                 ? "serverconfig.xml"
                 : currentServer?.type === "palworld"
                   ? "PalWorldSettings.ini"
-                  : format === "properties"
-                    ? "server.properties"
-                    : "config.json"})
+                  : currentServer?.type === "enshrouded"
+                    ? "enshrouded_server.json"
+                    : format === "properties"
+                      ? "server.properties"
+                      : "config.json"})
             </span>
           </h3>
           <div className="flex gap-2 items-center">
@@ -1425,6 +1494,64 @@ export default function ConfigEditor() {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {palworldCoreKeys.map((key) =>
+                          Object.prototype.hasOwnProperty.call(formValues, key) ? renderField(key) : null
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Categorized Groups */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      {groups.map((group) => (
+                        <div
+                          key={group.title}
+                          className="bg-den-surface/40 border border-den-border rounded-xl p-4 space-y-3"
+                        >
+                          <div className="text-[12px] uppercase tracking-widest text-den-text-dim font-semibold">
+                            {group.title}
+                          </div>
+                          <div className="grid grid-cols-1 gap-3">
+                            {group.keys.map((key) => renderField(key))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()
+            ) : currentServer?.type === "enshrouded" ? (
+              (() => {
+                const usedKeys = new Set<string>([
+                  ...enshroudedCoreKeys,
+                  ...enshroudedGroups.flatMap((group) => group.keys),
+                ]);
+                const remainingKeys = Object.keys(formValues)
+                  .filter((key) => !usedKeys.has(key))
+                  .sort((a, b) => a.localeCompare(b));
+                const groups = enshroudedGroups
+                  .filter((group) =>
+                    group.keys.some((key) => Object.prototype.hasOwnProperty.call(formValues, key))
+                  )
+                  .map((group) => ({
+                    ...group,
+                    keys: group.keys.filter((key) =>
+                      Object.prototype.hasOwnProperty.call(formValues, key)
+                    ),
+                  }));
+
+                if (remainingKeys.length > 0) {
+                  groups.push({ title: "Other", keys: remainingKeys });
+                }
+
+                return (
+                  <>
+                    {/* Core Settings */}
+                    <div className="bg-gradient-to-r from-den-surface/60 to-transparent border border-den-border rounded-xl p-5 space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-1 h-5 rounded-full bg-gradient-to-b from-den-cyan to-[#29b6f6]" />
+                        <h4 className="text-sm font-bold tracking-wide uppercase text-den-text">Core Settings</h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {enshroudedCoreKeys.map((key) =>
                           Object.prototype.hasOwnProperty.call(formValues, key) ? renderField(key) : null
                         )}
                       </div>

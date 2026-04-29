@@ -54,6 +54,18 @@
       "restApiPort": 8212,
       "restApiPassword": "your-admin-password",
       "steamCmdPath": "C:\\SteamCMD\\steamcmd.exe"
+    },
+    {
+      "id": "enshrouded",
+      "name": "Enshrouded",
+      "type": "enshrouded",
+      "dir": "C:\\GameServers\\Enshrouded-Server",
+      "startScript": "start_enshrouded.bat",
+      "configFile": "enshrouded_server.json",
+      "steamCmdPath": "C:\\SteamCMD\\steamcmd.exe",
+      "steamAppId": 2278520,
+      "gamePort": 15637,
+      "queryPort": 15638
     }
   ],
   "dashboard": {

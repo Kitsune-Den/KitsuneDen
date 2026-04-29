@@ -17,6 +17,7 @@ const TYPE_PILL: Record<string, { label: string; color: string }> = {
   "7d2d": { label: "7 Days to Die", color: "bg-red-500/20 text-red-400 border-red-500/30" },
   hytale: { label: "Hytale", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
   palworld: { label: "Palworld", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  enshrouded: { label: "Enshrouded", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
 };
 
 interface DeleteTarget {
@@ -64,6 +65,12 @@ const TYPE_FIELDS: Record<string, FieldDef[]> = {
     { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates" },
     { key: "restApiPort", label: "REST API Port", type: "number", hint: "REST API port (default 8212)" },
     { key: "restApiPassword", label: "REST API Password", type: "password", hint: "Admin password for the REST API" },
+  ],
+  enshrouded: [
+    { key: "queryPort", label: "Query Port", type: "number", hint: "Steam query port (default 15638)" },
+    { key: "configFile", label: "Config File", type: "text", hint: "Config filename (default: enshrouded_server.json)" },
+    { key: "startScript", label: "Start Script", type: "text", hint: "Optional bat file (default: start_enshrouded.bat). Falls back to launching enshrouded_server.exe directly." },
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates (app id 2278520)" },
   ],
 };
 
@@ -536,6 +543,7 @@ export default function ServersPage() {
               <option value="minecraft">Minecraft</option>
               <option value="hytale">Hytale</option>
               <option value="palworld">Palworld</option>
+              <option value="enshrouded">Enshrouded</option>
             </select>
           </div>
 

@@ -5,7 +5,7 @@ import { ChildProcess } from "child_process";
 export interface ServerDefinition {
   id: string;
   name: string;
-  type: "minecraft" | "hytale" | "7d2d" | "palworld";
+  type: "minecraft" | "hytale" | "7d2d" | "palworld" | "enshrouded";
   dir: string;
 
   // Minecraft-specific
@@ -37,6 +37,9 @@ export interface ServerDefinition {
   steamAppId?: number;
   restApiPort?: number;
   restApiPassword?: string;
+
+  // Enshrouded-specific
+  queryPort?: number;
 
   // Shared optional
   modsDir?: string;
