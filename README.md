@@ -45,6 +45,7 @@ KitsuneDen treats your servers like living things — each one with its own pers
 | 7 Days to Die | `7d2d` | ✅ Full support |
 | Hytale | `hytale` | ✅ Full support |
 | Palworld | `palworld` | ✅ Full support |
+| Enshrouded | `enshrouded` | ✅ Full support |
 | Others | — | 🔧 Add your own adapter |
 
 Adding a new game type means writing one adapter class. See [Adding a new game](#adding-a-new-game).
@@ -165,6 +166,20 @@ See `servers.example.json` for full examples including NeoForge (argfile launch)
 | `rconPassword` | Optional | RCON password |
 | `restApiPort` | Optional | REST API port (default 8212) |
 | `restApiPassword` | Optional | REST API password |
+
+**`enshrouded`** — Enshrouded
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `dir` | ✅ | Path to server directory |
+| `startScript` | Optional | Startup bat (falls back to `enshrouded_server.exe`) |
+| `configFile` | Optional | Config filename (default `enshrouded_server.json`) |
+| `steamCmdPath` | Optional | Path to steamcmd.exe for updates (Steam app id 2278520) |
+| `gamePort` | Optional | UDP game port (default 15637) |
+| `queryPort` | Optional | UDP Steam query port (default 15638) |
+
+> Enshrouded ships no RCON or REST API, so live commands are unavailable;
+> player presence is best-effort scraped from connect/disconnect log lines.
 
 ---
 
