@@ -333,6 +333,35 @@ export class MinecraftAdapter implements ServerAdapter {
   }
 
   sendCommand(cmd: string): ActionResult {
+    // Remote servers: there's no local stdin to write to, but RCON is open.
+    // Two behaviors layered on top of the local path:
+    //   1. Refuse shutdown-shaped commands (stop / restart / shutdown). The
+    //      dashboard can RCON them, but can't bring the server back up — a
+    //      casual typo would orphan the server.
+    //   2. Anything else goes over RCON fire-and-forget, mirroring the
+    //      "write to stdin, response comes back through the log stream"
+    //      shape of the local path. sendCommand stays sync; the async
+    //      response shows up later via addLog().
+    if (this.def.rconHost) {
+      // Tolerate leading slash and trailing args ("stop", "/stop", "stop 10").
+      const firstWord = cmd.trim().toLowerCase().replace(/^\//, "").split(/\s+/)[0];
+      if (firstWord === "stop" || firstWord === "restart" || firstWord === "shutdown") {
+        const msg = `'${firstWord}' is a lifecycle command — the dashboard refuses it for remote MC servers (rconHost=${this.def.rconHost}) because there's no way to bring the server back up from here. Use the launcher on the host (MCSS panel, run.bat, nssm) to restart.`;
+        this.addLog(`[Dashboard] ${msg}`);
+        return { success: false, message: msg };
+      }
+
+      this.addLog(`[Console] > ${cmd}`);
+      this.sendRconCommand(cmd)
+        .then((response) => {
+          if (response) this.addLog(response);
+        })
+        .catch((e) => {
+          this.addLog(`[RCON Error] ${(e as Error).message}`);
+        });
+      return { success: true, message: "Command sent via RCON" };
+    }
+
     const state = this.getState();
     if (!state.process || state.status !== "running") {
       return { success: false, message: "Server is not running" };
