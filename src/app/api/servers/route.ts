@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllAdapters, addServer, removeServer, updateServer } from "@/lib/adapters/adapter-registry";
+import { resolveServerStatus } from "@/lib/adapters/reachability";
 
 export async function GET() {
   const adapters = getAllAdapters();
 
   const servers = await Promise.all(
-    adapters.map(async (a) => {
-      // For Hytale, check process status dynamically
-      let status = a.getStatus();
-      if (a.def.type === "hytale" || a.def.type === "palworld" || a.def.type === "enshrouded") {
-        const stats = await a.getStats();
-        status = stats.process ? "running" : "stopped";
-      }
-
-      return {
-        ...a.def,
-        status,
-        capabilities: a.capabilities,
-      };
-    })
+    adapters.map(async (a) => ({
+      ...a.def,
+      status: await resolveServerStatus(a),
+      capabilities: a.capabilities,
+    }))
   );
 
   return NextResponse.json({ servers });
