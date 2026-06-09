@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllAdapters, addServer, removeServer, updateServer } from "@/lib/adapters/adapter-registry";
+import { probeServerReachable } from "@/lib/reachability";
 
 export async function GET() {
   const adapters = getAllAdapters();
 
   const servers = await Promise.all(
     adapters.map(async (a) => {
-      // For Hytale, check process status dynamically
+      // Hytale/Palworld/Enshrouded report runtime status via a process scan
+      // in getStats(). For Minecraft and 7D2D we don't have that path, so a
+      // TCP probe of the control port (RCON / telnet) catches externally-
+      // managed servers (nssm, systemd) that the adapter never spawned.
       let status = a.getStatus();
       if (a.def.type === "hytale" || a.def.type === "palworld" || a.def.type === "enshrouded") {
         const stats = await a.getStats();
         status = stats.process ? "running" : "stopped";
+      } else if (status === "stopped") {
+        const reachable = await probeServerReachable(a.def);
+        if (reachable === true) status = "running";
       }
 
       return {
