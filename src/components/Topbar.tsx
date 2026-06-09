@@ -1,7 +1,7 @@
 "use client";
 
 import { useServer } from "@/contexts/ServerContext";
-import { Play, Square, RotateCcw } from "lucide-react";
+import { Play, Square, RotateCcw, LogOut } from "lucide-react";
 import { useState, useCallback } from "react";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -99,6 +99,19 @@ export default function Topbar({ activePage }: TopbarProps) {
         >
           <RotateCcw size={14} />
           Restart
+        </button>
+
+        {/* Sign out — clears the shared-password session cookie and bounces to /login. */}
+        <button
+          onClick={async () => {
+            await fetch("/api/auth/logout", { method: "POST" });
+            window.location.href = "/login";
+          }}
+          className="flex items-center justify-center w-9 h-9 rounded-lg bg-den-surface border border-den-border text-den-text-muted hover:text-den-text hover:border-den-border-light transition-all"
+          title="Sign out"
+          aria-label="Sign out"
+        >
+          <LogOut size={14} />
         </button>
       </div>
     </header>
