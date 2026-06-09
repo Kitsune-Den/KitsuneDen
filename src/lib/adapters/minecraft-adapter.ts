@@ -376,8 +376,10 @@ export class MinecraftAdapter implements ServerAdapter {
    */
   private async sendRconCommand(command: string): Promise<string> {
     const { Rcon } = await import("rcon-client");
+    // Honor rconHost when set, so the dashboard can manage an MC server
+    // on a LAN/tailnet peer. Default loopback preserves the all-local shape.
     const rcon = await Rcon.connect({
-      host: "127.0.0.1",
+      host: this.def.rconHost || "127.0.0.1",
       port: this.def.rconPort || 25575,
       password: this.def.rconPassword || "",
     });

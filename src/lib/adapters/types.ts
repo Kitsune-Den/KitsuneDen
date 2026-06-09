@@ -17,6 +17,12 @@ export interface ServerDefinition {
   javaPath?: string;
   rconPort?: number;
   rconPassword?: string;
+  /** Host where the MC server lives. Optional — defaults to "127.0.0.1" when
+   * unset, preserving the all-local deploy shape. Set this when KitsuneDen
+   * runs on a different box than the MC server (e.g. dashboard on
+   * `kitsuneden-host`, server on a LAN peer at 192.168.x.y). Used for RCON
+   * connection AND the reachability probe — gameport and RCON co-locate. */
+  rconHost?: string;
   gamePort?: number;
 
   // Hytale-specific
