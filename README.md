@@ -79,6 +79,24 @@ cp servers.example.json servers.json
 
 See [Configuration](#configuration) for field details.
 
+### Auth
+
+KitsuneDen ships with a shared-password gate. Before you can boot it, set two environment variables:
+
+```bash
+cp .env.example .env
+# then edit .env and put real values in
+```
+
+| Variable | What it is |
+|---|---|
+| `KITSUNEDEN_PASSWORD` | The shared password. Everyone you let into the Den knows this one. |
+| `KITSUNEDEN_SESSION_SECRET` | HMAC key for signing session cookies. 32+ random chars. Generate with `openssl rand -base64 48`. |
+
+If either is missing, the login page renders a setup-required banner instead of a password prompt, and API calls return `503`. The session lasts 7 days; rotating `KITSUNEDEN_SESSION_SECRET` invalidates every active session (forces a re-login), which is what you want when a password leaks.
+
+**Trade-off:** shared password means no per-user audit trail and rotation means telling everyone the new password. Fine for a small home dashboard; if you ever need per-user accounts, the gate is structured to swap in without breaking the cookie shape.
+
 ### Run
 
 ```bash
