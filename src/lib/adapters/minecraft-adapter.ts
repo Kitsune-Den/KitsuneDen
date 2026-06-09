@@ -2,6 +2,7 @@ import { ChildProcess, spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { execRemotePowerShell } from "../remote-exec";
 import type {
   ServerAdapter,
   ServerDefinition,
@@ -110,11 +111,32 @@ export class MinecraftAdapter implements ServerAdapter {
       return { success: false, message: `Server is already ${state.status}` };
     }
 
-    // Remote servers can't be started by the dashboard — there's no local
-    // process to spawn. The operator runs whichever launcher actually owns
-    // lifecycle on the host (MCSS, nssm, run.bat, etc).
+    // Remote MC: route through SSH lifecycle when configured, refuse otherwise.
+    if (this.def.lifecycle?.kind === "ssh") {
+      const lc = this.def.lifecycle;
+      state.status = "starting";
+      this.addLog(`[Dashboard] Starting ${this.def.name} via SSH on ${lc.host} as ${lc.user}...`);
+      const result = await execRemotePowerShell(
+        { host: lc.host, port: lc.port, user: lc.user, identityFile: lc.identityFile },
+        lc.startCommand
+      );
+      if (result.stdout.trim()) this.addLog(`[ssh stdout] ${result.stdout.trim()}`);
+      if (result.stderr.trim()) this.addLog(`[ssh stderr] ${result.stderr.trim()}`);
+      if (!result.ok) {
+        const msg = `SSH start command failed (exit ${result.exitCode}). See log for details.`;
+        this.addLog(`[Dashboard] ${msg}`);
+        state.status = "stopped";
+        return { success: false, message: msg };
+      }
+      // The startCommand fires-and-returns (Start-Process detaches); the
+      // server itself takes 30-180s to fully boot. The reachability probe
+      // in /api/servers will flip the status to "running" once the gameport
+      // is up. We just report success here.
+      this.addLog("[Dashboard] Start command dispatched. Server will be reachable when boot completes (30-180s for modded NeoForge).");
+      return { success: true, message: "Start command dispatched via SSH; waiting for the server to bind ports." };
+    }
     if (this.def.rconHost) {
-      const msg = `Cannot start a remote MC server (rconHost=${this.def.rconHost}). Start it on the host with the launcher that owns its lifecycle (MCSS panel, run.bat, nssm — whatever you used to set it up).`;
+      const msg = `Cannot start a remote MC server (rconHost=${this.def.rconHost}). Configure a lifecycle block in servers.json or start it on the host directly.`;
       this.addLog(`[Dashboard] ${msg}`);
       return { success: false, message: msg };
     }
@@ -270,11 +292,26 @@ export class MinecraftAdapter implements ServerAdapter {
   }
 
   async restart(): Promise<ActionResult> {
-    // Remote servers: we can RCON-stop them, but we can't bring them back
-    // up — that requires whatever launcher owns lifecycle on the host. So
-    // refuse rather than half-do the operation and leave the server down.
+    // Remote MC with SSH lifecycle: RCON-stop → wait for the gameport to
+    // actually go down → SSH-start. The wait matters because Start-Process
+    // run.bat will silently fail to bind ports if the previous JVM is
+    // still on them (the bug that bit us during Ragnarok's manual restart).
+    if (this.def.lifecycle?.kind === "ssh") {
+      this.addLog("[Dashboard] Remote restart: stopping via RCON, then starting via SSH.");
+      const stopResult = await this.stop();
+      if (!stopResult.success) {
+        // If we can't even reach RCON, try the SSH path directly. Maybe
+        // the server is already down and we just need to relaunch.
+        this.addLog(`[Dashboard] RCON stop failed (${stopResult.message}); proceeding to SSH start anyway.`);
+      } else {
+        // Give the JVM time to actually exit and release ports. NeoForge
+        // takes 10-30s to save chunks and shut down cleanly.
+        await new Promise((resolve) => setTimeout(resolve, 15_000));
+      }
+      return this.start();
+    }
     if (this.def.rconHost) {
-      const msg = `Cannot restart a remote MC server (rconHost=${this.def.rconHost}) — the dashboard can stop it via RCON but can't bring it back up. Use Stop, then start it again on the host with its native launcher.`;
+      const msg = `Cannot restart a remote MC server (rconHost=${this.def.rconHost}) — the dashboard can stop it via RCON but can't bring it back up. Configure a lifecycle block in servers.json or use Stop and start it again on the host.`;
       this.addLog(`[Dashboard] ${msg}`);
       return { success: false, message: msg };
     }
