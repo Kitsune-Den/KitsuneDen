@@ -1,5 +1,41 @@
 import { ChildProcess } from "child_process";
 
+// ---- Lifecycle control (remote start/restart) ----
+
+/**
+ * Configures how the dashboard executes start/restart for servers that
+ * live on a remote host. Currently only SSH transport is implemented.
+ *
+ * Fields:
+ *   - `kind`: must be `"ssh"`. Reserved for future transports (HTTP agent,
+ *      WinRM, etc).
+ *   - `host` / `user`: target of the SSH connection.
+ *   - `port`: SSH port, defaults to 22.
+ *   - `identityFile`: absolute path on the dashboard host to the private
+ *      key. The nssm service runs as LocalSystem, so the file must be
+ *      readable by SYSTEM — see runbook for ACL recipe.
+ *   - `startCommand`: a PowerShell command to run on the remote host that
+ *      brings the server up. Executed via `powershell -EncodedCommand` so
+ *      pipes / quotes / multi-line content survive cmd.exe's quoting.
+ *   - `stopCommand`: optional PowerShell command used as the last-resort
+ *      fallback if RCON `stop` fails or RCON is unreachable. When unset,
+ *      stop() only tries RCON.
+ *
+ * Security note: startCommand and stopCommand are arbitrary PowerShell
+ * snippets loaded from servers.json. They run with whatever permissions
+ * the SSH user has on the remote host. Treat servers.json with the same
+ * care you'd treat /etc/sudoers — admin-only write access on the box.
+ */
+export interface LifecycleControl {
+  kind: "ssh";
+  host: string;
+  port?: number;
+  user: string;
+  identityFile: string;
+  startCommand: string;
+  stopCommand?: string;
+}
+
 // ---- Server Definition (read from servers.json) ----
 
 export interface ServerDefinition {
@@ -23,6 +59,11 @@ export interface ServerDefinition {
    * `kitsuneden-host`, server on a LAN peer at 192.168.x.y). Used for RCON
    * connection AND the reachability probe — gameport and RCON co-locate. */
   rconHost?: string;
+  /** Optional remote-lifecycle control. When set, start() / restart() execute
+   * the configured command on the remote host via SSH instead of refusing.
+   * Stop still prefers RCON `stop` (cleaner shutdown than SIGKILL) regardless.
+   * See [[remote-exec]] for the SSH transport. */
+  lifecycle?: LifecycleControl;
   gamePort?: number;
 
   // Hytale-specific
