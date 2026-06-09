@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
+import { resolveServerStatus } from "@/lib/adapters/reachability";
 
 function getServerId(request: NextRequest): string {
   return request.nextUrl.searchParams.get("server") || getDefaultServerId();
@@ -11,12 +12,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unknown server" }, { status: 404 });
   }
 
-  let status = adapter.getStatus();
-  if (adapter.def.type === "hytale" || adapter.def.type === "palworld" || adapter.def.type === "enshrouded") {
-    const stats = await adapter.getStats();
-    status = stats.process ? "running" : "stopped";
-  }
-
+  const status = await resolveServerStatus(adapter);
   return NextResponse.json({ status });
 }
 
