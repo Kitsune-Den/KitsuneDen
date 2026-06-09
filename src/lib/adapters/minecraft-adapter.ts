@@ -495,6 +495,16 @@ export class MinecraftAdapter implements ServerAdapter {
     }
   }
 
+  /**
+   * Public RCON entry point for callers outside the adapter (e.g. the
+   * /api/players POST handler). Routes through the same connection logic
+   * as the internal sendRconCommand. Returns the raw server response
+   * text — callers parse as needed. Throws on connection / auth failure.
+   */
+  public async rconSend(command: string): Promise<string> {
+    return this.sendRconCommand(command);
+  }
+
   async getPlayers(): Promise<PlayerData> {
     // Minecraft uses whitelist.json / ops.json for the durable roster, plus an
     // RCON `list` for who's online RIGHT NOW (the rosters say nothing about
