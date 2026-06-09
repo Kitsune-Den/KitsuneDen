@@ -706,35 +706,38 @@ export class SevenDaysAdapter implements ServerAdapter {
       // log may not exist
     }
 
-    // Check which players are currently online via telnet
+    // Check which players are currently online via telnet. We DON'T gate on
+    // getState().status — that's the internal-spawn state machine, which
+    // always reports "stopped" for nssm/systemd-managed servers and would
+    // silently skip the probe (matches the bug PR #10 fixed for the status
+    // endpoint, surfaced for getPlayers too). The try/catch below absorbs
+    // "telnet refused" cleanly when the server is actually off.
     const onlineIds = new Set<string>();
-    if (this.getState().status === "running") {
-      try {
-        const response = await telnetCommand(
-          "127.0.0.1",
-          this.telnetPort,
-          this.telnetPassword,
-          "listplayers"
+    try {
+      const response = await telnetCommand(
+        "127.0.0.1",
+        this.telnetPort,
+        this.telnetPassword,
+        "listplayers"
+      );
+      const lines = response.split("\n");
+      for (const line of lines) {
+        const match = line.match(
+          /\d+\.\s+id=(\d+),\s+(.+?),\s+pos=/
         );
-        const lines = response.split("\n");
-        for (const line of lines) {
-          const match = line.match(
-            /\d+\.\s+id=(\d+),\s+(.+?),\s+pos=/
-          );
-          if (match) {
-            // Mark as online — use entity ID to find the player
-            const playerName = match[2].trim();
-            for (const [eosId, info] of knownPlayers) {
-              if (info.name === playerName) {
-                onlineIds.add(eosId);
-                break;
-              }
+        if (match) {
+          // Mark as online — use entity ID to find the player
+          const playerName = match[2].trim();
+          for (const [eosId, info] of knownPlayers) {
+            if (info.name === playerName) {
+              onlineIds.add(eosId);
+              break;
             }
           }
         }
-      } catch {
-        // Telnet may not be available
       }
+    } catch {
+      // Telnet may not be available
     }
 
     // Get admin data to check op status
