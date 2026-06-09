@@ -90,17 +90,21 @@ export async function probeReachability(
 export function getProbeTarget(
   def: ServerDefinition
 ): { host: string; port: number } | null {
-  const host = "127.0.0.1";
+  // For MC we honor an optional rconHost override so the dashboard can probe
+  // a server living on a different LAN/tailnet peer. Other game types haven't
+  // grown that field yet — local-only by convention.
   switch (def.type) {
-    case "minecraft":
+    case "minecraft": {
+      const host = def.rconHost || "127.0.0.1";
       return def.gamePort ? { host, port: def.gamePort } : null;
+    }
     case "hytale":
-      return def.gamePort ? { host, port: def.gamePort } : null;
+      return def.gamePort ? { host: "127.0.0.1", port: def.gamePort } : null;
     case "7d2d":
-      return def.telnetPort ? { host, port: def.telnetPort } : null;
+      return def.telnetPort ? { host: "127.0.0.1", port: def.telnetPort } : null;
     case "palworld":
-      if (def.rconPort) return { host, port: def.rconPort };
-      if (def.restApiPort) return { host, port: def.restApiPort };
+      if (def.rconPort) return { host: "127.0.0.1", port: def.rconPort };
+      if (def.restApiPort) return { host: "127.0.0.1", port: def.restApiPort };
       return null;
     case "enshrouded":
       return null;

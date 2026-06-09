@@ -220,6 +220,32 @@ describe("getProbeTarget", () => {
     };
     expect(getProbeTarget(def)).toBeNull();
   });
+
+  it("honors rconHost for minecraft so probes hit the remote server", () => {
+    // When the MC server lives on a LAN/tailnet peer (e.g. Ragnarok at
+    // 192.168.7.14 while the dashboard runs on .77), the probe must dial
+    // the configured host, not 127.0.0.1.
+    const def: ServerDefinition = {
+      id: "ragnarok",
+      name: "Ragnarok",
+      type: "minecraft",
+      dir: "/",
+      rconHost: "192.168.7.14",
+      gamePort: 25570,
+    };
+    expect(getProbeTarget(def)).toEqual({ host: "192.168.7.14", port: 25570 });
+  });
+
+  it("falls back to 127.0.0.1 for minecraft when rconHost is unset", () => {
+    const def: ServerDefinition = {
+      id: "local-mc",
+      name: "Local MC",
+      type: "minecraft",
+      dir: "/",
+      gamePort: 25565,
+    };
+    expect(getProbeTarget(def)).toEqual({ host: "127.0.0.1", port: 25565 });
+  });
 });
 
 describe("resolveServerStatus", () => {
