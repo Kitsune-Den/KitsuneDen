@@ -26,6 +26,26 @@ if (!globalForMc.__mcStates) {
 }
 const states = globalForMc.__mcStates;
 
+/**
+ * Parse the response from Minecraft's RCON `list` command.
+ *
+ * Vanilla / NeoForge: "There are 2 of a max of 20 players online: Alice, Bob"
+ * Empty: "There are 0 of a max of 20 players online: " (note trailing space)
+ * Some mods prefix tags; we accept anything before the first ":" and split on
+ * commas. Empty-string entries (from "online: " with no names) are dropped.
+ * Exported so tests can pin the regex+split logic without standing up RCON.
+ */
+export function parseMinecraftListResponse(raw: string): string[] {
+  if (!raw) return [];
+  const colon = raw.indexOf(":");
+  if (colon < 0) return [];
+  return raw
+    .slice(colon + 1)
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
   const k = 1024;
@@ -349,8 +369,29 @@ export class MinecraftAdapter implements ServerAdapter {
     }
   }
 
+  /**
+   * RCON `list` over the wire. Quiet failures (RCON disabled, server down, wrong
+   * password) all collapse to "no online players known" — getPlayers() still
+   * returns the static roster so the UI keeps working when the server is off.
+   */
+  private async sendRconCommand(command: string): Promise<string> {
+    const { Rcon } = await import("rcon-client");
+    const rcon = await Rcon.connect({
+      host: "127.0.0.1",
+      port: this.def.rconPort || 25575,
+      password: this.def.rconPassword || "",
+    });
+    try {
+      return await rcon.send(command);
+    } finally {
+      rcon.end();
+    }
+  }
+
   async getPlayers(): Promise<PlayerData> {
-    // Minecraft uses whitelist.json / ops.json
+    // Minecraft uses whitelist.json / ops.json for the durable roster, plus an
+    // RCON `list` for who's online RIGHT NOW (the rosters say nothing about
+    // a guest who just joined an open server).
     const opsPath = path.join(this.def.dir, "ops.json");
     const wlPath = path.join(this.def.dir, "whitelist.json");
     const bannedPath = path.join(this.def.dir, "banned-players.json");
@@ -366,6 +407,17 @@ export class MinecraftAdapter implements ServerAdapter {
     const ops = readJson(opsPath);
     const whitelist = readJson(wlPath);
     const banned = readJson(bannedPath);
+
+    // Online list: ask RCON. Don't let RCON errors poison the roster response —
+    // an offline server should still show whitelist/ops so the UI is editable.
+    let onlineNames: string[] = [];
+    try {
+      const response = await this.sendRconCommand("list");
+      onlineNames = parseMinecraftListResponse(response);
+    } catch {
+      onlineNames = [];
+    }
+    const onlineLower = new Set(onlineNames.map((n) => n.toLowerCase()));
 
     // Merge into unified player list
     const playerMap = new Map<string, PlayerEntry>();
@@ -390,6 +442,33 @@ export class MinecraftAdapter implements ServerAdapter {
           name: p.name,
           groups: ["OP"],
           isOp: true,
+        });
+      }
+    }
+
+    // Stamp "Online" on roster entries currently in the game.
+    for (const entry of playerMap.values()) {
+      if (entry.name && onlineLower.has(entry.name.toLowerCase())) {
+        entry.groups.unshift("Online");
+      }
+    }
+
+    // Surface guests — players online but not in any roster file. Without UUID
+    // (RCON `list` is name-only) we use the name as the map key + entry uuid;
+    // the UI's roster-mutation actions resolve the UUID via usercache.json
+    // server-side, so name-only is enough for "show me who's on right now."
+    const rosterNames = new Set(
+      Array.from(playerMap.values())
+        .map((p) => p.name?.toLowerCase())
+        .filter(Boolean) as string[]
+    );
+    for (const name of onlineNames) {
+      if (!rosterNames.has(name.toLowerCase())) {
+        playerMap.set(`online:${name}`, {
+          uuid: "",
+          name,
+          groups: ["Online"],
+          isOp: false,
         });
       }
     }
