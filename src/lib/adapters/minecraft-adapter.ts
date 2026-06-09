@@ -114,7 +114,16 @@ export class MinecraftAdapter implements ServerAdapter {
     // Remote MC: route through SSH lifecycle when configured, refuse otherwise.
     if (this.def.lifecycle?.kind === "ssh") {
       const lc = this.def.lifecycle;
-      state.status = "starting";
+      // DO NOT set state.status = "starting" here. The local-spawn path
+      // transitions stopped → starting → running based on the child
+      // process's "Done (X.Xs)" stdout line; we monitor stdout to flip it.
+      // SSH dispatch has no stdout to watch — the server boots out-of-band
+      // on the remote host. If we set "starting" here, resolveServerStatus
+      // returns it directly (transitional states win over reachability),
+      // so the dashboard would be permanently stuck on "starting" even
+      // after the server's ports come up. Leaving status as "stopped"
+      // lets the reachability probe flip it to "running" within ~5s of
+      // the port actually binding, which is the signal we care about.
       this.addLog(`[Dashboard] Starting ${this.def.name} via SSH on ${lc.host} as ${lc.user}...`);
       const result = await execRemotePowerShell(
         { host: lc.host, port: lc.port, user: lc.user, identityFile: lc.identityFile },
@@ -125,15 +134,10 @@ export class MinecraftAdapter implements ServerAdapter {
       if (!result.ok) {
         const msg = `SSH start command failed (exit ${result.exitCode}). See log for details.`;
         this.addLog(`[Dashboard] ${msg}`);
-        state.status = "stopped";
         return { success: false, message: msg };
       }
-      // The startCommand fires-and-returns (Start-Process detaches); the
-      // server itself takes 30-180s to fully boot. The reachability probe
-      // in /api/servers will flip the status to "running" once the gameport
-      // is up. We just report success here.
       this.addLog("[Dashboard] Start command dispatched. Server will be reachable when boot completes (30-180s for modded NeoForge).");
-      return { success: true, message: "Start command dispatched via SSH; waiting for the server to bind ports." };
+      return { success: true, message: "Start command dispatched via SSH; the reachability probe will flag it running once it binds." };
     }
     if (this.def.rconHost) {
       const msg = `Cannot start a remote MC server (rconHost=${this.def.rconHost}). Configure a lifecycle block in servers.json or start it on the host directly.`;
