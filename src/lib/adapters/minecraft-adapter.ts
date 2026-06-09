@@ -110,6 +110,15 @@ export class MinecraftAdapter implements ServerAdapter {
       return { success: false, message: `Server is already ${state.status}` };
     }
 
+    // Remote servers can't be started by the dashboard — there's no local
+    // process to spawn. The operator runs whichever launcher actually owns
+    // lifecycle on the host (MCSS, nssm, run.bat, etc).
+    if (this.def.rconHost) {
+      const msg = `Cannot start a remote MC server (rconHost=${this.def.rconHost}). Start it on the host with the launcher that owns its lifecycle (MCSS panel, run.bat, nssm — whatever you used to set it up).`;
+      this.addLog(`[Dashboard] ${msg}`);
+      return { success: false, message: msg };
+    }
+
     state.status = "starting";
     state.logs = [];
 
@@ -219,6 +228,23 @@ export class MinecraftAdapter implements ServerAdapter {
   }
 
   async stop(): Promise<ActionResult> {
+    // Remote servers: send `stop` over RCON. We don't own the process,
+    // so there's no stdin to write to or PID to kill. RCON `stop` is the
+    // graceful shutdown command Minecraft itself uses.
+    if (this.def.rconHost) {
+      this.addLog(`[Dashboard] Sending RCON 'stop' to ${this.def.rconHost}...`);
+      try {
+        await this.sendRconCommand("stop");
+        const msg = "Stop command sent via RCON. The server will save and shut down on its host.";
+        this.addLog(`[Dashboard] ${msg}`);
+        return { success: true, message: msg };
+      } catch (e) {
+        const msg = `RCON stop failed: ${(e as Error).message}`;
+        this.addLog(`[Dashboard] ${msg}`);
+        return { success: false, message: msg };
+      }
+    }
+
     const state = this.getState();
     if (!state.process || state.status === "stopped") {
       return { success: false, message: "Server is not running" };
@@ -244,6 +270,15 @@ export class MinecraftAdapter implements ServerAdapter {
   }
 
   async restart(): Promise<ActionResult> {
+    // Remote servers: we can RCON-stop them, but we can't bring them back
+    // up — that requires whatever launcher owns lifecycle on the host. So
+    // refuse rather than half-do the operation and leave the server down.
+    if (this.def.rconHost) {
+      const msg = `Cannot restart a remote MC server (rconHost=${this.def.rconHost}) — the dashboard can stop it via RCON but can't bring it back up. Use Stop, then start it again on the host with its native launcher.`;
+      this.addLog(`[Dashboard] ${msg}`);
+      return { success: false, message: msg };
+    }
+
     const state = this.getState();
     if (state.status === "running") {
       const stopResult = await this.stop();
