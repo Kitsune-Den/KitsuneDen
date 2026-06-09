@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
+import { MinecraftAdapter } from "@/lib/adapters/minecraft-adapter";
 import fs from "fs";
 import path from "path";
 
@@ -194,6 +195,54 @@ export async function POST(request: NextRequest) {
   }
 
   if (adapter.def.type === "minecraft") {
+    // Remote MC: the `dir` on the dashboard host is a stub (empty roster
+    // files), not the real server's directory. File edits there go nowhere.
+    // Route roster mutations through RCON so they actually land on the
+    // server that's running. The RCON commands also update the server's
+    // own ops.json/whitelist.json/banned-players.json on the remote host
+    // as a side effect — same shape as an in-game admin typing /op.
+    if (adapter.def.rconHost) {
+      const mcAdapter = adapter as MinecraftAdapter;
+      const playerRef =
+        typeof name === "string" && name.trim()
+          ? name.trim()
+          : typeof uuid === "string" && uuid.trim()
+            ? uuid.trim()
+            : "";
+      if (!playerRef) {
+        return NextResponse.json(
+          { success: false, message: "Missing player name (RCON commands need a name, not just a UUID)." },
+          { status: 400 }
+        );
+      }
+
+      const rconCommand: Record<string, string | null> = {
+        "whitelist-add": `whitelist add ${playerRef}`,
+        "whitelist-remove": `whitelist remove ${playerRef}`,
+        "op-add": `op ${playerRef}`,
+        "op-remove": `deop ${playerRef}`,
+        "ban-add": `ban ${playerRef}`,
+        "ban-remove": `pardon ${playerRef}`,
+      };
+      const cmd = rconCommand[playerAction as string];
+      if (!cmd) {
+        return NextResponse.json(
+          { success: false, message: `Action '${playerAction}' isn't supported for remote MC servers.` },
+          { status: 400 }
+        );
+      }
+
+      try {
+        const response = await mcAdapter.rconSend(cmd);
+        return NextResponse.json({ success: true, message: response.trim() || "ok" });
+      } catch (err) {
+        return NextResponse.json(
+          { success: false, message: `RCON ${cmd} failed: ${(err as Error).message}` },
+          { status: 500 }
+        );
+      }
+    }
+
     const serverDir = adapter.def.dir;
     const opsPath = path.join(serverDir, "ops.json");
     const wlPath = path.join(serverDir, "whitelist.json");
