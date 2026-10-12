@@ -10,6 +10,7 @@ import { PalworldAdapter } from "../lib/adapters/palworld-adapter";
 import { EnshroudedAdapter, defaultConfig } from "../lib/adapters/enshrouded-adapter";
 import { ValheimAdapter } from "../lib/adapters/valheim-adapter";
 import { VRisingAdapter } from "../lib/adapters/vrising-adapter";
+import { ProjectZomboidAdapter } from "../lib/adapters/projectzomboid-adapter";
 import { RECIPES, portDefault, recipeDefault, recipeDefaults, recipeFor, type GameType } from "../lib/recipes";
 
 /**
@@ -37,6 +38,8 @@ function adapterFor(type: GameType): ServerAdapter {
       return new ValheimAdapter(def);
     case "vrising":
       return new VRisingAdapter(def);
+    case "projectzomboid":
+      return new ProjectZomboidAdapter(def);
   }
 }
 
@@ -95,8 +98,8 @@ describe("game recipes", () => {
   });
 
   it("an unknown type has no recipe and no defaults", () => {
-    expect(recipeFor("projectzomboid")).toBeUndefined();
-    expect(recipeDefaults("projectzomboid")).toEqual({});
+    expect(recipeFor("rust")).toBeUndefined();
+    expect(recipeDefaults("rust")).toEqual({});
   });
 
   it("recipeDefault returns a recipe's value and refuses a missing one", () => {

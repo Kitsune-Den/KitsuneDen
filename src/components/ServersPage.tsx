@@ -74,6 +74,12 @@ const TYPE_FIELDS: Record<string, FieldDef[]> = {
     { key: "rconPassword", label: "RCON Password", type: "password", hint: "Leave blank and the Den generates one in ServerHostSettings.json" },
     { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe, to install and update the server" },
   ],
+  // Game settings are in servertest.ini (Config tab); admin password and heap in kitsuneden-zomboid.json.
+  projectzomboid: [
+    { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port the Den writes into servertest.ini" },
+    { key: "rconPassword", label: "RCON Password", type: "password", hint: "Leave blank and the Den generates one in servertest.ini" },
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe, to install and update the server" },
+  ],
 };
 
 const PROTO_LABEL: Record<RecipePort["proto"], string> = { tcp: "TCP", udp: "UDP", "tcp+udp": "TCP and UDP" };

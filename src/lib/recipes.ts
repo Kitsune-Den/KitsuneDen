@@ -434,6 +434,65 @@ export const RECIPES: Record<GameType, GameRecipe> = {
       "No mod support (BepInEx).",
     ],
   },
+
+  // Launch, servertest.ini and RCON setup as PackRelay measured them on a
+  // real Windows server. See src/lib/zomboid-settings.ts.
+  projectzomboid: {
+    type: "projectzomboid",
+    tier: "experimental",
+    evidence: "New in the Den and not yet run through it. Its launch, settings and RCON setup follow PackRelay, which has run Project Zomboid on Windows (ready in about a minute, a clean quit in 11 s).",
+    platforms: { windows: true, linux: true },
+    install: { kind: "steamcmd", appId: 380870, anonymous: true, denCanInstall: true },
+    launch: {
+      kind: "java",
+      entry: "jre64\\bin\\java.exe",
+      help: "The game's bundled Java, run directly with its own JVM flags plus -cachedir=./zomboid-data and -adminpassword. Not StartServer64.bat, which passes on only two arguments, fixes the heap at 16 GB and ends in PAUSE.",
+    },
+    // DefaultPort, UDPPort, RCONPort and RCONPassword are written into
+    // servertest.ini before every start. PackRelay saw UDP 16261 + 16262.
+    ports: [
+      { field: "gamePort", purpose: "game", proto: "udp", default: 16261, public: true },
+      {
+        field: "queryPort",
+        purpose: "game",
+        proto: "udp",
+        offset: { from: "gamePort", by: 1 },
+        public: true,
+        note: "Project Zomboid's second UDP port (UDPPort), written as one above the game port. Forward both.",
+      },
+      {
+        field: "rconPort",
+        purpose: "rcon",
+        proto: "tcp",
+        default: 27015,
+        public: false,
+        note: "Project Zomboid's default, which the Steam client also uses on a machine someone plays on. Writing the port and a password into servertest.ini is what turns RCON on.",
+      },
+    ],
+    control: {
+      console: "rcon",
+      stop: "RCON `quit`, and it saves on the way out (11 s when PackRelay measured it). A kill if it's still up a minute later.",
+      players: "RCON `players`.",
+    },
+    saves: {
+      path: "zomboid-data",
+      backup: "zip",
+      note: "-cachedir keeps the world, database, logs and Server\\servertest.ini in zomboid-data, not the shared %USERPROFILE%\\Zomboid. Backups send RCON `save` first, then zip a copy with kitsuneden-zomboid.json into ../backups/projectzomboid.",
+    },
+    config: [
+      { file: "zomboid-data\\Server\\servertest.ini", format: "properties" },
+      { file: "kitsuneden-zomboid.json", format: "json" },
+    ],
+    connect: "Join Server → enter the address and game port, or find it in the public list when Public is on.",
+    steamClientAppId: 108600,
+    defaults: { steamAppId: 380870 },
+    gaps: [
+      "Not yet run through the Den. Once someone has installed it, started it, joined and stopped it, mark it verified.",
+      "The admin password and Java heap (2 to 4 GB) live in kitsuneden-zomboid.json, edited by hand. The admin password only takes effect when the world is first created.",
+      "The Config tab edits servertest.ini, which Project Zomboid writes on its first start. World rules (SandboxVars.lua) and Workshop mods are edited by hand.",
+      "A backup of a running server copies its open database. PackRelay captured one cleanly, but restoring one hasn't been tested.",
+    ],
+  },
 };
 
 export function recipeFor(type: string | undefined): GameRecipe | undefined {

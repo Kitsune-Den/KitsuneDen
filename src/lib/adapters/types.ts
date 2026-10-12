@@ -41,7 +41,7 @@ export interface LifecycleControl {
 export interface ServerDefinition {
   id: string;
   name: string;
-  type: "minecraft" | "hytale" | "7d2d" | "palworld" | "enshrouded" | "valheim" | "vrising";
+  type: "minecraft" | "hytale" | "7d2d" | "palworld" | "enshrouded" | "valheim" | "vrising" | "projectzomboid";
   dir: string;
 
   // Minecraft-specific

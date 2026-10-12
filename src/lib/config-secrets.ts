@@ -33,6 +33,8 @@ const FLAT_SECRET_KEYS: Record<ServerType, readonly string[]> = {
   valheim: [],
   // The RCON password is inside Rcon, which getConfig never returns.
   vrising: [],
+  // RCONPassword is a Den-owned key that getConfig never returns.
+  projectzomboid: [],
 };
 
 interface EnshroudedGroup {

@@ -5,6 +5,7 @@ import path from "path";
 import type { ServerDefinition } from "./adapters/types";
 import { RECIPES, portDefault } from "./recipes";
 import { parseSettingsJson } from "./vrising-settings";
+import { INI_PATH, parseIni } from "./zomboid-settings";
 import { parseServerConfigXml } from "./seven-days-config";
 import { parseOptionSettings } from "./adapters/palworld-adapter";
 import { validatePathFields } from "./server-def-security";
@@ -29,7 +30,7 @@ import { validatePathFields } from "./server-def-security";
  * gameConfigSecrets() fills them in server-side when the server is saved.
  */
 
-export type GameType = "minecraft" | "7d2d" | "hytale" | "palworld" | "enshrouded" | "valheim" | "vrising";
+export type GameType = "minecraft" | "7d2d" | "hytale" | "palworld" | "enshrouded" | "valheim" | "vrising" | "projectzomboid";
 export type PortField = "gamePort" | "rconPort" | "telnetPort" | "restApiPort" | "queryPort";
 type Protocol = "tcp" | "udp" | "both";
 
@@ -44,7 +45,7 @@ interface PortSpec {
 }
 
 /** Games whose install folder can be read. */
-const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded", "valheim", "vrising"];
+const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded", "valheim", "vrising", "projectzomboid"];
 
 /**
  * How far apart to look when the usual port is taken, where that isn't just
@@ -506,6 +507,35 @@ function detectVRising(dir: string, d: Detection) {
   if (!d.fields.name) d.fields.name = path.basename(dir);
 }
 
+/**
+ * Project Zomboid keeps servertest.ini under zomboid-data (with -cachedir).
+ * Like V Rising, its ports are read but no configFile is reported: the Den
+ * writes Server setup's ports into the ini before every start.
+ */
+function detectProjectZomboid(dir: string, d: Detection) {
+  if (!exists(path.join(dir, "jre64", "bin", "java.exe"))) {
+    d.notes.push("No jre64\\bin\\java.exe here yet. Once the SteamCMD path is set, the Update tab can install the server.");
+  }
+  const text = readText(path.join(dir, ...INI_PATH.split("/")));
+  if (text) {
+    const ini = parseIni(text);
+    const port = num(ini.DefaultPort);
+    if (port) d.configPorts.gamePort = port;
+    const rconPort = num(ini.RCONPort);
+    if (rconPort) d.configPorts.rconPort = rconPort;
+    if (ini.RCONPassword) d.secretsFound.push("rconPassword");
+    // A stock name isn't the operator's; leave the folder name instead.
+    if (ini.PublicName && !["My PZ Server", "A Project Zomboid Server"].includes(ini.PublicName)) {
+      d.fields.name = ini.PublicName;
+      d.nameFromConfig = true;
+    }
+    d.notes.push("Ports read from servertest.ini. The Den writes Server setup's ports there before every start.");
+  }
+  const steam = findSteamCmd(dir);
+  if (steam) d.fields.steamCmdPath = steam;
+  if (!d.fields.name) d.fields.name = path.basename(dir);
+}
+
 export type DetectResult = { ok: true; detection: Detection } | { ok: false; error: string };
 
 /** Read what's already in an install folder. Never returns secret values. */
@@ -527,6 +557,7 @@ export function detectInstall(type: GameType, dir: string): DetectResult {
   else if (type === "enshrouded") detectEnshrouded(dir, d);
   else if (type === "valheim") detectValheim(dir, d);
   else if (type === "vrising") detectVRising(dir, d);
+  else if (type === "projectzomboid") detectProjectZomboid(dir, d);
   else detectHytale(dir, d);
   return { ok: true, detection: d };
 }

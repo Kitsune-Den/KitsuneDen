@@ -9,6 +9,7 @@ import { PalworldAdapter } from "./palworld-adapter";
 import { EnshroudedAdapter } from "./enshrouded-adapter";
 import { ValheimAdapter } from "./valheim-adapter";
 import { VRisingAdapter } from "./vrising-adapter";
+import { ProjectZomboidAdapter } from "./projectzomboid-adapter";
 
 // Persist across Next.js HMR reloads
 const globalForRegistry = globalThis as unknown as {
@@ -62,6 +63,8 @@ function createAdapter(def: ServerDefinition): ServerAdapter {
       return new ValheimAdapter(def);
     case "vrising":
       return new VRisingAdapter(def);
+    case "projectzomboid":
+      return new ProjectZomboidAdapter(def);
     default:
       throw new Error(`Unknown server type: ${def.type}`);
   }

@@ -206,6 +206,17 @@ describe("detectInstall", () => {
     expect(JSON.stringify(r.detection)).not.toContain("hidden");
   });
 
+  it("reads Project Zomboid's servertest.ini without returning the RCON password", () => {
+    write("zomboid-data/Server/servertest.ini", "PublicName=Knox Country\r\nDefaultPort=16271\r\nRCONPort=27020\r\nRCONPassword=hidden\r\n");
+    const r = detectInstall("projectzomboid", dir);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.detection.fields.name).toBe("Knox Country");
+    expect(r.detection.configPorts).toEqual({ gamePort: 16271, rconPort: 27020 });
+    expect(r.detection.secretsFound).toEqual(["rconPassword"]);
+    expect(JSON.stringify(r.detection)).not.toContain("hidden");
+    expect(r.detection.notes.join(" ")).toContain("No jre64\\bin\\java.exe here yet");
+  });
+
   it("falls back to the folder name and says what's missing", () => {
     const r = detectInstall("7d2d", dir);
     if (!r.ok) throw new Error(r.error);
@@ -254,6 +265,7 @@ describe("PORT_SPECS", () => {
       enshrouded: ["gamePort 15637 udp step 1 span 1"],
       valheim: ["gamePort 2456 udp step 2 span 2"],
       vrising: ["gamePort 9876 udp step 2 span 2", "rconPort 25575 tcp step 1 span 1"],
+      projectzomboid: ["gamePort 16261 udp step 2 span 2", "rconPort 27015 tcp step 1 span 1"],
     });
   });
 });

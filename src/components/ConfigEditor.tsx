@@ -172,6 +172,28 @@ export default function ConfigEditor() {
     crossplay: "Crossplay",
   };
 
+  const zomboidFieldHelp: Record<string, string> = {
+    PublicName: "Server name in the public list.",
+    PublicDescription: "Shown under the name in the public list.",
+    Password: "Join password. Leave empty for none.",
+    MaxPlayers: "Player slots.",
+    Public: "List the server publicly.",
+    Open: "Let new players join without being whitelisted.",
+    PVP: "Players can hurt each other.",
+    PauseEmpty: "Pause the world while nobody is on.",
+    GlobalChat: "Server-wide chat.",
+    ServerWelcomeMessage: "Shown to players as they join.",
+    Map: "Map(s) to load, separated by semicolons.",
+    Mods: "Mod IDs, separated by semicolons. These are mod IDs, not the Workshop numbers below; both lists are needed.",
+    WorkshopItems: "Workshop item numbers, separated by semicolons.",
+    SaveWorldEveryMinutes: "Minutes between saves (0 = only when the server stops).",
+    BackupsCount: "How many of its own backups the game keeps. Separate from the Den's backups.",
+    BackupsOnStart: "Have the game back up the world each time it starts.",
+    BackupsPeriod: "Minutes between the game's own backups (0 = off).",
+    PlayerSafehouse: "Players can claim safehouses.",
+    HoursForLootRespawn: "In-game hours before looted containers refill (0 = never).",
+  };
+
   const vrisingFieldHelp: Record<string, string> = {
     Name: "Server name in the server list.",
     Description: "Shown under the name in the server list.",
@@ -216,6 +238,7 @@ export default function ConfigEditor() {
     ...(currentServer?.type === "enshrouded" ? enshroudedFieldHelp : {}),
     ...(currentServer?.type === "valheim" ? valheimFieldHelp : {}),
     ...(currentServer?.type === "vrising" ? vrisingFieldHelp : {}),
+    ...(currentServer?.type === "projectzomboid" ? zomboidFieldHelp : {}),
     ...(currentServer?.type === "hytale"
       ? {
           DisplayTmpTagsInStrings:
@@ -1396,6 +1419,16 @@ export default function ConfigEditor() {
         { title: "Scheduled wipes", keys: ["ResetDaysInterval", "DayOfReset"] },
       ],
     },
+    // DefaultPort, UDPPort, RCONPort and RCONPassword aren't returned: the Den writes them.
+    projectzomboid: {
+      core: ["PublicName", "PublicDescription", "Password", "MaxPlayers", "Public", "Open"],
+      hidden: [],
+      groups: [
+        { title: "Gameplay", keys: ["PVP", "PauseEmpty", "GlobalChat", "ServerWelcomeMessage", "PlayerSafehouse", "HoursForLootRespawn"] },
+        { title: "Map & mods", keys: ["Map", "Mods", "WorkshopItems"] },
+        { title: "Saves", keys: ["SaveWorldEveryMinutes", "BackupsCount", "BackupsOnStart", "BackupsPeriod"] },
+      ],
+    },
   };
   const layout = groupedLayouts[currentServer?.type ?? ""];
 
@@ -1502,6 +1535,8 @@ export default function ConfigEditor() {
                     ? "kitsuneden-valheim.json"
                     : currentServer?.type === "vrising"
                     ? "ServerHostSettings.json"
+                    : currentServer?.type === "projectzomboid"
+                    ? "servertest.ini"
                     : format === "properties"
                       ? "server.properties"
                       : "config.json"})
@@ -1549,7 +1584,11 @@ export default function ConfigEditor() {
         ) : (
           <div className="p-5 space-y-4">
             {Object.keys(formValues).length === 0 ? (
-              <div className="text-sm text-den-text-dim">No config fields found.</div>
+              <div className="text-sm text-den-text-dim">
+                {currentServer?.type === "projectzomboid"
+                  ? "Project Zomboid writes servertest.ini on its first start. Start the server once and its settings show up here."
+                  : "No config fields found."}
+              </div>
             ) : currentServer?.type === "7d2d" ? (
               (() => {
                 const usedKeys = new Set<string>([

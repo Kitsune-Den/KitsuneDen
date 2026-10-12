@@ -32,7 +32,7 @@ describe("serverPorts", () => {
   });
 
   it("has nothing for a game without a recipe", () => {
-    expect(serverPorts({ id: "z", name: "Project Zomboid", type: "projectzomboid" })).toEqual([]);
+    expect(serverPorts({ id: "r", name: "Rust", type: "rust" })).toEqual([]);
   });
 
   it("derives Valheim's query port as the game port + 1", () => {

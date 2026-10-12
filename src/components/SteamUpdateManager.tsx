@@ -20,6 +20,7 @@ const ENDPOINTS: Record<string, string> = {
   "7d2d": "/api/7d2d-update",
   valheim: "/api/valheim-update",
   vrising: "/api/vrising-update",
+  projectzomboid: "/api/projectzomboid-update",
 };
 
 /**

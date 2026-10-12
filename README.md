@@ -55,6 +55,7 @@ KitsuneDen treats your servers like living things. Each one gets its own persona
 | Enshrouded | `enshrouded` | ✅ Full support (no RCON, so no live commands) |
 | Valheim | `valheim` | 🧪 Experimental: new, not yet run through the Den (no console, so no live commands) |
 | V Rising | `vrising` | 🧪 Experimental: new, not yet run through the Den (RCON commands; Windows only) |
+| Project Zomboid | `projectzomboid` | 🧪 Experimental: new, not yet run through the Den (RCON commands and player list) |
 | Something else | - | 🔧 [Write an adapter](#adding-a-new-game) |
 
 ---
@@ -228,6 +229,19 @@ By default KitsuneDen reads and writes `servers.json` in the directory it's star
 
 > V Rising runs with `-persistentDataPath save-data`, so its settings and saves live in `save-data\` inside the server folder. Before every start the Den writes the ports and turns RCON on in `save-data\Settings\ServerHostSettings.json`; the first time, it creates the file from the game's template, listed on Steam and EOS. Name, save, password, listing and presets are on the Config tab; the game rules (`ServerGameSettings.json`) are edited by hand for now.
 > Stop sends RCON `shutdown`, and V Rising saves as it exits.
+
+**`projectzomboid`**: Project Zomboid
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `dir` | ✅ | Path to the server directory |
+| `gamePort` | Optional | UDP game port (default 16261). The Den writes the second UDP port as the next one up; forward both. |
+| `rconPort` | Optional | RCON port (default 27015, which the Steam client also uses on a machine someone plays on) |
+| `rconPassword` | Optional | RCON password. Leave it out and the Den generates one. |
+| `steamCmdPath` | Optional | Path to steamcmd.exe, to install and update the server (Steam app id 380870) |
+
+> The Den runs the game's bundled Java directly (not `StartServer64.bat`, which fixes the heap at 16 GB and passes on only two arguments) with `-cachedir=./zomboid-data`, so the world, database, logs and `servertest.ini` live in the server folder. Before every start it writes the ports and RCON into `zomboid-data\Server\servertest.ini`; the Config tab edits the rest of that file once the first start has created it.
+> The first start also writes `kitsuneden-zomboid.json` with the in-game `admin` password (shown once, and only applied when the world is first created) and the Java heap (2 to 4 GB). Stop sends RCON `quit`, and backups send RCON `save` first.
 
 ### Remote Minecraft servers
 

@@ -67,6 +67,9 @@ This chapter is for skimming. Keep it open in a tab and reach for whatever you n
 | V Rising game | 9876 | UDP | `gamePort`, written into `ServerHostSettings.json` |
 | V Rising query | 9877 | UDP | `gamePort` + 1, written into `ServerHostSettings.json` |
 | V Rising RCON | 25575 | TCP | `rconPort`; also the status probe |
+| Project Zomboid game | 16261 | UDP | `gamePort`, written into `servertest.ini` as `DefaultPort` |
+| Project Zomboid second port | 16262 | UDP | `gamePort` + 1, written as `UDPPort` |
+| Project Zomboid RCON | 27015 | TCP | `rconPort`; also the status probe |
 | SSH (remote lifecycle) | 22 | TCP | `lifecycle.port` |
 
 ---
@@ -125,6 +128,7 @@ Every route except `/api/auth/*` needs a valid session. Server-aware routes take
 | `/api/7d2d-update` | GET, POST | Version, branch and app id / SteamCMD update on the installed branch |
 | `/api/valheim-update` | GET, POST | Branch and app id / SteamCMD install or update on the installed branch |
 | `/api/vrising-update` | GET, POST | Branch and app id / SteamCMD install or update on the installed branch |
+| `/api/projectzomboid-update` | GET, POST | Branch and app id / SteamCMD install or update on the installed branch |
 | `/api/airdrops/settings` | GET, PUT | KitsuneCommand airdrop settings |
 | `/api/airdrops/loot-tables` | GET, POST, PUT, DELETE | Loot tables and entries |
 | `/api/airdrops/history` | GET | Recent drops (`?limit=`, default 50) |
@@ -243,6 +247,18 @@ Game settings live in `kitsuneden-valheim.json` in the server folder (Config tab
 | `steamAppId` | 1829350 | Steam app id |
 
 Host settings live in `save-data\Settings\ServerHostSettings.json` (Config tab); game rules in `ServerGameSettings.json` beside it.
+
+### Project Zomboid (`projectzomboid`)
+
+| Field | Default | Description |
+|---|---|---|
+| `gamePort` | 16261 | UDP game port; the second UDP port is the next one up |
+| `rconPort` | 27015 | RCON port, turned on by the Den before every start |
+| `rconPassword` | generated | RCON password; kept in `servertest.ini` when not set here |
+| `steamCmdPath` | | `steamcmd.exe` for installs and updates |
+| `steamAppId` | 380870 | Steam app id |
+
+Server settings live in `zomboid-data\Server\servertest.ini` (Config tab, after the first start). The `admin` password and Java heap (`minMemoryGB`, `maxMemoryGB`) live in `kitsuneden-zomboid.json` in the server folder.
 
 ### Top level
 
