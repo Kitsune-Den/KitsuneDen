@@ -42,9 +42,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ...players, userCache });
   }
   if (adapter.def.type === "palworld" && "getAdmins" in adapter) {
-    // Deliberately no admin/RCON password here — this payload is fetched on
-    // every Players page load. Operators who need it can read AdminPassword
-    // in the Config tab.
+    // Deliberately no admin/RCON password here. It's write-only everywhere in
+    // the dashboard (see lib/config-secrets.ts); operators can set a new
+    // AdminPassword in the Config tab.
     const a = adapter as { getAdmins: () => unknown };
     return NextResponse.json({
       ...players,

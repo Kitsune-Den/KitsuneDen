@@ -22,28 +22,31 @@ interface DocsPageProps {
 }
 
 export default function DocsPage({ docKey, onSelect }: DocsPageProps) {
-  const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  // Tag each result with the doc it belongs to; anything else means the
+  // requested doc is still in flight.
+  const [doc, setDoc] = useState<{ key: string; content: string; error: string } | null>(null);
+  const loading = doc?.key !== docKey;
+  const content = doc?.content ?? "";
+  const error = loading ? "" : doc.error;
 
   useEffect(() => {
-    setLoading(true);
-    setError("");
+    let cancelled = false;
     fetch(`/api/docs?file=${encodeURIComponent(docKey)}`)
       .then((res) => res.json())
       .then((data) => {
+        if (cancelled) return;
         if (data.content) {
-          setContent(data.content);
+          setDoc({ key: docKey, content: data.content, error: "" });
         } else {
-          setContent("");
-          setError(data.error || "Failed to load doc.");
+          setDoc({ key: docKey, content: "", error: data.error || "Failed to load doc." });
         }
       })
       .catch(() => {
-        setContent("");
-        setError("Failed to load doc.");
-      })
-      .finally(() => setLoading(false));
+        if (!cancelled) setDoc({ key: docKey, content: "", error: "Failed to load doc." });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [docKey]);
 
   const current = DOC_OPTIONS.find((d) => d.key === docKey);

@@ -28,9 +28,9 @@ export function useLifecycle(serverId: string, status: string | undefined) {
   const { refreshServers } = useServer();
   const [pending, setPending] = useState<{ action: Action; from: string | undefined } | null>(null);
 
-  useEffect(() => {
-    if (pending && status !== pending.from) setPending(null);
-  }, [status, pending]);
+  // The polled status moved, so the action landed: clear it during render
+  // rather than in an effect.
+  if (pending && status !== pending.from) setPending(null);
 
   useEffect(() => {
     if (!pending) return;

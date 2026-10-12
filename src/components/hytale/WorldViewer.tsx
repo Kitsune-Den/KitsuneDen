@@ -1,7 +1,7 @@
 "use client";
 
 import { useServer } from "@/contexts/ServerContext";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 
 interface WorldData {
   name: string;
@@ -35,21 +35,24 @@ export default function WorldViewer() {
   const [warps, setWarps] = useState<Warp[]>([]);
   const [defaultWorld, setDefaultWorld] = useState("");
 
-  const loadData = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/worlds?server=${serverId}`);
-      const data = await res.json();
-      setWorlds(data.worlds || []);
-      setWarps((data.warps as Warp[]) || []);
-      setDefaultWorld((data.defaultWorld as string) || "");
-    } catch {
-      // ignore
-    }
-  }, [serverId]);
-
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/worlds?server=${serverId}`);
+        const data = await res.json();
+        if (cancelled) return;
+        setWorlds(data.worlds || []);
+        setWarps((data.warps as Warp[]) || []);
+        setDefaultWorld((data.defaultWorld as string) || "");
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [serverId]);
 
   if (currentServer?.type !== "hytale") {
     return null;
