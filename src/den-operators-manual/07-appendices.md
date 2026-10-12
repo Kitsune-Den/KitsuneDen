@@ -212,7 +212,7 @@ Deep night blues underneath, warm and bright accents on top. Check `globals.css`
 
 | Field | Description |
 |---|---|
-| `dashboard.port` | Present in the schema but unused; the port comes from `package.json` (3001) |
+| `dashboard.port` | Ignored if present (older configs had it). The port comes from `package.json` (3001) |
 
 ### Environment (`.env`)
 
