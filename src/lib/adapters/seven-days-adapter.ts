@@ -14,6 +14,8 @@ import type {
   ServerStats,
   PlayerData,
   PlayerEntry,
+  AdminData,
+  SevenDaysAdminApi,
 } from "./types";
 
 const MAX_LOG_LINES = 2000;
@@ -122,39 +124,6 @@ export function syncKnownPlayers(logFile: string, cacheFile: string): Map<string
 }
 
 // ---- serveradmin.xml support ----
-
-export interface AdminUser {
-  platform: string;
-  userId: string;
-  name: string;
-  permissionLevel: number;
-}
-
-export interface AdminWhitelistEntry {
-  platform: string;
-  userId: string;
-  name: string;
-}
-
-export interface AdminBlacklistEntry {
-  platform: string;
-  userId: string;
-  name: string;
-  unbanDate: string;
-  reason: string;
-}
-
-export interface AdminCommand {
-  cmd: string;
-  permissionLevel: number;
-}
-
-export interface AdminData {
-  users: AdminUser[];
-  whitelist: AdminWhitelistEntry[];
-  blacklist: AdminBlacklistEntry[];
-  commands: AdminCommand[];
-}
 
 function parseAdminXml(filePath: string): AdminData {
   const data: AdminData = { users: [], whitelist: [], blacklist: [], commands: [] };
@@ -415,7 +384,7 @@ function telnetCommand(
   });
 }
 
-export class SevenDaysAdapter implements ServerAdapter {
+export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
   readonly def: ServerDefinition;
   readonly capabilities: ServerCapabilities = {
     hasRcon: false,

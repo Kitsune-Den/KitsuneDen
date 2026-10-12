@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { withActivity, playerLabel } from "@/lib/activity-route";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
 import { MinecraftAdapter } from "@/lib/adapters/minecraft-adapter";
-import type { SevenDaysAdapter } from "@/lib/adapters/seven-days-adapter";
+import type { ServerAdapter, SevenDaysAdminApi } from "@/lib/adapters/types";
 import fs from "fs";
 import path from "path";
 
 function getServerId(request: NextRequest): string {
   return request.nextUrl.searchParams.get("server") || getDefaultServerId();
+}
+
+// Checks shape rather than `instanceof SevenDaysAdapter`: adapters live on
+// globalThis across HMR reloads, so the class identity can differ from a
+// fresh import.
+function hasSevenDaysAdmin(adapter: ServerAdapter): adapter is ServerAdapter & SevenDaysAdminApi {
+  return adapter.def.type === "7d2d" && "getAdminData" in adapter;
 }
 
 export async function GET(request: NextRequest) {
@@ -17,14 +24,11 @@ export async function GET(request: NextRequest) {
   }
 
   const players = await adapter.getPlayers();
-  if (adapter.def.type === "7d2d" && "getAdminData" in adapter) {
-    // Type-only cast (not instanceof): adapters live on globalThis across HMR
-    // reloads, so the class identity can differ from a fresh import.
-    const a = adapter as unknown as SevenDaysAdapter;
+  if (hasSevenDaysAdmin(adapter)) {
     return NextResponse.json({
       ...players,
-      adminData: a.getAdminData(),
-      adminFilePath: a.getAdminFilePath() || null,
+      adminData: adapter.getAdminData(),
+      adminFilePath: adapter.getAdminFilePath() || null,
     });
   }
   if (adapter.def.type === "minecraft") {
@@ -64,9 +68,8 @@ async function handlePost(request: NextRequest) {
   const { action: playerAction, uuid, op, name } = body;
 
   // 7D2D admin operations
-  if (adapter.def.type === "7d2d" && "getAdminData" in adapter) {
-    const sdAdapter = adapter as unknown as SevenDaysAdapter;
-    const adminData = sdAdapter.getAdminData();
+  if (hasSevenDaysAdmin(adapter)) {
+    const adminData = adapter.getAdminData();
 
     switch (playerAction) {
       case "admin-add": {
@@ -89,13 +92,13 @@ async function handlePost(request: NextRequest) {
             existing.permissionLevel = permissionLevel ?? existing.permissionLevel;
           }
         }
-        const result = sdAdapter.saveAdminData(adminData);
+        const result = adapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "admin-remove": {
         const { userId } = body;
         adminData.users = adminData.users.filter((u) => u.userId !== userId);
-        const result = sdAdapter.saveAdminData(adminData);
+        const result = adapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "whitelist-add": {
@@ -110,13 +113,13 @@ async function handlePost(request: NextRequest) {
             name: name || "",
           });
         }
-        const result = sdAdapter.saveAdminData(adminData);
+        const result = adapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "whitelist-remove": {
         const { userId } = body;
         adminData.whitelist = adminData.whitelist.filter((w) => w.userId !== userId);
-        const result = sdAdapter.saveAdminData(adminData);
+        const result = adapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "blacklist-add": {
@@ -133,13 +136,13 @@ async function handlePost(request: NextRequest) {
             reason: reason || "Banned via Dashboard",
           });
         }
-        const result = sdAdapter.saveAdminData(adminData);
+        const result = adapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "blacklist-remove": {
         const { userId } = body;
         adminData.blacklist = adminData.blacklist.filter((b) => b.userId !== userId);
-        const result = sdAdapter.saveAdminData(adminData);
+        const result = adapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "command-update": {
@@ -153,13 +156,13 @@ async function handlePost(request: NextRequest) {
         } else {
           adminData.commands.push({ cmd, permissionLevel: permissionLevel ?? 0 });
         }
-        const result = sdAdapter.saveAdminData(adminData);
+        const result = adapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       case "command-remove": {
         const { cmd } = body;
         adminData.commands = adminData.commands.filter((c) => c.cmd !== cmd);
-        const result = sdAdapter.saveAdminData(adminData);
+        const result = adapter.saveAdminData(adminData);
         return NextResponse.json(result);
       }
       default:
