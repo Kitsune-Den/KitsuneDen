@@ -1308,7 +1308,7 @@ export default function ConfigEditor() {
                     : "text-den-text-muted hover:bg-den-surface"
                 }`}
               >
-                Raw JSON
+                Raw
               </button>
             </div>
             <button
