@@ -1,8 +1,11 @@
+import { getSessionSecret, isPasswordConfigured } from "@/lib/den-auth-config";
+
 /**
- * Edge-compatible session verifier for the Next.js proxy (formerly middleware).
+ * Session verifier for the Next.js proxy (formerly middleware).
  *
- * Mirrors verifySession() in auth.ts but uses Web Crypto (globalThis.crypto.subtle)
- * instead of node:crypto, so it works in the edge runtime that proxy.ts runs on.
+ * Mirrors verifySession() in auth.ts using Web Crypto (globalThis.crypto.subtle).
+ * Next 16 runs the proxy on Node.js, so the secret and password checks below
+ * share den-auth-config.ts with auth.ts; only the HMAC verify stays here.
  * Same wire format: base64url(JSON.stringify({v:1,iat})) + "." + base64url(HMAC-SHA256)
  *
  * Why duplicate the verify logic? Because pulling node:crypto into a proxy is a
@@ -81,18 +84,15 @@ export async function verifySessionEdge(
 }
 
 /**
- * Read the session secret in an edge-safe way. Returns null when it's unset
- * or too short; the proxy treats that as "setup incomplete" (503 for APIs,
- * /login?setup=1 for pages). auth.ts applies the same rule and refuses to
- * sign, so the two can never disagree about which key is in use.
- * Keep the 32-char minimum in sync with MIN_SESSION_SECRET_LENGTH in auth.ts.
+ * The session secret the proxy verifies against: the same one auth.ts signs
+ * with (env, else the persisted one), so the two can never disagree.
+ * Null only while the Den has no password yet.
  */
 export function getSessionSecretEdge(): string | null {
-  const s = process.env.KITSUNEDEN_SESSION_SECRET;
-  if (!s || s.length < 32) return null;
-  return s;
+  return getSessionSecret();
 }
 
+/** False until a password exists (env or first-run setup). */
 export function isAuthConfiguredEdge(): boolean {
-  return (process.env.KITSUNEDEN_PASSWORD?.length ?? 0) > 0;
+  return isPasswordConfigured();
 }

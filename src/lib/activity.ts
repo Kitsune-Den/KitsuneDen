@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { dataDir } from "@/lib/data-dir";
 
 /**
  * The Den's activity log: an append-only JSONL file of things that happened
@@ -25,7 +26,7 @@ const MAX_LINES = 2000;
 const KEEP_LINES = 1500;
 
 function logPath(): string {
-  return process.env.KITSUNEDEN_ACTIVITY_FILE || path.join(process.cwd(), "data", "activity.jsonl");
+  return process.env.KITSUNEDEN_ACTIVITY_FILE || path.join(dataDir(), "activity.jsonl");
 }
 
 let appendsSinceTrim = 0;

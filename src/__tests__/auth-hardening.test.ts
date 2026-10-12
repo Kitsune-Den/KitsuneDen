@@ -10,12 +10,16 @@ import {
 import { getSessionSecretEdge, verifySessionEdge } from "../lib/auth-edge";
 import { POST as login } from "../app/api/auth/login/route";
 import { POST as logout } from "../app/api/auth/logout/route";
+import fs from "node:fs";
+import { authFilePath } from "../lib/den-auth-config";
 
 /**
  * Two setup foot-guns:
  *  1. KITSUNEDEN_PASSWORD set, KITSUNEDEN_SESSION_SECRET unset → auth.ts used
  *     to sign with a random in-process key the edge proxy can never verify,
- *     so login "succeeded" and then bounced straight back to /login.
+ *     so login "succeeded" and then bounced straight back to /login. Now a
+ *     secret is generated once and persisted in the data folder, and the
+ *     proxy reads the same one.
  *  2. The cookie was Secure whenever NODE_ENV=production, so a production
  *     build reached over http://<LAN-IP> got a cookie the browser discards.
  */
@@ -31,6 +35,7 @@ beforeEach(() => {
   savedPassword = process.env.KITSUNEDEN_PASSWORD;
   process.env.KITSUNEDEN_SESSION_SECRET = TEST_SECRET;
   process.env.KITSUNEDEN_PASSWORD = TEST_PASSWORD;
+  fs.rmSync(authFilePath(), { force: true });
   _resetSecretCacheForTests();
 });
 
@@ -56,44 +61,56 @@ function sessionSetCookie(res: Response): string {
   return header;
 }
 
-describe("missing session secret", () => {
+describe("missing or short env session secret", () => {
   for (const [label, value] of [
     ["unset", undefined],
     ["too short", "only-31-characters-long-oops!!!"],
   ] as const) {
-    it(`is reported as unconfigured when ${label}`, () => {
+    it(`falls back to a persisted secret when ${label}`, () => {
       if (value === undefined) delete process.env.KITSUNEDEN_SESSION_SECRET;
       else process.env.KITSUNEDEN_SESSION_SECRET = value;
-      expect(isSessionSecretConfigured()).toBe(false);
-      expect(getSessionSecretEdge()).toBeNull();
+      expect(isSessionSecretConfigured()).toBe(true);
+      const secret = getSessionSecretEdge();
+      expect(secret).not.toBeNull();
+      expect(secret!.length).toBeGreaterThanOrEqual(32);
+      expect(secret).not.toBe(value);
+      // Persisted, not per-process: the file carries it.
+      expect(JSON.parse(fs.readFileSync(authFilePath(), "utf8")).sessionSecret).toBe(secret);
     });
   }
 
-  it("signSession refuses instead of using a throwaway random key", () => {
+  it("keeps the same secret across cache resets (a restart)", () => {
     delete process.env.KITSUNEDEN_SESSION_SECRET;
-    expect(() => signSession()).toThrow(/KITSUNEDEN_SESSION_SECRET/);
-  });
-
-  it("verifySession fails closed", () => {
-    const cookie = signSession();
-    delete process.env.KITSUNEDEN_SESSION_SECRET;
+    const first = getSessionSecretEdge();
     _resetSecretCacheForTests();
-    expect(verifySession(cookie)).toEqual({ ok: false, reason: "no-secret" });
+    expect(getSessionSecretEdge()).toBe(first);
   });
 
-  it("login returns 503 naming the variable and sets no cookie", async () => {
+  it("login succeeds and its cookie verifies in the proxy with the persisted secret", async () => {
     delete process.env.KITSUNEDEN_SESSION_SECRET;
-    const res = await login(loginRequest("http://192.168.1.20:3001/api/auth/login"));
-    expect(res.status).toBe(503);
-    expect((await res.json()).error).toMatch(/KITSUNEDEN_SESSION_SECRET/);
-    expect(res.headers.get("set-cookie")).toBeNull();
-  });
-
-  it("a cookie from login verifies in the edge proxy with the env secret", async () => {
     const res = await login(loginRequest("http://192.168.1.20:3001/api/auth/login"));
     expect(res.status).toBe(200);
     const value = /kitsuneden_session=([^;]+)/.exec(sessionSetCookie(res))![1];
     expect(await verifySessionEdge(value, getSessionSecretEdge()!)).toBe(true);
+    expect(verifySession(value).ok).toBe(true);
+  });
+
+  it("verifySession fails closed when there is no password and so no secret", () => {
+    const cookie = signSession();
+    delete process.env.KITSUNEDEN_SESSION_SECRET;
+    delete process.env.KITSUNEDEN_PASSWORD;
+    fs.rmSync(authFilePath(), { force: true });
+    _resetSecretCacheForTests();
+    expect(verifySession(cookie)).toEqual({ ok: false, reason: "no-secret" });
+    expect(() => signSession()).toThrow(/session secret/);
+  });
+
+  it("a cookie from login verifies in the proxy with the env secret", async () => {
+    const res = await login(loginRequest("http://192.168.1.20:3001/api/auth/login"));
+    expect(res.status).toBe(200);
+    const value = /kitsuneden_session=([^;]+)/.exec(sessionSetCookie(res))![1];
+    expect(await verifySessionEdge(value, getSessionSecretEdge()!)).toBe(true);
+    expect(getSessionSecretEdge()).toBe(TEST_SECRET);
   });
 });
 

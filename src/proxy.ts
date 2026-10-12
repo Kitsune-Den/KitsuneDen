@@ -13,19 +13,38 @@ import {
  *
  * Public paths (never gated):
  *   - /login
+ *   - /setup, /api/setup  (first-run setup, itself guarded by a one-time code)
  *   - /api/auth/*  (login + logout must be reachable without a session)
  *   - /favicon.ico
  *   - /_next/* static + image (excluded via matcher below)
  *
- * Auth-not-configured behavior: rather than locking everyone out forever,
- * we redirect HTML to /login?setup=1 (which renders setup instructions) and
- * 503 for API calls. This makes "first boot" debuggable.
+ * No password yet (fresh install): pages go to /setup, APIs get a 503 with
+ * `setup: true`. Once a password exists, /setup bounces to /login.
  *
  * Response shape: HTML navs get 302 → /login?next=<path>. API routes get a
  * 401 JSON so stale fetch()s don't surprise-redirect to HTML.
  */
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  const configured = isAuthConfiguredEdge();
+  const isSetupPath = pathname === "/setup" || pathname === "/api/setup";
+
+  if (isSetupPath) {
+    if (configured && pathname === "/setup") return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.next();
+  }
+
+  if (!configured) {
+    if (pathname.startsWith("/api/auth/") || pathname === "/favicon.ico") return NextResponse.next();
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "The Den isn't set up yet. Open it in a browser to choose a password.", setup: true },
+        { status: 503 }
+      );
+    }
+    return NextResponse.redirect(new URL("/setup", request.url));
+  }
 
   if (
     pathname === "/login" ||
@@ -35,22 +54,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (!isAuthConfiguredEdge()) {
-    if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
-        { error: "Auth not configured. Set KITSUNEDEN_PASSWORD in the environment." },
-        { status: 503 }
-      );
-    }
-    return NextResponse.redirect(new URL("/login?setup=1", request.url));
-  }
-
   const secret = getSessionSecretEdge();
   if (!secret) {
-    // Configured password but no usable secret — same setup-incomplete fork.
+    // A password exists but no secret could be read or saved (unwritable
+    // data folder). Rare; say so rather than loop through the login page.
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
-        { error: "KITSUNEDEN_SESSION_SECRET missing or too short (need ≥32 chars)." },
+        { error: "Couldn't load or save the session secret. Check that the data folder is writable." },
         { status: 503 }
       );
     }

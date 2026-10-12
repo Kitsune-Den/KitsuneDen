@@ -5,6 +5,7 @@ import Page from "@/components/shell/Page";
 import { CB_KEY, THEME_KEY, parseThemePref, setColorBlind, setThemePref, type ThemePref } from "@/lib/theme";
 import { useStoredItem } from "@/lib/useStored";
 import { SHORTCUTS } from "@/lib/useHotkeys";
+import PasswordSettings from "@/components/PasswordSettings";
 
 const THEMES: { id: ThemePref; label: string; icon: React.ReactNode }[] = [
   { id: "dark", label: "Dark", icon: <Moon size={14} /> },
@@ -21,7 +22,7 @@ export default function SettingsPage() {
   const cb = useStoredItem(CB_KEY)[0] === "1";
 
   return (
-    <Page title="Settings" subtitle="How the Den looks on this device">
+    <Page title="Settings" subtitle="Appearance on this device, and the Den password">
       <div className="max-w-[760px] space-y-4">
         <section className="den-card">
           <div className="den-card-header">
@@ -72,6 +73,8 @@ export default function SettingsPage() {
             <p className="text-[12px] text-den-text-dim">Saved in this browser only.</p>
           </div>
         </section>
+
+        <PasswordSettings />
 
         <section className="den-card">
           <div className="den-card-header">
