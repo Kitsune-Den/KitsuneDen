@@ -123,6 +123,8 @@ Every route except `/api/auth/*` needs a valid session. Server-aware routes take
 | `/api/airdrops/history` | GET | Recent drops (`?limit=`, default 50) |
 | `/api/browse-folder` | GET | Opens a folder picker on the dashboard host |
 | `/api/docs` | GET | `?file=` README or a manual chapter |
+| `/api/setup` | GET, POST | First-run status (prints the setup code) / `{ code, password }` sets the password and signs you in. Public, works only before a password exists |
+| `/api/account/password` | GET, POST | Where the password comes from / `{ current, next, signOutOthers }` changes it |
 | `/api/activity` | GET | Recent events, newest first (`?server=`, `?kind=server,crash,config,players,backup,mods,setup,auth`, `?limit=` up to 500) |
 
 ---
@@ -216,12 +218,13 @@ Deep night blues underneath, warm and bright accents on top. Check `globals.css`
 |---|---|
 | `dashboard.port` | Ignored if present (older configs had it). The port comes from `package.json` (3001) |
 
-### Environment (`.env`)
+### Environment (`.env`, all optional)
 
 | Variable | Description |
 |---|---|
-| `KITSUNEDEN_PASSWORD` | The shared password. Required |
-| `KITSUNEDEN_SESSION_SECRET` | HMAC key for session cookies, 32+ characters. Required. Changing it signs everyone out |
+| `KITSUNEDEN_PASSWORD` | The shared password. Overrides the one from first-run setup, and hides the setup screen |
+| `KITSUNEDEN_SESSION_SECRET` | HMAC key for session cookies, 32+ characters. Overrides the generated one. Changing it signs everyone out |
+| `KITSUNEDEN_DATA_DIR` | Where runtime files live (default `data` in the repo): `den-auth.json`, `activity.jsonl`, `setup-code.txt` |
 
 ### Files in each server's directory
 
@@ -305,7 +308,7 @@ For the full story behind each issue, see Chapter 5.
 | Problem | First check |
 |---|---|
 | Dashboard won't load | Is Node running? Right port (3001)? Does `servers.json` exist? |
-| Setup banner / 503 | Both `.env` variables set? Secret 32+ chars? Dashboard restarted? |
+| Stuck on setup / 503 | Setup code in `data\setup-code.txt` or the log? `data` writable? `.env` secret 32+ chars? Restarted? |
 | Login loops | Production mode over plain HTTP? Use HTTPS or localhost |
 | Server won't start | Read the console. Port free? `javaPath` right? |
 | Port conflict | `netstat -ano \| findstr :<port>`; MC and Palworld RCON share 25575 |

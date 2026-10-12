@@ -9,6 +9,6 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
-    setupFiles: ["src/__tests__/setup/isolate-activity-log.ts"],
+    setupFiles: ["src/__tests__/setup/isolate-data-dir.ts"],
   },
 });

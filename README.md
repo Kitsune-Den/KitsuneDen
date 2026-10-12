@@ -72,22 +72,16 @@ cd KitsuneDen
 npm install
 ```
 
-### Set the password
+### Pick a password (first run)
 
-KitsuneDen won't let anyone in until you give it a password and a session secret.
+There's nothing to configure. Start the Den (see [Run it](#run-it)) and open it in a browser. Until it has a password, every page goes to a **Welcome to the Den** screen.
 
-```bash
-cp .env.example .env
-```
+1. Find the **setup code**. It's printed in the window or log running the Den, and saved to `data/setup-code.txt`. It proves you're the person setting it up, so nobody else on your network can claim the Den first.
+2. Enter the code, pick the shared password, and you're in.
 
-Then open `.env` and fill in real values:
+The Den keeps an scrypt hash of the password (never the password itself) and a generated session secret in `data/den-auth.json`. Change the password later under **Settings**, optionally signing everyone else out. Sessions last 7 days.
 
-| Variable | What it is |
-|---|---|
-| `KITSUNEDEN_PASSWORD` | The shared password. Everyone you let into the Den knows this one. |
-| `KITSUNEDEN_SESSION_SECRET` | HMAC key for signing session cookies. 32+ random characters. `openssl rand -base64 48` works. |
-
-If either one is missing, the login page shows a setup banner instead of a password box and the API answers `503`. Sessions last 7 days. Rotating the secret logs everyone out, which is exactly what you want if the password leaks.
+Prefer config files? Copy `.env.example` to `.env` and set `KITSUNEDEN_PASSWORD` (and optionally `KITSUNEDEN_SESSION_SECRET`, 32+ characters). Values in `.env` win over first-run setup, and the setup screen never appears.
 
 The session cookie is only marked `Secure` when the request came in over HTTPS (directly, or through a proxy or tunnel that sets `X-Forwarded-Proto: https`), so signing in over plain `http://<LAN-IP>:3001` works.
 
