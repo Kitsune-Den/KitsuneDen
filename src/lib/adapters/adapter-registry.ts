@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import type { ServersConfig, ServerDefinition, ServerAdapter } from "./types";
+import { checkDeletableDir } from "../server-def-security";
 import { MinecraftAdapter } from "./minecraft-adapter";
 import { HytaleAdapter } from "./hytale-adapter";
 import { SevenDaysAdapter } from "./seven-days-adapter";
@@ -13,11 +14,22 @@ const globalForRegistry = globalThis as unknown as {
   __denConfig?: ServersConfig;
 };
 
+/**
+ * Path to the servers config. Override with KITSUNEDEN_SERVERS_CONFIG
+ * (tests use this to avoid touching the operator's real servers.json).
+ * Resolved on every call so the override can change at runtime.
+ */
+export function getConfigPath(): string {
+  return (
+    process.env.KITSUNEDEN_SERVERS_CONFIG ||
+    path.join(process.cwd(), "servers.json")
+  );
+}
+
 function loadConfig(): ServersConfig {
   if (globalForRegistry.__denConfig) return globalForRegistry.__denConfig;
 
-  const configPath = path.join(process.cwd(), "servers.json");
-  const raw = fs.readFileSync(configPath, "utf-8");
+  const raw = fs.readFileSync(getConfigPath(), "utf-8");
   const config: ServersConfig = JSON.parse(raw);
   globalForRegistry.__denConfig = config;
   return config;
@@ -83,8 +95,7 @@ export async function addServer(
   }
 
   config.servers.push(def);
-  const configPath = path.join(process.cwd(), "servers.json");
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  fs.writeFileSync(getConfigPath(), JSON.stringify(config, null, 2));
 
   const map = getAdapterMap();
   map.set(def.id, createAdapter(def));
@@ -106,8 +117,7 @@ export async function updateServer(
   const { id: _id, type: _type, ...safeUpdates } = updates;
   config.servers[idx] = { ...config.servers[idx], ...safeUpdates };
 
-  const configPath = path.join(process.cwd(), "servers.json");
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  fs.writeFileSync(getConfigPath(), JSON.stringify(config, null, 2));
 
   // Rebuild the adapter with updated definition
   const map = getAdapterMap();
@@ -124,10 +134,17 @@ export async function updateServer(
 export async function removeServer(
   serverId: string,
   deleteFiles: boolean = false
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; reason?: "not-found" | "unsafe-delete" }> {
   const config = loadConfig();
   const def = config.servers.find((s) => s.id === serverId);
-  if (!def) return { success: false, message: "Server not found" };
+  if (!def) return { success: false, message: "Server not found", reason: "not-found" };
+
+  // Guard the recursive delete before touching anything — a refused delete
+  // must leave the server running and still listed, not half-removed.
+  if (deleteFiles) {
+    const unsafe = checkDeletableDir(def.dir);
+    if (unsafe) return { success: false, message: unsafe, reason: "unsafe-delete" };
+  }
 
   // Stop the server if it's running
   const adapter = getAdapterMap().get(serverId);
@@ -137,11 +154,10 @@ export async function removeServer(
 
   // Remove from config
   config.servers = config.servers.filter((s) => s.id !== serverId);
-  const configPath = path.join(process.cwd(), "servers.json");
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  fs.writeFileSync(getConfigPath(), JSON.stringify(config, null, 2));
 
   // Delete server files from disk if requested
-  if (deleteFiles && def.dir) {
+  if (deleteFiles) {
     try {
       fs.rmSync(def.dir, { recursive: true, force: true });
     } catch (err) {

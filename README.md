@@ -144,6 +144,8 @@ Then open `http://localhost:3001`. The port lives in the `dev` and `start` scrip
 
 `servers.example.json` has fuller examples, including NeoForge (argfile launch), Hytale, 7 Days to Die, and Palworld.
 
+By default KitsuneDen reads and writes `servers.json` in the directory it's started from. Set `KITSUNEDEN_SERVERS_CONFIG` to an absolute path to use a different file instead — the dashboard's add/edit/remove server actions write back to that same file. The test suite uses this to work on a temp copy, so running `npx vitest run` never touches your live config.
+
 ### Fields by game
 
 **`minecraft`**: Fabric, NeoForge, Vanilla, and most other loaders
