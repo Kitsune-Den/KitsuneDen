@@ -5,6 +5,12 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { resolveDayNightConfig, reverseDayNightConfig } from "@/lib/day-night";
 import { setUnsaved } from "@/lib/unsaved";
 import { sendLifecycle } from "@/components/instances/InstanceControls";
+import {
+  isSandboxEra,
+  SANDBOX_CODE_KEY,
+  SANDBOX_GOVERNED_KEYS,
+  STOCK_SANDBOX_CODE,
+} from "@/lib/seven-days-config";
 import { Loader, RotateCcw, Check, CircleAlert } from "lucide-react";
 
 function formatBytes(bytes: number): string {
@@ -49,6 +55,9 @@ export default function ConfigEditor() {
   const [restarting, setRestarting] = useState(false);
   const [mods, setMods] = useState<{ name: string; sizeBytes: number }[]>([]);
   const [availableWorlds, setAvailableWorlds] = useState<string[]>([]);
+  /** 7D2D 3.x: the world/gameplay ruleset lives in SandboxCode, not serverconfig.xml */
+  const [sandboxEra, setSandboxEra] = useState(false);
+  const [gameVersion, setGameVersion] = useState<string | undefined>(undefined);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -155,6 +164,13 @@ export default function ConfigEditor() {
             "Controls whether temporary/template tags inside strings are shown. Leave off unless you rely on tag output.",
         }
       : {}),
+    SandboxCode:
+      "7D2D 3.x carries the whole world/gameplay ruleset (difficulty, day length, blood moons, zombie speed, loot, XP and more) in this one code. Build it in-game under New Game > Sandbox Options, use Copy Code, and paste it here. The stock value is the Adventurer preset.",
+    Region: "Region shown in the server browser.",
+    Language:
+      "Primary language for players, by its English name (German, not Deutsch). Shown in the server browser.",
+    UserDataFolder:
+      "Overrides where the server stores user data, including generated worlds and saves. Use an absolute path.",
     BlockDamagePlayer:
       "Scales how much damage players deal to blocks (percentage). 300% is popular for solo play to reduce resource grind.",
     BlockDamageAI:
@@ -233,6 +249,9 @@ export default function ConfigEditor() {
       setFormat(data.format || "json");
       const nextConfig = (data.config as Record<string, unknown>) || {};
       // Inject defaults for 7D2D fields that may not exist in the XML yet
+      const sandbox = currentServer?.type === "7d2d" && isSandboxEra(nextConfig, data.gameVersion);
+      setSandboxEra(sandbox);
+      setGameVersion(data.gameVersion || undefined);
       if (currentServer?.type === "7d2d") {
         const defaults7d2d: Record<string, string> = {
           // Block Damage
@@ -279,8 +298,14 @@ export default function ConfigEditor() {
           MaxChunkAge: "-1",
           SaveDataLimit: "-1",
           MaxQueuedMeshLayers: "1000",
+          // 3.x ships these in its stock serverconfig.xml
+          ...(sandbox
+            ? { Region: "NorthAmericaEast", Language: "English", [SANDBOX_CODE_KEY]: STOCK_SANDBOX_CODE }
+            : {}),
         };
         for (const [key, value] of Object.entries(defaults7d2d)) {
+          // On 3.x the Sandbox overwrites these at load, so don't add them to the file.
+          if (sandbox && SANDBOX_GOVERNED_KEYS.has(key)) continue;
           if (!Object.prototype.hasOwnProperty.call(nextConfig, key)) {
             nextConfig[key] = value;
           }
@@ -739,6 +764,10 @@ export default function ConfigEditor() {
   const sevenDaysCoreKeys = ["ServerName", "ServerPassword", "ServerDescription", "ServerLoginConfirmationText"];
   const sevenDaysGroups = [
     {
+      title: "Sandbox",
+      keys: [SANDBOX_CODE_KEY],
+    },
+    {
       title: "World",
       keys: [
         "GameWorld",
@@ -834,6 +863,8 @@ export default function ConfigEditor() {
       keys: [
         "ServerPort",
         "ServerVisibility",
+        "Region",
+        "Language",
         "ServerMaxPlayerCount",
         "ServerReservedSlots",
         "ServerReservedSlotsPermission",
@@ -865,6 +896,7 @@ export default function ConfigEditor() {
       title: "Advanced",
       keys: [
         "ServerWebsiteURL",
+        "UserDataFolder",
         "ServerMaxAllowedViewDistance",
         "TerminalWindowEnabled",
         "WebDashboardEnabled",
@@ -950,6 +982,18 @@ export default function ConfigEditor() {
       { value: "1", label: "1 - Everything" },
       { value: "2", label: "2 - Toolbelt Only" },
       { value: "3", label: "3 - Backpack Only" },
+    ],
+    Region: [
+      { value: "NorthAmericaEast", label: "North America (East)" },
+      { value: "NorthAmericaWest", label: "North America (West)" },
+      { value: "CentralAmerica", label: "Central America" },
+      { value: "SouthAmerica", label: "South America" },
+      { value: "Europe", label: "Europe" },
+      { value: "Russia", label: "Russia" },
+      { value: "Asia", label: "Asia" },
+      { value: "MiddleEast", label: "Middle East" },
+      { value: "Africa", label: "Africa" },
+      { value: "Oceania", label: "Oceania" },
     ],
     ServerVisibility: [
       { value: "0", label: "0 - Not Listed" },
@@ -1406,13 +1450,18 @@ export default function ConfigEditor() {
                   ...sevenDaysGroups.flatMap((group) => group.keys),
                   "DayNightLength", "DayLightLength",
                 ]);
+                // On 3.x the Sandbox overwrites these at load; editing them does nothing.
+                const isShown = (key: string) => !(sandboxEra && SANDBOX_GOVERNED_KEYS.has(key));
+                const ignoredKeys = Object.keys(formValues)
+                  .filter((key) => !isShown(key))
+                  .sort((a, b) => a.localeCompare(b));
                 const remainingKeys = Object.keys(formValues)
-                  .filter((key) => !usedKeys.has(key))
+                  .filter((key) => !usedKeys.has(key) && isShown(key))
                   .sort((a, b) => a.localeCompare(b));
                 const hasKey = (key: string) =>
                   key === "__DayNightWidget__"
-                    ? Object.prototype.hasOwnProperty.call(formValues, "DayNightLength")
-                    : Object.prototype.hasOwnProperty.call(formValues, key);
+                    ? isShown("DayNightLength") && Object.prototype.hasOwnProperty.call(formValues, "DayNightLength")
+                    : isShown(key) && Object.prototype.hasOwnProperty.call(formValues, key);
                 const groups = sevenDaysGroups
                   .filter((group) =>
                     group.keys.some(hasKey)
@@ -1428,6 +1477,20 @@ export default function ConfigEditor() {
 
                 return (
                   <>
+                    {sandboxEra && (
+                      <div className="px-4 py-3 rounded-lg text-[12px] bg-den-surface/60 text-den-text-muted border border-den-border space-y-1">
+                        <div>
+                          {gameVersion ? `This server runs 7 Days to Die ${gameVersion}.` : "This is a 7 Days to Die 3.x config."}{" "}
+                          Difficulty, day length, blood moons, zombie behaviour, loot and XP come from the Sandbox Code,
+                          so those settings aren&apos;t listed here.
+                        </div>
+                        {ignoredKeys.length > 0 && (
+                          <div className="text-den-text-dim">
+                            Still in serverconfig.xml but ignored by the game: {ignoredKeys.join(", ")}.
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="bg-gradient-to-r from-den-surface/60 to-transparent border border-den-border rounded-xl p-5 space-y-4">
                       <div className="flex items-center gap-3">
                         <div className="w-1 h-5 rounded-full bg-den-accent-fill" />

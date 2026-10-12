@@ -4,6 +4,11 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { probeReachability } from "./reachability";
+import {
+  parseServerConfigXml,
+  patchServerConfigXml,
+  sevenDaysVersionFromLog,
+} from "../seven-days-config";
 import type {
   ServerAdapter,
   ServerDefinition,
@@ -309,14 +314,7 @@ ${cmdLines.join("\n")}
 
 function parseXmlConfig(filePath: string): Record<string, string> {
   try {
-    const xml = fs.readFileSync(filePath, "utf8");
-    const props: Record<string, string> = {};
-    const re = /<property\s+name="([^"]+)"\s+value="([^"]*)"\s*\/>/g;
-    let m;
-    while ((m = re.exec(xml)) !== null) {
-      props[m[1]] = m[2];
-    }
-    return props;
+    return parseServerConfigXml(fs.readFileSync(filePath, "utf8"));
   } catch {
     return {};
   }
@@ -326,28 +324,8 @@ function writeXmlConfig(
   filePath: string,
   changes: Record<string, string>
 ): void {
-  let xml = fs.readFileSync(filePath, "utf8");
-  const added: string[] = [];
-  for (const [key, value] of Object.entries(changes)) {
-    const re = new RegExp(
-      `(<property\\s+name="${key}"\\s+value=")([^"]*)("\\s*/>)`,
-      "g"
-    );
-    if (re.test(xml)) {
-      // Reset lastIndex after test() so replace() works from the start
-      re.lastIndex = 0;
-      xml = xml.replace(re, `$1${value}$3`);
-    } else {
-      // Property doesn't exist yet — queue it for insertion
-      added.push(`\t<property name="${key}"\t\t\t\tvalue="${value}"/>`);
-    }
-  }
-  // Insert new properties before the closing </ServerSettings> tag
-  if (added.length > 0) {
-    const insertBlock = "\n\t<!-- Added by Dashboard -->\n" + added.join("\n") + "\n";
-    xml = xml.replace(/([\t ]*<\/ServerSettings>)/, insertBlock + "$1");
-  }
-  fs.writeFileSync(filePath, xml, "utf8");
+  const xml = fs.readFileSync(filePath, "utf8");
+  fs.writeFileSync(filePath, patchServerConfigXml(xml, changes), "utf8");
 }
 
 /** Send a single telnet command and return the response */
@@ -790,6 +768,17 @@ export class SevenDaysAdapter implements ServerAdapter {
     return parseXmlConfig(this.configPath);
   }
 
+  /** The version the game printed on its last boot ("V 3.3.0 (b18)"), so the
+   *  config editor can tell a 3.x server apart even when its serverconfig.xml
+   *  predates the SandboxCode. Undefined until the server has logged once. */
+  getGameVersion(): string | undefined {
+    try {
+      return sevenDaysVersionFromLog(fs.readFileSync(this.logFilePath, "utf8")) ?? undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   async saveConfig(config: Record<string, unknown>): Promise<ActionResult> {
     try {
       // Backup first
@@ -933,8 +922,7 @@ export class SevenDaysAdapter implements ServerAdapter {
     const uniquePlayers = new Set<string>();
     try {
       const log = fs.readFileSync(this.logFilePath, "utf8");
-      const versionMatch = log.match(/INF Version:\s*(V\s*[\d.]+\s*\([^)]+\))/);
-      if (versionMatch) serverVersion = versionMatch[1];
+      serverVersion = sevenDaysVersionFromLog(log) ?? "";
       const loginRe = /INF PlayerLogin:\s*(.+?)\/V/g;
       let m;
       while ((m = loginRe.exec(log)) !== null) {
