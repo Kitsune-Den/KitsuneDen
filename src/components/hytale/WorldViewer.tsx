@@ -69,8 +69,8 @@ export default function WorldViewer() {
               <div
                 className={`h-20 flex items-center justify-center text-4xl ${
                   world.name === "den"
-                    ? "bg-gradient-to-r from-[#1a4a2e] via-[#0b3d1a] to-[#1a4a2e]"
-                    : "bg-gradient-to-r from-[#1a2a4a] via-[#0b1d3d] to-[#1a2a4a]"
+                    ? "bg-den-green/15"
+                    : "bg-den-info/15"
                 }`}
               >
                 {world.name === "den" ? "\uD83E\uDD8A" : "\uD83C\uDF0D"}

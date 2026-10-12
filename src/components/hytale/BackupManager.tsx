@@ -77,7 +77,7 @@ export default function BackupManager() {
         <button
           onClick={() => runBackup("hourly")}
           disabled={running}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg text-sm font-semibold hover:brightness-110 hover:shadow-[0_0_16px_rgba(79,195,247,0.3)] disabled:opacity-50 transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-den-accent-deep text-white border border-den-accent-fill rounded-lg text-sm font-semibold hover:brightness-110 disabled:opacity-50 transition-all"
         >
           <Clock size={16} />
           Run Hourly Backup

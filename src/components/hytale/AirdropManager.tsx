@@ -77,7 +77,7 @@ export default function AirdropManager() {
             onClick={() => setTab(t)}
             className={`flex-1 px-4 py-2 rounded-md text-sm font-semibold transition-all ${
               tab === t
-                ? "bg-den-cyan-glow text-den-cyan shadow-[inset_0_0_12px_rgba(79,195,247,0.1)]"
+                ? "bg-den-cyan-glow text-den-cyan"
                 : "text-den-text-muted hover:text-den-text hover:bg-den-elevated"
             }`}
           >
@@ -182,7 +182,7 @@ function LootTablesTab({ serverId }: { serverId: string }) {
       {!showCreate ? (
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg text-sm font-semibold hover:brightness-110 hover:shadow-[0_0_16px_rgba(79,195,247,0.3)] transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-den-accent-deep text-white border border-den-accent-fill rounded-lg text-sm font-semibold hover:brightness-110 transition-all"
         >
           <Plus size={16} />
           New Loot Table
@@ -212,7 +212,7 @@ function LootTablesTab({ serverId }: { serverId: string }) {
           <button
             onClick={createTable}
             disabled={!newName.trim()}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg text-sm font-semibold hover:brightness-110 disabled:opacity-50 transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-den-accent-deep text-white border border-den-accent-fill rounded-lg text-sm font-semibold hover:brightness-110 disabled:opacity-50 transition-all"
           >
             <Plus size={14} />
             Create
@@ -596,7 +596,7 @@ function SettingsTab({ serverId }: { serverId: string }) {
         <button
           onClick={saveAll}
           disabled={dirty.size === 0 || saving}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg text-sm font-semibold hover:brightness-110 hover:shadow-[0_0_16px_rgba(79,195,247,0.3)] disabled:opacity-50 transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-den-accent-deep text-white border border-den-accent-fill rounded-lg text-sm font-semibold hover:brightness-110 disabled:opacity-50 transition-all"
         >
           <Save size={16} />
           Save Changes

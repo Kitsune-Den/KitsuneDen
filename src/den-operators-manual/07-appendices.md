@@ -39,7 +39,8 @@ This chapter is for skimming. Keep it open in a tab and reach for whatever you n
 | **Stub directory** | The local `dir` a remote Minecraft entry points at; it isn't the real server folder |
 | **Mod Library** | `mods-library\`, the reservoir of Minecraft mods that packs draw from |
 | **Mod Pack** | A named set of library mods that can be activated together |
-| **Server Switcher** | The bar that chooses which server every page talks to |
+| **Server grid** | The home page: one card per server, with live status and quick controls |
+| **Activity log** | `data\activity.jsonl`, the record of starts, stops, crashes, saves and roster changes |
 | **SSE** | Server-Sent Events, the stream that carries console output to the browser |
 | **RCON** | Remote Console, used by Minecraft and Palworld |
 | **Argfile** | A text file of JVM arguments (`@file`), used by NeoForge's launch style |
@@ -122,6 +123,7 @@ Every route except `/api/auth/*` needs a valid session. Server-aware routes take
 | `/api/airdrops/history` | GET | Recent drops (`?limit=`, default 50) |
 | `/api/browse-folder` | GET | Opens a folder picker on the dashboard host |
 | `/api/docs` | GET | `?file=` README or a manual chapter |
+| `/api/activity` | GET | Recent events, newest first (`?server=`, `?kind=server,crash,config,players,backup,mods,setup,auth`, `?limit=` up to 500) |
 
 ---
 

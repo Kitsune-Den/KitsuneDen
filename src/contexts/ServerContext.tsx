@@ -8,6 +8,7 @@ import {
   useCallback,
   ReactNode,
 } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 interface ServerInfo {
   id: string;
@@ -38,11 +39,15 @@ interface ServerInfo {
 }
 
 interface ServerContextType {
+  /** The server in focus: the one in the URL on /instances/[id], else the last one visited */
   serverId: string;
+  /** Opens a server's page */
   setServerId: (id: string) => void;
   servers: ServerInfo[];
   currentServer: ServerInfo | null;
   refreshServers: () => void;
+  /** False until the first /api/servers response, so pages can show skeletons */
+  loaded: boolean;
 }
 
 const ServerContext = createContext<ServerContextType>({
@@ -51,11 +56,26 @@ const ServerContext = createContext<ServerContextType>({
   servers: [],
   currentServer: null,
   refreshServers: () => {},
+  loaded: false,
 });
 
+export type { ServerInfo };
+
 export function ServerProvider({ children }: { children: ReactNode }) {
-  const [serverId, setServerId] = useState("");
+  const pathname = usePathname();
+  const router = useRouter();
+  const routeMatch = pathname?.match(/^\/instances\/([^/]+)/);
+  const routeId = routeMatch ? decodeURIComponent(routeMatch[1]) : null;
+
+  const [lastId, setLastId] = useState("");
   const [servers, setServers] = useState<ServerInfo[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (routeId) setLastId(routeId);
+  }, [routeId]);
+
+  const serverId = routeId ?? lastId;
 
   const fetchServers = useCallback(() => {
     fetch("/api/servers")
@@ -66,9 +86,10 @@ export function ServerProvider({ children }: { children: ReactNode }) {
           const next = JSON.stringify(list);
           return JSON.stringify(prev) === next ? prev : list;
         });
-        // Auto-select first server if none selected
+        setLoaded(true);
+        // Keep a sensible fallback focus for pages outside /instances/[id]
         if (list.length > 0) {
-          setServerId((prev) => (prev && list.some((s) => s.id === prev) ? prev : list[0].id));
+          setLastId((prev) => (prev && list.some((s) => s.id === prev) ? prev : list[0].id));
         }
       })
       .catch(() => {});
@@ -82,8 +103,16 @@ export function ServerProvider({ children }: { children: ReactNode }) {
 
   const currentServer = servers.find((s) => s.id === serverId) || null;
 
+  const setServerId = useCallback(
+    (id: string) => {
+      setLastId(id);
+      router.push(`/instances/${encodeURIComponent(id)}`);
+    },
+    [router]
+  );
+
   return (
-    <ServerContext.Provider value={{ serverId, setServerId, servers, currentServer, refreshServers: fetchServers }}>
+    <ServerContext.Provider value={{ serverId, setServerId, servers, currentServer, refreshServers: fetchServers, loaded }}>
       {children}
     </ServerContext.Provider>
   );

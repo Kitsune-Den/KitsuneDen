@@ -370,7 +370,7 @@ export default function ModPacks() {
               <button
                 onClick={savePack}
                 disabled={saving}
-                className="px-3 py-2 text-xs font-semibold bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg disabled:opacity-40 hover:brightness-110 transition-all inline-flex items-center gap-2"
+                className="px-3 py-2 text-xs font-semibold bg-den-accent-deep text-white border border-den-accent-fill rounded-lg disabled:opacity-40 hover:brightness-110 transition-all inline-flex items-center gap-2"
               >
                 <Save size={12} />
                 {saving ? "Saving..." : "Save Pack"}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { recordActivity } from "@/lib/activity";
 import {
   SESSION_COOKIE_NAME,
   SESSION_TTL_SECONDS,
@@ -50,10 +51,12 @@ export async function POST(request: NextRequest) {
   const submitted = typeof body.password === "string" ? body.password : "";
   if (!checkPassword(submitted)) {
     // Generic message — don't leak whether the password matched length, etc.
+    recordActivity({ level: "warn", kind: "auth", message: "Failed sign-in attempt" });
     return NextResponse.json({ ok: false, error: "Wrong password." }, { status: 401 });
   }
 
   const cookieValue = signSession();
+  recordActivity({ level: "info", kind: "auth", message: "Someone signed in" });
   const response = NextResponse.json({ ok: true });
   response.cookies.set({
     name: SESSION_COOKIE_NAME,

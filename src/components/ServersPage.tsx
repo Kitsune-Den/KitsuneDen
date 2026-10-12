@@ -298,7 +298,7 @@ export default function ServersPage() {
       <div className="flex justify-end">
         <button
           onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg hover:brightness-110 transition-all"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-den-accent-deep text-white border border-den-accent-fill hover:brightness-110 transition-all"
         >
           <Plus size={16} />
           Add Server

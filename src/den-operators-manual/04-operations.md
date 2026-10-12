@@ -82,7 +82,7 @@ Open [http://localhost:3001](http://localhost:3001). You should land on the logi
 ## 2. Passing the Gate (Login)
 
 - Everyone uses the same password: `KITSUNEDEN_PASSWORD`.
-- A session lasts **7 days**. **Log out** from the top bar.
+- A session lasts **7 days**. **Log out** with the button next to *Den operator* at the bottom of the sidebar.
 - **Changing the password** means editing `.env`, restarting the dashboard, and telling everyone. Existing sessions stay valid until they expire.
 - **Ending every session at once** (say, after a password leak): change `KITSUNEDEN_SESSION_SECRET` and restart. Every cookie signed with the old secret stops working.
 
@@ -112,7 +112,7 @@ Some fields aren't in the form yet. Edit `servers.json` by hand for:
 
 ## 4. Starting and Stopping Game Servers
 
-Use the **Start**, **Stop**, and **Restart** buttons in the top bar. They act on whichever server the switcher has selected.
+Each server card on the home page has start/stop and restart buttons, and every server's own page has **Start**, **Stop**, and **Restart** in its header. Stop and restart ask for confirmation, since they disconnect players. On a server's page the keys `s`, `x` and `r` do the same (with the same confirmation).
 
 What each button actually does depends on the spirit (see Chapter 2, section 9). In short:
 
@@ -141,13 +141,25 @@ Launch scripts use relative paths, so always `cd` into the server's folder first
 
 ---
 
-## 5. Switching Between Servers
+## 5. Getting Around
 
-The **server switcher** sits above the page content and lists every server in `servers.json`, each with a live status indicator. The list refreshes every 5 seconds.
+**Servers** (the home page) shows every server in `servers.json` as a card: status, memory, players online, uptime, and quick controls. Toggle between grid and list at the top right. Cards refresh every few seconds while the tab is visible.
 
-Choosing a server changes the target of every page: console, stats, config, players, mods, and so on. Pages that don't apply to that server's game disappear from the sidebar.
+Click a card to open that server. Its page has tabs: **Status, Console, Config, Players**, then whichever of **Worlds, Backups, Mods, Mod packs, Airdrops, Update** the game supports, and **Activity**. Each tab has its own URL, so you can bookmark `/instances/<id>/console`. `[` and `]` step between tabs; `h` goes back to all servers; `?` lists every shortcut.
 
-**Switching never stops anything.** Servers on different ports can all run at once; the switcher only changes which one you're looking at.
+**Opening a server never stops anything.** Servers on different ports can all run at once; you're only choosing which one to look at.
+
+### Saving config
+
+Config edits are staged. Each changed field gets a small orange dot, the header counts the unsaved changes, and a bar at the bottom offers **Save changes** or **Discard**. After a save it tells you whether the server needs a restart and offers **Restart now** if it's running. Leaving the tab, the page, or the browser with unsaved edits asks first.
+
+### Activity
+
+The **Activity** page (and each server's Activity tab) lists what happened: starts, stops, restarts, config saves, roster changes, backups, mod changes, sign-ins. A server that goes down without the dashboard asking is logged as a crash. The log lives in `data\activity.jsonl` and keeps the most recent ~1500 events.
+
+### Settings
+
+**Settings** picks dark, light or system theme and turns on the colour-blind status palette. Both are saved in the browser, so each person (and each device) chooses their own.
 
 ---
 
@@ -176,7 +188,7 @@ For a clean swap: clear `mods\`, then activate the pack.
 
 ## 7. Memory (Minecraft)
 
-Set heap size in the **Memory Allocation** card on the Dashboard page (local Minecraft servers only; a remote server's JVM isn't started by the dashboard). It's stored in `dashboard-config.json` in the server's directory:
+Set heap size in the **Memory Allocation** card on the server's **Status** tab (local Minecraft servers only; a remote server's JVM isn't started by the dashboard). It's stored in `dashboard-config.json` in the server's directory:
 
 ```json
 { "minMemoryGB": 2, "maxMemoryGB": 4 }
@@ -290,7 +302,8 @@ Whether the mod picks up changes without a restart depends on the mod.
 ### Morning
 
 - [ ] Open the Den ([localhost:3001](http://localhost:3001)) and confirm it loads
-- [ ] Glance at the switcher. Is everyone who should be awake, awake?
+- [ ] Glance at the server grid. Is everyone who should be awake, awake?
+- [ ] Skim **Activity** for anything marked as stopped unexpectedly.
 - [ ] Skim the console of anything that restarted overnight
 
 ### Occasional
