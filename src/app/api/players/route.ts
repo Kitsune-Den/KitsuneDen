@@ -38,11 +38,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ...players, userCache });
   }
   if (adapter.def.type === "palworld" && "getAdmins" in adapter) {
-    const a = adapter as { getAdmins: () => unknown; def: { rconPassword?: string } };
+    // Deliberately no admin/RCON password here — this payload is fetched on
+    // every Players page load. Operators who need it can read AdminPassword
+    // in the Config tab.
+    const a = adapter as { getAdmins: () => unknown };
     return NextResponse.json({
       ...players,
       admins: a.getAdmins(),
-      adminPassword: a.def.rconPassword || "",
     });
   }
   return NextResponse.json(players);

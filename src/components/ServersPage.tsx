@@ -224,6 +224,12 @@ export default function ServersPage() {
     const fields = [...SHARED_FIELDS, ...(TYPE_FIELDS[server.type] || [])];
     const draft: Record<string, string | number> = {};
     for (const f of fields) {
+      // Secrets are write-only: the API never returns them, so the input
+      // starts blank and blank-on-save means "keep the existing value".
+      if (f.type === "password") {
+        draft[f.key] = "";
+        continue;
+      }
       const val = full?.[f.key as keyof typeof full];
       draft[f.key] = val !== undefined && val !== null ? val as string | number : "";
     }
@@ -231,6 +237,8 @@ export default function ServersPage() {
     setEditTarget(server);
     setEditMessage(null);
   };
+
+  const editSecretsSet = servers.find((s) => s.id === editTarget?.id)?.secretsSet ?? [];
 
   const handleSaveEdit = async () => {
     if (!editTarget) return;
@@ -243,6 +251,7 @@ export default function ServersPage() {
       const updates: Record<string, unknown> = {};
       for (const f of fields) {
         const val = editDraft[f.key];
+        if (f.type === "password" && val === "") continue;
         if (f.type === "number" && val !== "") {
           updates[f.key] = Number(val);
         } else {
@@ -617,6 +626,14 @@ export default function ServersPage() {
                   <input
                     type={field.type === "password" ? "password" : field.type === "number" ? "number" : "text"}
                     value={editDraft[field.key] ?? ""}
+                    placeholder={
+                      field.type === "password"
+                        ? editSecretsSet.includes(field.key)
+                          ? "Saved — leave blank to keep"
+                          : "Not set"
+                        : undefined
+                    }
+                    autoComplete={field.type === "password" ? "new-password" : undefined}
                     onChange={(e) =>
                       setEditDraft((prev) => ({ ...prev, [field.key]: e.target.value }))
                     }
