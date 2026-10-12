@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs";
+import path from "node:path";
 import { NextRequest } from "next/server";
 import {
   _resetAuthConfigForTests,
@@ -216,5 +217,31 @@ describe("environment still wins", () => {
     const env = "an-env-session-secret-that-is-long-enough!!";
     process.env.KITSUNEDEN_SESSION_SECRET = env;
     expect(getSessionSecret()).toBe(env);
+  });
+});
+
+describe("GET /api/setup is public, so it says as little as possible", () => {
+  it("returns only needsSetup once a password exists", async () => {
+    await runSetup();
+    expect(await (await setupStatus()).json()).toEqual({ needsSetup: false });
+  });
+
+  it("returns only needsSetup when the password comes from .env", async () => {
+    process.env.KITSUNEDEN_PASSWORD = "from-the-env-file";
+    expect(await (await setupStatus()).json()).toEqual({ needsSetup: false });
+    expect(fs.existsSync(setupCodePath())).toBe(false);
+  });
+
+  it("shows the code file relative to the app folder when it lives there", async () => {
+    const saved = process.env.KITSUNEDEN_DATA_DIR;
+    process.env.KITSUNEDEN_DATA_DIR = path.join(process.cwd(), "data-test-setup-path");
+    try {
+      const body = await (await setupStatus()).json();
+      expect(body.codeFile).toBe("data-test-setup-path/setup-code.txt");
+    } finally {
+      fs.rmSync(process.env.KITSUNEDEN_DATA_DIR, { recursive: true, force: true });
+      process.env.KITSUNEDEN_DATA_DIR = saved;
+      _resetAuthConfigForTests();
+    }
   });
 });
