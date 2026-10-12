@@ -31,8 +31,17 @@ export function getConfigPath(): string {
 function loadConfig(): ServersConfig {
   if (globalForRegistry.__denConfig) return globalForRegistry.__denConfig;
 
-  const raw = fs.readFileSync(getConfigPath(), "utf-8");
+  let raw: string;
+  try {
+    raw = fs.readFileSync(getConfigPath(), "utf-8");
+  } catch (err) {
+    // A fresh install has no servers.json yet. That's "no servers", not an
+    // error; the first server added from the UI creates the file.
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return { servers: [] };
+    throw err;
+  }
   const config: ServersConfig = JSON.parse(raw);
+  if (!Array.isArray(config.servers)) config.servers = [];
   globalForRegistry.__denConfig = config;
   return config;
 }
@@ -60,10 +69,13 @@ function createAdapter(def: ServerDefinition): ServerAdapter {
 
 function getAdapterMap(): Map<string, ServerAdapter> {
   if (!globalForRegistry.__denAdapters) {
-    globalForRegistry.__denAdapters = new Map();
+    // Load before caching, so a bad servers.json errors every time instead of
+    // leaving an empty registry behind after the first failure.
     const config = loadConfig();
+    const map = new Map<string, ServerAdapter>();
+    globalForRegistry.__denAdapters = map;
     for (const def of config.servers) {
-      globalForRegistry.__denAdapters.set(def.id, createAdapter(def));
+      map.set(def.id, createAdapter(def));
     }
   }
   return globalForRegistry.__denAdapters;

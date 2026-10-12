@@ -25,8 +25,10 @@ KitsuneDen is one repository. The game servers live wherever you installed them;
 KitsuneDen\
   servers.json               The Den's map: every server and how to reach it (gitignored)
   servers.example.json       Template with Fabric, NeoForge, 7D2D, Palworld, Enshrouded
-  .env                       KITSUNEDEN_PASSWORD + KITSUNEDEN_SESSION_SECRET (gitignored)
+  .env                       Optional: KITSUNEDEN_PASSWORD / _SESSION_SECRET / _DATA_DIR (gitignored)
   .env.example               Template for .env
+  data\                      Runtime files (gitignored): den-auth.json, activity.jsonl,
+                             setup-code.txt during first run
   next.config.ts             Build settings (see section 2)
   package.json               Scripts: dev / build / start on port 3001, lint, test
   src\
@@ -228,16 +230,20 @@ How it runs (`remote-exec.ts`):
 
 ## 6. The Gate (Auth)
 
-`src/proxy.ts` runs on every request except `/login`, `/api/auth/*`, `/favicon.ico`, and Next's static assets.
+`src/proxy.ts` runs on every request except `/login`, `/setup`, `/api/setup`, `/api/auth/*`, `/favicon.ico`, and Next's static assets. Next 16 runs the proxy on Node.js, so it reads the same auth config as the routes.
 
 | Situation | HTML pages | API routes |
 |---|---|---|
-| `KITSUNEDEN_PASSWORD` unset | redirect to `/login?setup=1` | `503` |
-| `KITSUNEDEN_SESSION_SECRET` missing or under 32 chars | redirect to `/login?setup=1` | `503` |
+| No password yet (fresh install) | redirect to `/setup` | `503` with `setup: true` |
+| Password exists, but no secret could be read or saved | redirect to `/login?setup=1` | `503` |
 | No valid session | redirect to `/login?next=<path>` | `401` |
 | Valid session | through | through |
 
-The session cookie is `kitsuneden_session`: a small payload (`{ v: 1, iat }`) plus an HMAC-SHA256 signature, valid for 7 days. It is `HttpOnly`, `SameSite=Lax`, and `Secure` only when the request arrived over HTTPS (directly, or via a proxy that sets `X-Forwarded-Proto: https`). `auth.ts` signs it at login (Node crypto); `auth-edge.ts` verifies it in the proxy (Web Crypto). Keep their constants in sync.
+**Where the password and secret come from** (`src/lib/den-auth-config.ts`): `KITSUNEDEN_PASSWORD` / `KITSUNEDEN_SESSION_SECRET` when set, otherwise `data/den-auth.json`. First-run setup writes that file: an scrypt hash of the password and a 48-byte random secret. If a password exists but no secret does (say, `.env` has only the password), a secret is generated and saved on first use. The file is cached by modification time, so a password change applies on the next request without a restart.
+
+**First-run setup** (`/setup`, `POST /api/setup`) only works while no password exists, and only with the one-time setup code. The code is printed to the server log and saved to `data/setup-code.txt`; ten wrong guesses replace it. A launcher can open `/setup?code=XXXX-XXXX` to pre-fill it. **Password changes** (`POST /api/account/password`, behind the gate) need the current password, and by default rotate the secret, ending every other session while re-issuing the caller's cookie.
+
+The session cookie is `kitsuneden_session`: a small payload (`{ v: 1, iat }`) plus an HMAC-SHA256 signature, valid for 7 days. It is `HttpOnly`, `SameSite=Lax`, and `Secure` only when the request arrived over HTTPS (directly, or via a proxy that sets `X-Forwarded-Proto: https`). `auth.ts` signs it (login, setup and password change all use `setSessionCookie`); `auth-edge.ts` verifies it in the proxy with Web Crypto. Keep their constants in sync.
 
 The password check is constant-time. There is no rate limit on `/api/auth/login` yet, so keep the Den behind a tailnet, Cloudflare Access, or your LAN rather than on a bare public IP.
 
@@ -258,7 +264,8 @@ It is always night in the workshop. There is no light theme.
 ### Den-level
 
 - **`servers.json`**: every server, its type, directory, ports, and credentials. Field reference in Appendix F. The `dashboard.port` key is not read by anything; the port comes from `package.json`.
-- **`.env`**: `KITSUNEDEN_PASSWORD` and `KITSUNEDEN_SESSION_SECRET`. Next.js loads it automatically.
+- **`.env`** (optional): `KITSUNEDEN_PASSWORD`, `KITSUNEDEN_SESSION_SECRET`, `KITSUNEDEN_DATA_DIR`. Next.js loads it automatically.
+- **`data\den-auth.json`**: the password hash and session secret from first-run setup. Treat it like a password file.
 
 ### Per game
 

@@ -101,22 +101,39 @@ function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function xmlEscape(s: string): string {
+/** Escape a value for a double-quoted XML attribute. Newlines and tabs become
+ * character references so attribute-value normalization doesn't turn them
+ * into spaces. Also used for serveradmin.xml (player names, ban reasons). */
+export function xmlEscape(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/\r/g, "&#13;")
+    .replace(/\n/g, "&#10;")
+    .replace(/\t/g, "&#9;");
 }
 
-function xmlUnescape(s: string): string {
-  return s
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&");
+const NAMED_ENTITIES: Record<string, string> = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">" };
+
+/** Decode the predefined entities and numeric character references in one
+ * pass (so "&amp;quot;" stays "&quot;"). Malformed references are left as-is. */
+export function xmlUnescape(s: string): string {
+  return s.replace(/&(?:#(\d+)|#x([0-9a-fA-F]+)|(amp|quot|apos|lt|gt));/g, (match, dec, hex, name) => {
+    if (name) return NAMED_ENTITIES[name];
+    const code = dec !== undefined ? parseInt(dec, 10) : parseInt(hex, 16);
+    try {
+      return String.fromCodePoint(code);
+    } catch {
+      return match;
+    }
+  });
 }
+
+/** 7D2D property names are plain identifiers. Anything else is refused: the
+ * name is written into the file unescaped. */
+const PROPERTY_NAME = /^[A-Za-z][A-Za-z0-9_.-]*$/;
 
 /**
  * Read every live property into a name→value map. Commented-out properties are
@@ -130,7 +147,7 @@ export function parseServerConfigXml(xml: string): Record<string, string> {
     .filter((_, i) => i % 2 === 0)
     .join("");
   for (const m of live.matchAll(PROPERTY_RE)) {
-    props[m[1]] = xmlUnescape(m[2]);
+    props[xmlUnescape(m[1])] = xmlUnescape(m[2]);
   }
   return props;
 }
@@ -140,8 +157,13 @@ export function parseServerConfigXml(xml: string): Record<string, string> {
  * Only live properties are replaced; a key that's missing (or only present
  * inside a comment) is appended before `</ServerSettings>`. Values are
  * XML-escaped, so a quote in a server description can't break the file.
+ * Throws (before changing anything) on a property name that isn't an
+ * identifier.
  */
 export function patchServerConfigXml(xml: string, changes: Record<string, string>): string {
+  for (const key of Object.keys(changes)) {
+    if (!PROPERTY_NAME.test(key)) throw new Error(`Invalid config property name: ${JSON.stringify(key)}`);
+  }
   const parts = xml.split(COMMENT_SPLIT);
   const added: string[] = [];
   for (const [key, value] of Object.entries(changes)) {
