@@ -599,7 +599,7 @@ export default function PlayerManager() {
           </div>
           <div className="p-5 space-y-3">
             <div className="text-[11px] text-den-text-dim">
-              Share the admin password (<code className="text-den-cyan">AdminPassword</code> in the Config tab) with trusted players below. They use <code className="text-den-cyan">/AdminPassword</code> in-game to gain admin.
+              Share the admin password with trusted players below. They use <code className="text-den-cyan">/AdminPassword</code> in-game to gain admin. The dashboard doesn&apos;t show it; set a new <code className="text-den-cyan">AdminPassword</code> in the Config tab if you need to.
             </div>
             <div className="space-y-2">
               {pwAdmins.map((steamId) => {
