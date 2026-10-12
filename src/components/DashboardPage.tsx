@@ -4,6 +4,7 @@ import { useServer } from "@/contexts/ServerContext";
 import { useEffect, useState } from "react";
 import StatCard from "@/components/StatCard";
 import MemoryAllocation from "@/components/minecraft/MemoryAllocation";
+import NetworkingCard from "@/components/instances/NetworkingCard";
 import { Activity, Users, Globe, Cpu, Copy, Check, ArrowRight } from "lucide-react";
 import { gameMeta } from "@/lib/game-meta";
 
@@ -306,6 +307,9 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
           </div>
         </section>
       </div>
+
+      {/* Ports from the game's recipe, with clashes against the rest of the Den */}
+      <NetworkingCard />
 
       {/* Minecraft -Xms/-Xmx (renders nothing for other games / remote MC) */}
       <MemoryAllocation />

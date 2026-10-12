@@ -155,13 +155,16 @@ export const RECIPES: Record<GameType, GameRecipe> = {
     },
     ports: [
       { field: "gamePort", purpose: "game", proto: "tcp+udp", default: 26900, public: true },
+      // Measured by PackRelay on 3.2.0: ServerPort 26950 bound 26950 TCP+UDP
+      // and 26952 UDP, nothing on +1. Not a field in the Den's form: the game
+      // picks it from the game port, so there's nothing to set.
       {
         field: "queryPort",
         purpose: "query",
         proto: "udp",
         offset: { from: "gamePort", by: 2 },
         public: true,
-        note: "Measured by PackRelay on 3.2.0: ServerPort 26950 bound 26950 TCP+UDP and 26952 UDP, nothing on +1. Not in the Den's form yet.",
+        note: "The game opens this itself, two above the game port. Forward it too, or the server won't show in the in-game browser.",
       },
       { field: "telnetPort", purpose: "telnet", proto: "tcp", default: 8081, public: false },
     ],
