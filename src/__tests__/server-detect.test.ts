@@ -69,11 +69,12 @@ describe("advisePorts", () => {
     expect(ports.restApiPort!.value).toBe(8213);
   });
 
-  it("keeps Enshrouded's game and query ports paired", async () => {
-    const owners = portOwners([def({ name: "Shroud", type: "enshrouded", gamePort: 15637, queryPort: 15638 })]);
+  it("moves Enshrouded's one port to the next free one", async () => {
+    // One UDP port for joining and queries (its config's queryPort).
+    const owners = portOwners([def({ name: "Shroud", type: "enshrouded", gamePort: 15637 })]);
     const ports = await advisePorts("enshrouded", {}, owners, allFree);
-    expect(ports.gamePort!.value).toBe(15639);
-    expect(ports.queryPort!.value).toBe(15640);
+    expect(ports.gamePort!.value).toBe(15638);
+    expect(ports.queryPort).toBeUndefined();
   });
 });
 
@@ -156,12 +157,13 @@ describe("detectInstall", () => {
   });
 
   it("reads Enshrouded's JSON config and start script", () => {
-    write("enshrouded_server.json", JSON.stringify({ name: "Shroud", gamePort: 15639, queryPort: 15640 }));
+    // queryPort is the one port; gamePort is a leftover key the game ignores.
+    write("enshrouded_server.json", JSON.stringify({ name: "Shroud", gamePort: 15637, queryPort: 15639 }));
     write("start_enshrouded.bat");
     const r = detectInstall("enshrouded", dir);
     if (!r.ok) throw new Error(r.error);
     expect(r.detection.fields).toMatchObject({ name: "Shroud", startScript: "start_enshrouded.bat", configFile: "enshrouded_server.json" });
-    expect(r.detection.configPorts).toEqual({ gamePort: 15639, queryPort: 15640 });
+    expect(r.detection.configPorts).toEqual({ gamePort: 15639 });
   });
 
   it("falls back to the folder name and says what's missing", () => {
@@ -209,7 +211,7 @@ describe("PORT_SPECS", () => {
       "7d2d": ["gamePort 26900 both step 10 span 3", "telnetPort 8081 tcp step 1 span 1"],
       hytale: ["gamePort 5520 udp step 1 span 1"],
       palworld: ["gamePort 8211 udp step 1 span 1", "rconPort 25575 tcp step 1 span 1", "restApiPort 8212 tcp step 1 span 1"],
-      enshrouded: ["gamePort 15637 udp step 2 span 1", "queryPort 15638 udp step 2 span 1"],
+      enshrouded: ["gamePort 15637 udp step 1 span 1"],
     });
   });
 });

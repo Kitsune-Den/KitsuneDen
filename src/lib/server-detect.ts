@@ -47,12 +47,11 @@ const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "en
 
 /**
  * How far apart to look when the usual port is taken, where that isn't just
- * the ports the field spans: 7D2D game ports sit 10 apart, Enshrouded's in
- * pairs. Everything else steps by its span.
+ * the ports the field spans: 7D2D game ports sit 10 apart. Everything else
+ * steps by its span.
  */
 const PORT_STEP: Partial<Record<GameType, Partial<Record<PortField, number>>>> = {
   "7d2d": { gamePort: 10 },
-  enshrouded: { gamePort: 2, queryPort: 2 },
 };
 
 /**
@@ -416,10 +415,10 @@ function detectEnshrouded(dir: string, d: Detection) {
       const c = JSON.parse(text) as Record<string, unknown>;
       d.configFile = "enshrouded_server.json";
       d.fields.configFile = "enshrouded_server.json";
-      const game = num(c.gamePort);
-      if (game) d.configPorts.gamePort = game;
-      const query = num(c.queryPort);
-      if (query) d.configPorts.queryPort = query;
+      // Enshrouded's one port is its config's queryPort (the Den's Game
+      // Port); a gamePort key is left over from older configs and unused.
+      const port = num(c.queryPort);
+      if (port) d.configPorts.gamePort = port;
       if (typeof c.name === "string" && c.name && c.name !== "Enshrouded Server") {
         d.fields.name = c.name;
         d.nameFromConfig = true;
@@ -498,5 +497,5 @@ export const CONFIG_PORT_KEYS: Partial<Record<GameType, Partial<Record<PortField
   minecraft: { gamePort: "server-port", rconPort: "rcon.port" },
   "7d2d": { gamePort: "ServerPort", telnetPort: "TelnetPort" },
   palworld: { gamePort: "PublicPort", rconPort: "RCONPort", restApiPort: "RESTAPIPort" },
-  enshrouded: { gamePort: "gamePort", queryPort: "queryPort" },
+  enshrouded: { gamePort: "queryPort" },
 };
