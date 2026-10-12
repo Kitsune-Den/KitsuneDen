@@ -94,7 +94,8 @@ export interface ServerDefinition {
 
 export interface ServersConfig {
   servers: ServerDefinition[];
-  dashboard: {
+  /** Legacy and unused: the port comes from package.json scripts. Older files may still carry it. */
+  dashboard?: {
     port: number;
   };
 }
