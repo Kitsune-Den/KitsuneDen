@@ -6,8 +6,8 @@ import { GET } from "../app/api/players/route";
 /**
  * GET /api/players for Palworld used to return `adminPassword:
  * def.rconPassword`, so every Players page load shipped the RCON / in-game
- * admin password to the browser. It's still reachable for operators via the
- * Config tab (PalWorldSettings.ini), just not on this hot path.
+ * admin password to the browser. It's write-only now (the Config tab can set
+ * AdminPassword but no longer shows it).
  */
 
 const ADMIN_PASSWORD = "palworld-admin-secret";
