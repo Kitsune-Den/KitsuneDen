@@ -62,7 +62,7 @@ export default function DocsPage({ docKey, onSelect }: DocsPageProps) {
     <div className="grid grid-cols-1 xl:grid-cols-[240px_1fr] gap-4 items-start">
       <nav className="den-card overflow-hidden xl:sticky xl:top-4" aria-label="Documents">
         <div className="den-card-header">
-          <h3 className="den-card-title">Library</h3>
+          <h3 className="den-card-title">Contents</h3>
         </div>
         <div className="p-2 flex flex-row flex-wrap xl:flex-col gap-1">
           {DOC_OPTIONS.map((doc) => (

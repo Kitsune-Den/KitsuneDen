@@ -166,7 +166,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
           icon={<Activity size={20} />}
           value={isOnline ? "Online" : status === "starting" ? "Starting" : status === "stopping" ? "Stopping" : "Offline"}
           label="Server status"
-          tone={isOnline ? "green" : status === "starting" || status === "stopping" ? "amber" : "red"}
+          tone={isOnline ? "green" : status === "starting" || status === "stopping" ? "accent" : "dim"}
           highlight
         />
         <StatCard
