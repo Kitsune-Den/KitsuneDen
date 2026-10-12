@@ -106,7 +106,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={busy || password.length === 0}
-              className="w-full bg-den-cyan hover:brightness-110 text-den-bg font-semibold py-2.5 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full bg-den-accent-deep hover:bg-den-accent-fill text-white font-semibold py-2.5 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {busy ? "Signing in…" : "Enter the Den"}
             </button>

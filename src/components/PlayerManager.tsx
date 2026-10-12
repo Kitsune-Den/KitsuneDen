@@ -294,7 +294,7 @@ export default function PlayerManager() {
             <button
               onClick={handleAddPlayer}
               disabled={busyAction === "add-player"}
-              className="px-4 py-2 text-xs font-semibold bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
+              className="px-4 py-2 text-xs font-semibold bg-den-accent-deep text-white border border-den-accent-fill rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
             >
               {busyAction === "add-player" ? "Saving..." : "Apply"}
             </button>
@@ -382,8 +382,8 @@ export default function PlayerManager() {
                       <div
                         className={`w-10 h-10 rounded-md flex items-center justify-center text-lg font-extrabold shrink-0 ${
                           player.isOp
-                            ? "bg-gradient-to-br from-den-amber to-den-lantern text-den-bg shadow-[0_0_12px_rgba(255,167,38,0.3)]"
-                            : "bg-gradient-to-br from-den-cyan to-[#29b6f6] text-den-bg"
+                            ? "bg-den-amber text-[#1d1408] shadow-[0_0_12px_rgba(255,167,38,0.3)]"
+                            : "bg-den-accent-soft text-den-accent"
                         }`}
                       >
                         {player.isOp ? "\u2B50" : escapeHtml(initial)}
@@ -588,7 +588,7 @@ export default function PlayerManager() {
                     className="flex items-center justify-between p-3 rounded-lg border border-den-amber/20 bg-den-amber/4"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-md flex items-center justify-center text-sm font-extrabold bg-gradient-to-br from-den-amber to-den-lantern text-den-bg shadow-[0_0_12px_rgba(255,167,38,0.3)]">
+                      <div className="w-8 h-8 rounded-md flex items-center justify-center text-sm font-extrabold bg-den-amber text-[#1d1408] shadow-[0_0_12px_rgba(255,167,38,0.3)]">
                         {"\u2B50"}
                       </div>
                       <div className="min-w-0">
@@ -857,7 +857,7 @@ export default function PlayerManager() {
                     setAdminPermLevel("0");
                   }}
                   disabled={!adminSteamId || busyAction === "admin-add"}
-                  className="px-4 py-2 text-xs font-semibold bg-gradient-to-r from-den-amber to-den-lantern text-den-bg rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
+                  className="px-4 py-2 text-xs font-semibold bg-den-amber text-[#1d1408] rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
                 >
                   Add Admin
                 </button>
@@ -872,7 +872,7 @@ export default function PlayerManager() {
                     setWlName("");
                   }}
                   disabled={!(wlSteamId || adminSteamId) || busyAction === "whitelist-add"}
-                  className="px-4 py-2 text-xs font-semibold bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
+                  className="px-4 py-2 text-xs font-semibold bg-den-accent-deep text-white border border-den-accent-fill rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
                 >
                   Add to Whitelist
                 </button>
@@ -889,7 +889,7 @@ export default function PlayerManager() {
                     setBlReason("");
                   }}
                   disabled={!(blSteamId || adminSteamId) || busyAction === "blacklist-add"}
-                  className="px-4 py-2 text-xs font-semibold bg-gradient-to-r from-den-red to-[#ef5350] text-white rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
+                  className="px-4 py-2 text-xs font-semibold bg-den-red text-white rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
                 >
                   Ban Player
                 </button>
@@ -1056,7 +1056,7 @@ export default function PlayerManager() {
                     }
                   }}
                   disabled={!cmdName.trim() || busyAction === "command-update"}
-                  className="px-3 py-1.5 text-[11px] font-semibold bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
+                  className="px-3 py-1.5 text-[11px] font-semibold bg-den-accent-deep text-white border border-den-accent-fill rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
                 >
                   Add / Update
                 </button>

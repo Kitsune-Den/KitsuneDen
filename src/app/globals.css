@@ -1,69 +1,144 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens follow PackRelay's panel system (plum surfaces, 10/14px
+ * radii, tinted pills), white-labelled with the Den's lantern-orange accent
+ * the same way PackRelay's brand override swaps its purple.
+ *
+ * Raw values live on :root and flip with [data-theme] / [data-cb]; the
+ * Tailwind `den-*` colors point at them so every utility follows the theme.
+ */
+
+:root {
+  color-scheme: dark;
+  --bg: #140f1e;
+  --surface: #1c1628;
+  --surface-2: #251d34;
+  --surface-3: #2e2440;
+  --border: #322a45;
+  --border-bright: #45395d;
+  --text: #ece8f6;
+  --text-muted: #a89fc2;
+  --text-dim: #7a7194;
+
+  --accent: #ef8a3c;
+  --accent-bright: #f6a865;
+  --accent-deep: #b9521a;
+  --accent-soft: #2f1f22;
+
+  --violet: #a78bfa;
+  --cyan: #67e8f9;
+  --green: #5fb15a;
+  --amber: #e0a33a;
+  --red: #d4564a;
+
+  --console-bg: #0d0a14;
+  --console-text: #cfc7e0;
+
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f2ee;
+  --surface: #fffdfb;
+  --surface-2: #f3ede7;
+  --surface-3: #eae2da;
+  --border: #e6ddd4;
+  --border-bright: #d4c7ba;
+  --text: #241a16;
+  --text-muted: #6c5d55;
+  --text-dim: #8d7f77;
+
+  --accent: #d9691f;
+  --accent-bright: #b4501a;
+  --accent-deep: #b4501a;
+  --accent-soft: #fbe6d6;
+
+  --violet: #6d28d9;
+  --cyan: #0e7490;
+  --green: #3f9a44;
+  --amber: #b9791a;
+  --red: #c5392c;
+
+  --console-bg: #1a1420;
+  --console-text: #e2dcea;
+}
+
+/* Colour-blind mode: ColorBrewer Dark2 status colors, distinct under the
+   common forms of colour-vision deficiency. Status is never colour-only
+   anyway (every state also has an icon/label). */
+:root[data-cb="1"] {
+  --green: #1b9e77;
+  --amber: #e6ab02;
+  --red: #d95f02;
+}
+
 @theme inline {
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, "Cascadia Code", Consolas, monospace;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas, monospace;
 
-  /* Night-sky ink: deep, low-saturation navy so the accents carry the color */
-  --color-den-bg: #090c14;
-  --color-den-base: #0d111b;
-  --color-den-surface: #121725;
-  --color-den-card: #151b2a;
-  --color-den-card-hover: #1a2133;
-  --color-den-elevated: #1e2639;
+  --color-den-bg: var(--bg);
+  --color-den-base: var(--surface);
+  --color-den-card: var(--surface);
+  --color-den-card-hover: var(--surface-2);
+  --color-den-surface: var(--surface-2);
+  --color-den-elevated: var(--surface-3);
 
-  --color-den-border: #232b40;
-  --color-den-border-light: #313a55;
+  --color-den-border: var(--border);
+  --color-den-border-light: var(--border-bright);
 
-  --color-den-text: #e9edf5;
-  --color-den-text-muted: #9aa3ba;
-  --color-den-text-dim: #6c7690;
+  --color-den-text: var(--text);
+  --color-den-text-muted: var(--text-muted);
+  --color-den-text-dim: var(--text-dim);
 
-  /* Accent colors */
-  --color-den-cyan: #4fc3f7;
-  --color-den-cyan-dim: #2a7da8;
-  --color-den-cyan-glow: rgba(79, 195, 247, 0.12);
+  --color-den-accent: var(--accent-bright);
+  --color-den-accent-fill: var(--accent);
+  --color-den-accent-deep: var(--accent-deep);
+  --color-den-accent-soft: var(--accent-soft);
 
-  --color-den-purple: #b07fe0;
-  --color-den-purple-dim: #8e5cc4;
+  /* Legacy names kept as aliases so older markup follows the theme */
+  --color-den-cyan: var(--accent-bright);
+  --color-den-cyan-dim: var(--accent-deep);
+  --color-den-cyan-glow: var(--accent-soft);
+  --color-den-lantern: var(--accent);
+  --color-den-lantern-dim: var(--accent-deep);
 
-  --color-den-green: #5fc77a;
-  --color-den-green-dim: #2e7d4a;
-  --color-den-green-glow: rgba(95, 199, 122, 0.12);
+  --color-den-purple: var(--violet);
+  --color-den-purple-dim: var(--violet);
+  --color-den-info: var(--cyan);
 
-  --color-den-amber: #ffb547;
-  --color-den-amber-dim: #e07b00;
+  --color-den-green: var(--green);
+  --color-den-green-dim: color-mix(in srgb, var(--green) 55%, var(--bg));
+  --color-den-green-glow: color-mix(in srgb, var(--green) 14%, transparent);
 
-  --color-den-red: #f0605d;
-  --color-den-red-dim: #c03a37;
+  --color-den-amber: var(--amber);
+  --color-den-amber-dim: color-mix(in srgb, var(--amber) 55%, var(--bg));
 
-  /* The fox: brand mark, lantern light */
-  --color-den-lantern: #f0914a;
-  --color-den-lantern-dim: #c8682a;
+  --color-den-red: var(--red);
+  --color-den-red-dim: color-mix(in srgb, var(--red) 55%, var(--bg));
 }
 
 *, *::before, *::after {
   box-sizing: border-box;
 }
 
-html {
-  color-scheme: dark;
-}
-
 body {
   font-family: var(--font-sans);
-  background: var(--color-den-bg);
-  color: var(--color-den-text);
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: "cv11", "ss01";
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-den-cyan) 30%, transparent);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 :focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-den-cyan) 70%, transparent);
+  outline: 2px solid var(--accent-bright);
   outline-offset: 2px;
 }
 
@@ -78,35 +153,28 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-den-border);
+  background: var(--border);
   border-radius: 8px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-den-border-light);
+  background: var(--border-bright);
   background-clip: padding-box;
 }
 
 @layer components {
-  /* Page canvas: a faint lantern glow in the corner instead of a flat fill */
+  /* ---- Containers ---- */
+
   .den-canvas {
-    background:
-      radial-gradient(1200px 600px at 100% -10%, color-mix(in srgb, var(--color-den-lantern) 7%, transparent), transparent 60%),
-      radial-gradient(900px 500px at -10% 110%, color-mix(in srgb, var(--color-den-cyan) 5%, transparent), transparent 60%),
-      var(--color-den-bg);
+    background: var(--bg);
   }
 
-  /* The standard panel every page is built from */
   .den-card {
-    background: linear-gradient(180deg, var(--color-den-card), color-mix(in srgb, var(--color-den-card) 55%, var(--color-den-surface)));
-    border: 1px solid var(--color-den-border);
-    border-radius: 14px;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.03),
-      0 1px 2px rgba(0, 0, 0, 0.25),
-      0 8px 24px -12px rgba(0, 0, 0, 0.4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
   }
 
   .den-card-header {
@@ -115,14 +183,13 @@ body {
     justify-content: space-between;
     gap: 12px;
     padding: 14px 20px;
-    border-bottom: 1px solid var(--color-den-border);
+    border-bottom: 1px solid var(--border);
   }
 
   .den-card-title {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 600;
-    letter-spacing: -0.005em;
-    color: var(--color-den-text);
+    color: var(--text);
   }
 
   .den-row {
@@ -131,7 +198,7 @@ body {
     justify-content: space-between;
     gap: 16px;
     padding: 10px 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--color-den-border) 60%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   }
 
   .den-row:last-child {
@@ -139,26 +206,389 @@ body {
   }
 
   .den-eyebrow {
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--color-den-text-dim);
+    color: var(--text-dim);
+  }
+
+  /* ---- Buttons ---- */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn:hover:not(:disabled) {
+    background: var(--surface-3);
+    border-color: var(--accent);
+  }
+
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--accent-deep);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent);
+    border-color: var(--accent-bright);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    color: var(--red);
+    border-color: var(--red);
+    background: color-mix(in srgb, var(--red) 10%, var(--surface-2));
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-muted);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--surface-2);
+    border-color: var(--border);
+    color: var(--text);
+  }
+
+  .btn-sm {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    color: var(--text-dim);
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .icon-btn:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  /* ---- Badges ---- */
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 7px;
+    background: var(--accent-soft);
+    color: var(--accent-bright);
+    white-space: nowrap;
+  }
+
+  .badge-tone {
+    background: color-mix(in srgb, var(--tone) 15%, transparent);
+    color: var(--tone);
+  }
+
+  /* ---- Forms ---- */
+
+  .input {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
+  .seg {
+    display: inline-flex;
+    padding: 2px;
+    gap: 2px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .seg > button {
+    height: 28px;
+    padding: 0 12px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+    border-radius: 8px;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .seg > button:hover {
+    color: var(--text);
+  }
+
+  .seg > button[aria-pressed="true"] {
+    background: var(--accent-deep);
+    color: #fff;
+  }
+
+  /* ---- Tabs ---- */
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+    white-space: nowrap;
+    transition: color 0.15s;
+  }
+
+  .tab:hover {
+    color: var(--text);
+  }
+
+  .tab[aria-selected="true"] {
+    color: var(--accent-bright);
+  }
+
+  .tab[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  /* ---- Instance cards (frosted overlay on game art) ---- */
+
+  .gcard {
+    position: relative;
+    height: 236px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.32);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    isolation: isolate;
+  }
+
+  .gcard:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.42);
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  }
+
+  .gcard-overlay {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 14px 16px;
+    background: linear-gradient(to top, rgba(14, 10, 22, 0.92), rgba(14, 10, 22, 0.55) 70%, rgba(14, 10, 22, 0));
+    backdrop-filter: blur(14px) saturate(1.3);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    mask-image: linear-gradient(to top, #000 78%, transparent);
+    -webkit-mask-image: linear-gradient(to top, #000 78%, transparent);
+    color: #f3eefb;
+  }
+
+  .glass-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border-radius: 999px;
+    color: #fff;
+    background: color-mix(in srgb, var(--tone, #888) 32%, rgba(18, 13, 28, 0.45));
+    border: 1px solid color-mix(in srgb, var(--tone, #888) 45%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .cbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 30px;
+    border-radius: 8px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .cbtn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.18);
+  }
+
+  .cbtn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .cbtn-go:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--green) 55%, transparent);
+    border-color: var(--green);
+  }
+
+  .cbtn-stop:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--red) 55%, transparent);
+    border-color: var(--red);
+  }
+
+  /* ---- Meters ---- */
+
+  .meter {
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+  }
+
+  .meter > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--tone, var(--accent));
+    transition: width 0.6s ease;
+  }
+
+  /* ---- Loading ---- */
+
+  .skel {
+    border-radius: 8px;
+    background: linear-gradient(100deg, var(--surface-2) 30%, var(--surface-3) 50%, var(--surface-2) 70%);
+    background-size: 300% 100%;
+    animation: skel 1.4s ease-in-out infinite;
+  }
+
+  /* ---- Keyboard hint ---- */
+
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text);
+    background: var(--surface-3);
+    border: 1px solid var(--border-bright);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+  }
+
+  /* ---- Overlays ---- */
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.12s ease-out;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 440px;
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5);
+    animation: modalIn 0.14s ease-out;
+  }
+
+  /* ---- Sticky save bar (staged config) ---- */
+
+  .savebar {
+    position: sticky;
+    bottom: 14px;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 760px;
+    margin: 16px auto 0;
+    padding: 10px 12px 10px 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    animation: toastIn 0.18s ease-out;
   }
 }
 
-/* Ambient particles */
-@keyframes particleFloat {
-  0% { opacity: 0; transform: translateY(100vh) scale(0); }
-  20% { opacity: 0.35; }
-  80% { opacity: 0.15; }
-  100% { opacity: 0; transform: translateY(-20vh) scale(1); }
+@keyframes skel {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
 }
 
 /* Status pulse */
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-den-green) 45%, transparent); }
-  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-den-green) 0%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 45%, transparent); }
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 0%, transparent); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Page transition */

@@ -180,7 +180,7 @@ export default function ServerControl({ compact }: ServerControlProps) {
             <button
               onClick={saveMemory}
               disabled={memSaved}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-den-cyan hover:bg-[#29b6f6] disabled:bg-den-border disabled:text-den-text-dim text-den-bg rounded-lg transition-colors font-medium"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-den-accent-deep hover:brightness-110 disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors font-medium"
             >
               <Save size={14} />
               {memSaved ? "Saved" : "Save"}
