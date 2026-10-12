@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import type { ServersConfig, ServerDefinition, ServerAdapter } from "./types";
+import { checkDeletableDir } from "../server-def-security";
 import { MinecraftAdapter } from "./minecraft-adapter";
 import { HytaleAdapter } from "./hytale-adapter";
 import { SevenDaysAdapter } from "./seven-days-adapter";
@@ -124,10 +125,17 @@ export async function updateServer(
 export async function removeServer(
   serverId: string,
   deleteFiles: boolean = false
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; reason?: "not-found" | "unsafe-delete" }> {
   const config = loadConfig();
   const def = config.servers.find((s) => s.id === serverId);
-  if (!def) return { success: false, message: "Server not found" };
+  if (!def) return { success: false, message: "Server not found", reason: "not-found" };
+
+  // Guard the recursive delete before touching anything — a refused delete
+  // must leave the server running and still listed, not half-removed.
+  if (deleteFiles) {
+    const unsafe = checkDeletableDir(def.dir);
+    if (unsafe) return { success: false, message: unsafe, reason: "unsafe-delete" };
+  }
 
   // Stop the server if it's running
   const adapter = getAdapterMap().get(serverId);
@@ -141,7 +149,7 @@ export async function removeServer(
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
   // Delete server files from disk if requested
-  if (deleteFiles && def.dir) {
+  if (deleteFiles) {
     try {
       fs.rmSync(def.dir, { recursive: true, force: true });
     } catch (err) {

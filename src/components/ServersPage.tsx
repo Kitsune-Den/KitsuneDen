@@ -55,8 +55,8 @@ const TYPE_FIELDS: Record<string, FieldDef[]> = {
     { key: "version", label: "Version", type: "text", hint: "Minecraft version (e.g. 1.21.4)" },
   ],
   hytale: [
-    { key: "startScript", label: "Start Script", type: "text", hint: "Bat file to launch the server (e.g. start.bat)" },
-    { key: "backupScript", label: "Backup Script", type: "text", hint: "PowerShell script for backups (optional)" },
+    { key: "startScript", label: "Start Script", type: "text", hint: "Bat file to launch the server, relative to the install directory (e.g. start.bat)" },
+    { key: "backupScript", label: "Backup Script", type: "text", hint: "PowerShell script for backups, relative to the install directory (optional)" },
     { key: "processFilter", label: "Process Filter", type: "text", hint: "Process name to detect if server is running" },
   ],
   palworld: [
@@ -69,7 +69,7 @@ const TYPE_FIELDS: Record<string, FieldDef[]> = {
   enshrouded: [
     { key: "queryPort", label: "Query Port", type: "number", hint: "Steam query port (default 15638)" },
     { key: "configFile", label: "Config File", type: "text", hint: "Config filename (default: enshrouded_server.json)" },
-    { key: "startScript", label: "Start Script", type: "text", hint: "Optional bat file (default: start_enshrouded.bat). Falls back to launching enshrouded_server.exe directly." },
+    { key: "startScript", label: "Start Script", type: "text", hint: "Optional bat file in the install directory (default: start_enshrouded.bat). Falls back to launching enshrouded_server.exe directly." },
     { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates (app id 2278520)" },
   ],
 };
