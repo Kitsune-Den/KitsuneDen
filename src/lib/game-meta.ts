@@ -1,22 +1,62 @@
 /**
  * Display metadata for each game type: the human name, a short tag for
- * tight spaces, and the tag colors. One place, so the switcher, topbar and
- * dashboard never disagree about what a Palworld chip looks like.
+ * tight spaces, tag colors, and the card art (a gradient + icon, since the
+ * Den ships no game artwork). One place, so every surface agrees.
  */
+
+export type GameIcon = "pickaxe" | "skull" | "castle" | "paw" | "flame" | "server";
 
 export interface GameMeta {
   label: string;
   short: string;
   /** Tailwind classes for a tinted tag: background, text, border */
   tag: string;
+  /** CSS background for instance-card art */
+  art: string;
+  icon: GameIcon;
 }
 
+const art = (a: string, b: string, glow: string) =>
+  `radial-gradient(120% 90% at 85% 0%, ${glow} 0%, transparent 55%), ` +
+  `radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1.4px) 0 0 / 14px 14px, ` +
+  `linear-gradient(150deg, ${a}, ${b})`;
+
 const GAME_META: Record<string, GameMeta> = {
-  minecraft: { label: "Minecraft", short: "MC", tag: "bg-emerald-400/10 text-emerald-300 border-emerald-400/25" },
-  "7d2d": { label: "7 Days to Die", short: "7D2D", tag: "bg-rose-400/10 text-rose-300 border-rose-400/25" },
-  hytale: { label: "Hytale", short: "Hytale", tag: "bg-amber-400/10 text-amber-300 border-amber-400/25" },
-  palworld: { label: "Palworld", short: "Palworld", tag: "bg-sky-400/10 text-sky-300 border-sky-400/25" },
-  enshrouded: { label: "Enshrouded", short: "Enshrouded", tag: "bg-violet-400/10 text-violet-300 border-violet-400/25" },
+  minecraft: {
+    label: "Minecraft",
+    short: "MC",
+    tag: "bg-emerald-400/10 text-emerald-500 border-emerald-400/30",
+    art: art("#1f6b45", "#0d2016", "rgba(134,239,172,0.35)"),
+    icon: "pickaxe",
+  },
+  "7d2d": {
+    label: "7 Days to Die",
+    short: "7D2D",
+    tag: "bg-rose-400/10 text-rose-500 border-rose-400/30",
+    art: art("#7a2618", "#1c0c0a", "rgba(251,146,60,0.32)"),
+    icon: "skull",
+  },
+  hytale: {
+    label: "Hytale",
+    short: "Hytale",
+    tag: "bg-amber-400/10 text-amber-500 border-amber-400/30",
+    art: art("#7c5312", "#1b1308", "rgba(253,224,71,0.3)"),
+    icon: "castle",
+  },
+  palworld: {
+    label: "Palworld",
+    short: "Palworld",
+    tag: "bg-sky-400/10 text-sky-500 border-sky-400/30",
+    art: art("#1c5a86", "#0a1826", "rgba(125,211,252,0.32)"),
+    icon: "paw",
+  },
+  enshrouded: {
+    label: "Enshrouded",
+    short: "Enshrouded",
+    tag: "bg-violet-400/10 text-violet-500 border-violet-400/30",
+    art: art("#4a2a7a", "#130c21", "rgba(196,181,253,0.32)"),
+    icon: "flame",
+  },
 };
 
 export function gameMeta(type: string | undefined): GameMeta {
@@ -24,18 +64,28 @@ export function gameMeta(type: string | undefined): GameMeta {
     (type && GAME_META[type]) || {
       label: type || "Unknown",
       short: type || "?",
-      tag: "bg-slate-400/10 text-slate-300 border-slate-400/25",
+      tag: "bg-slate-400/10 text-slate-400 border-slate-400/30",
+      art: art("#3a3150", "#140f1e", "rgba(167,139,250,0.3)"),
+      icon: "server",
     }
   );
 }
 
-export const STATUS_META: Record<string, { label: string; dot: string; text: string }> = {
-  running: { label: "Online", dot: "bg-den-green animate-[pulse_2.4s_ease-in-out_infinite]", text: "text-den-green" },
-  starting: { label: "Starting…", dot: "bg-den-amber animate-pulse", text: "text-den-amber" },
-  stopping: { label: "Stopping…", dot: "bg-den-amber animate-pulse", text: "text-den-amber" },
-  stopped: { label: "Offline", dot: "bg-den-red/80", text: "text-den-red" },
+export interface StatusMeta {
+  label: string;
+  /** CSS color for pills, meters and dots */
+  tone: string;
+  dot: string;
+  text: string;
+}
+
+export const STATUS_META: Record<string, StatusMeta> = {
+  running: { label: "Online", tone: "var(--green)", dot: "bg-den-green animate-[pulse_2.4s_ease-in-out_infinite]", text: "text-den-green" },
+  starting: { label: "Starting…", tone: "var(--accent-bright)", dot: "bg-den-accent animate-pulse", text: "text-den-accent" },
+  stopping: { label: "Stopping…", tone: "var(--accent-bright)", dot: "bg-den-accent animate-pulse", text: "text-den-accent" },
+  stopped: { label: "Offline", tone: "var(--text-dim)", dot: "bg-den-text-dim", text: "text-den-text-dim" },
 };
 
-export function statusMeta(status: string | undefined) {
+export function statusMeta(status: string | undefined): StatusMeta {
   return STATUS_META[status || "stopped"] || STATUS_META.stopped;
 }

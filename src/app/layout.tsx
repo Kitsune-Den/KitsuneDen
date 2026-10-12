@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
-const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains", display: "swap" });
 
 export const metadata: Metadata = {
   title: "KitsuneDen",
@@ -16,10 +13,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`dark ${inter.variable} ${jetbrains.variable}`}>
-      <body className="antialiased bg-den-bg text-den-text">
-        {children}
-      </body>
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <head>
+        {/* Runs before first paint so a light-theme user never sees a dark flash */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
+      <body className="antialiased bg-den-bg text-den-text">{children}</body>
     </html>
   );
 }

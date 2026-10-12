@@ -3,6 +3,9 @@
 import { useServer } from "@/contexts/ServerContext";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { resolveDayNightConfig, reverseDayNightConfig } from "@/lib/day-night";
+import { setUnsaved } from "@/lib/unsaved";
+import { sendLifecycle } from "@/components/instances/InstanceControls";
+import { Loader, RotateCcw, Check, CircleAlert } from "lucide-react";
 
 function formatBytes(bytes: number): string {
   if (!bytes) return "0 B";
@@ -41,6 +44,9 @@ export default function ConfigEditor() {
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  /** null = nothing to report, "saved" = last save worked, any other string = the error */
+  const [saveState, setSaveState] = useState<string | null>(null);
+  const [restarting, setRestarting] = useState(false);
   const [mods, setMods] = useState<{ name: string; sizeBytes: number }[]>([]);
   const [availableWorlds, setAvailableWorlds] = useState<string[]>([]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -340,12 +346,13 @@ export default function ConfigEditor() {
   const handleSave = async () => {
     setSaving(true);
     setMessage("");
+    setSaveState(null);
     try {
       let parsed: Record<string, unknown>;
       if (viewMode === "form") {
         const formConfig = buildConfigFromForm();
         if (!formConfig) {
-          setMessage("Fix invalid JSON fields before saving.");
+          setSaveState("Fix the invalid JSON fields before saving.");
           setSaving(false);
           return;
         }
@@ -360,16 +367,16 @@ export default function ConfigEditor() {
       });
       const data = await res.json();
       if (data.success) {
-        setMessage("Config saved. Restart server for changes to take effect.");
+        setSaveState("saved");
         const text = JSON.stringify(parsed, null, 2);
         setConfig(text);
         setOriginal(text);
         setOriginalJson(JSON.stringify(parsed));
       } else {
-        setMessage(`Save failed: ${data.message || data.error}`);
+        setSaveState(`Save failed: ${data.message || data.error}`);
       }
     } catch (e) {
-      setMessage(`Invalid JSON: ${(e as Error).message}`);
+      setSaveState(`Invalid JSON: ${(e as Error).message}`);
     } finally {
       setSaving(false);
     }
@@ -380,6 +387,57 @@ export default function ConfigEditor() {
     viewMode === "form"
       ? (formConfig ? JSON.stringify(formConfig) : "") !== originalJson
       : config !== original;
+
+  // Staged editing: which keys differ from what's on disk, for the per-field
+  // markers and the "N unsaved" count in the save bar.
+  const originalObj = useMemo<Record<string, unknown>>(() => {
+    try {
+      return JSON.parse(originalJson || "{}");
+    } catch {
+      return {};
+    }
+  }, [originalJson]);
+  const changedKeys = new Set<string>(
+    formConfig
+      ? [...new Set([...Object.keys(formConfig), ...Object.keys(originalObj)])].filter(
+          (k) => JSON.stringify(formConfig[k]) !== JSON.stringify(originalObj[k])
+        )
+      : []
+  );
+  const unsavedCount = viewMode === "form" ? changedKeys.size : hasChanges ? 1 : 0;
+
+  useEffect(() => {
+    setUnsaved("config", hasChanges);
+    if (hasChanges) setSaveState((s) => (s === "saved" ? null : s));
+    if (!hasChanges) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasChanges]);
+
+  useEffect(() => () => setUnsaved("config", false), []);
+
+  const discardChanges = () => {
+    setConfig(original);
+    setMessage("");
+    setSaveState(null);
+    try {
+      syncFormFromObject(JSON.parse(original || "{}"));
+    } catch {
+      syncFormFromObject({});
+    }
+  };
+
+  const restartNow = async () => {
+    if (!serverId || restarting) return;
+    setRestarting(true);
+    const result = await sendLifecycle(serverId, "restart");
+    setRestarting(false);
+    if (result.success !== false) setSaveState(null);
+  };
 
   const handleJsonDraftChange = (key: string, value: string) => {
     setFormDrafts((prev) => ({ ...prev, [key]: value }));
@@ -531,8 +589,11 @@ export default function ConfigEditor() {
 
     return (
       <div key={key} className="flex flex-col gap-2">
-        <label className="text-[13px] text-den-text-muted" title={tooltip}>
+        <label className="text-[13px] text-den-text-muted flex items-center gap-1.5" title={tooltip}>
           {label}
+          {changedKeys.has(key) && (
+            <span className="w-[7px] h-[7px] rounded-full bg-den-accent-fill" title="Unsaved change" aria-label="unsaved" />
+          )}
         </label>
         {isObject ? (
           <textarea
@@ -1311,28 +1372,11 @@ export default function ConfigEditor() {
                 Raw
               </button>
             </div>
-            <button
-              onClick={() => {
-                setConfig(original);
-                setMessage("");
-                try {
-                  syncFormFromObject(JSON.parse(original || "{}"));
-                } catch {
-                  syncFormFromObject({});
-                }
-              }}
-              disabled={!hasChanges}
-              className="px-3 py-1 text-xs font-semibold text-den-text-muted border border-den-border rounded-lg hover:bg-den-surface disabled:opacity-40 transition-colors"
-            >
-              Reset
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || saving}
-              className="px-3 py-1 text-xs font-semibold bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
+            {unsavedCount > 0 && (
+              <span className="badge !rounded-full">
+                {viewMode === "form" ? `${unsavedCount} unsaved` : "Unsaved edits"}
+              </span>
+            )}
           </div>
         </div>
         {viewMode === "raw" ? (
@@ -1379,7 +1423,7 @@ export default function ConfigEditor() {
                   <>
                     <div className="bg-gradient-to-r from-den-surface/60 to-transparent border border-den-border rounded-xl p-5 space-y-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-1 h-5 rounded-full bg-gradient-to-b from-den-cyan to-[#29b6f6]" />
+                        <div className="w-1 h-5 rounded-full bg-den-accent-fill" />
                         <h4 className="text-sm font-bold tracking-wide uppercase text-den-text">Core Settings</h4>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1489,7 +1533,7 @@ export default function ConfigEditor() {
                     {/* Core Settings */}
                     <div className="bg-gradient-to-r from-den-surface/60 to-transparent border border-den-border rounded-xl p-5 space-y-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-1 h-5 rounded-full bg-gradient-to-b from-den-cyan to-[#29b6f6]" />
+                        <div className="w-1 h-5 rounded-full bg-den-accent-fill" />
                         <h4 className="text-sm font-bold tracking-wide uppercase text-den-text">Core Settings</h4>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1547,7 +1591,7 @@ export default function ConfigEditor() {
                     {/* Core Settings */}
                     <div className="bg-gradient-to-r from-den-surface/60 to-transparent border border-den-border rounded-xl p-5 space-y-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-1 h-5 rounded-full bg-gradient-to-b from-den-cyan to-[#29b6f6]" />
+                        <div className="w-1 h-5 rounded-full bg-den-accent-fill" />
                         <h4 className="text-sm font-bold tracking-wide uppercase text-den-text">Core Settings</h4>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1754,6 +1798,58 @@ export default function ConfigEditor() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {(hasChanges || saveState) && (
+        <div className="savebar" role="region" aria-label="Unsaved changes">
+          {hasChanges ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-den-accent-fill shrink-0" aria-hidden />
+              <span className="flex-1 text-[13.5px]">
+                {viewMode === "form"
+                  ? `${unsavedCount} unsaved ${unsavedCount === 1 ? "change" : "changes"}`
+                  : "Unsaved edits to the raw file"}
+                {saveState && saveState !== "saved" && (
+                  <span className="block text-[12.5px] text-den-red">{saveState}</span>
+                )}
+              </span>
+              <button className="btn btn-ghost" onClick={discardChanges} disabled={saving}>
+                Discard
+              </button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                {saving ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
+                {saving ? "Saving…" : "Save changes"}
+              </button>
+            </>
+          ) : saveState === "saved" ? (
+            <>
+              <Check size={16} className="text-den-green shrink-0" aria-hidden />
+              <span className="flex-1 text-[13.5px]">
+                Saved.{" "}
+                {currentServer?.status === "running"
+                  ? "Restart the server to apply it."
+                  : "It applies the next time the server starts."}
+              </span>
+              {currentServer?.status === "running" && (
+                <button className="btn btn-primary" onClick={restartNow} disabled={restarting}>
+                  {restarting ? <Loader size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                  Restart now
+                </button>
+              )}
+              <button className="btn btn-ghost" onClick={() => setSaveState(null)}>
+                Dismiss
+              </button>
+            </>
+          ) : (
+            <>
+              <CircleAlert size={16} className="text-den-red shrink-0" aria-hidden />
+              <span className="flex-1 text-[13.5px] text-den-red">{saveState}</span>
+              <button className="btn btn-ghost" onClick={() => setSaveState(null)}>
+                Dismiss
+              </button>
+            </>
+          )}
         </div>
       )}
 

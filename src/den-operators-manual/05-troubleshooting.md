@@ -353,7 +353,7 @@ When something is broken and you're not sure what, this sequence clears most min
    ```
 4. **Send zombies home**: `taskkill /PID <PID> /F` for each leftover
 5. **Restart the dashboard**: `npm run dev`, or `npm run start` after a build
-6. **Restart the game server** from the top bar
+6. **Restart the game server** from its card or its page header
 7. **Watch the console for 30 seconds** and confirm a clean start
 8. **Breathe.** The Den is patient with those who tend it calmly.
 
