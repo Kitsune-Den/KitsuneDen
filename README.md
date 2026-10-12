@@ -275,17 +275,21 @@ export const capabilities: ServerCapabilities = {
 
 ## Auto-start on Windows
 
-KitsuneDen is happiest as a scheduled task. Antivirus tends to get twitchy about `.bat` files in the startup folder.
+KitsuneDen is happiest as a scheduled task (antivirus tends to get twitchy about `.bat` files in the startup folder). A script sets it up:
 
-1. Build once: `npm run build`
-2. Open **Task Scheduler** and create a task:
-   - **Trigger:** At startup, with a 30 second delay
-   - **Action:** Start a program. Program: `cmd.exe`. Arguments: `/c npm run start`. Start in: your KitsuneDen folder.
-   - **Run with highest privileges**
-   - **Restart on failure**
-3. Run it by hand once before you trust it to come up on its own.
+```bash
+npm run build
+powershell -ExecutionPolicy Bypass -File scripts\install-startup-task.ps1
+```
 
-The [Operator's Manual](src/den-operators-manual/07-appendices.md) has more on running it as a service.
+That registers a **KitsuneDen** task that runs the Den hidden when you sign in, restarts it if it crashes, and never starts a second copy. Add `-AtStartup` (from an admin PowerShell) to start it at boot instead, before anyone signs in.
+
+- **Start or stop it:** `Start-ScheduledTask KitsuneDen` / `Stop-ScheduledTask KitsuneDen`. Stopping really stops the Den and frees port 3001.
+- **Update:** `git pull`, `Stop-ScheduledTask KitsuneDen`, `npm run build`, `Start-ScheduledTask KitsuneDen`.
+- **Logs:** `data\den-server.log`.
+- **Remove it:** run the installer again with `-Uninstall`.
+
+The task runs `scripts/run-den.ps1`, copied into `data\` so switching branches can't pull it out from under a running Den.
 
 ---
 
