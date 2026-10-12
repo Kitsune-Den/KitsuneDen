@@ -14,6 +14,11 @@ import type {
   PlayerData,
   PlayerEntry,
 } from "./types";
+import { recipeDefault } from "../recipes";
+
+// Fallbacks for fields servers.json leaves unset, from the Hytale recipe.
+const DEFAULT_PROCESS_FILTER = recipeDefault("hytale", "processFilter");
+const START_SCRIPT = recipeDefault("hytale", "startScript");
 
 const MAX_LOG_LINES = 2000;
 
@@ -149,7 +154,7 @@ export class HytaleAdapter implements ServerAdapter {
   }
 
   private get processFilter(): string {
-    return this.def.processFilter || "HytaleServer";
+    return this.def.processFilter || DEFAULT_PROCESS_FILTER;
   }
 
   private async isServerRunning(): Promise<boolean> {
@@ -192,7 +197,7 @@ export class HytaleAdapter implements ServerAdapter {
       return { success: false, message: "Server is already running" };
     }
 
-    const batPath = path.join(this.def.dir, this.def.startScript || "start.bat").replace(/\//g, "\\");
+    const batPath = path.join(this.def.dir, this.def.startScript || START_SCRIPT).replace(/\//g, "\\");
     const workDir = this.def.dir.replace(/\//g, "\\");
     const cmd = `powershell -NoProfile -Command "Start-Process cmd.exe -ArgumentList '/c','${batPath}' -WorkingDirectory '${workDir}'"`;
 

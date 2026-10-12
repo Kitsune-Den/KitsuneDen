@@ -334,6 +334,22 @@ export function portDefault(recipe: GameRecipe, field: PortField): number | unde
   return undefined;
 }
 
+/**
+ * The default an adapter falls back to when servers.json leaves a field unset.
+ * Adapters call this once, at import, so a recipe that loses a default an
+ * adapter needs fails the test suite instead of a live start.
+ */
+export function recipeDefault<K extends keyof ServerDefinition>(
+  type: GameType,
+  field: K
+): NonNullable<ServerDefinition[K]> {
+  const value = recipeDefaults(type)[field];
+  if (value === undefined || value === null) {
+    throw new Error(`The ${type} recipe has no default for ${String(field)}`);
+  }
+  return value as NonNullable<ServerDefinition[K]>;
+}
+
 /** What the Add Server form pre-fills: the recipe's defaults plus its port
  *  defaults. Computed, so the port numbers are stated exactly once. */
 export function recipeDefaults(type: string | undefined): Partial<ServerDefinition> {

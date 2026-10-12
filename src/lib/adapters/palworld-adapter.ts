@@ -13,10 +13,18 @@ import type {
   PlayerData,
   PlayerEntry,
 } from "./types";
+import { recipeDefault } from "../recipes";
 
 const MAX_LOG_LINES = 2000;
 const STOP_TIMEOUT_MS = 30_000;
 const PROCESS_NAME = "PalServer-Win64-Shipping-Cmd.exe";
+
+// Fallbacks for fields servers.json leaves unset, from the Palworld recipe.
+const STEAM_APP_ID = recipeDefault("palworld", "steamAppId");
+const DEFAULT_GAME_PORT = recipeDefault("palworld", "gamePort");
+const DEFAULT_RCON_PORT = recipeDefault("palworld", "rconPort");
+const DEFAULT_REST_API_PORT = recipeDefault("palworld", "restApiPort");
+const START_SCRIPT = recipeDefault("palworld", "startScript");
 
 // Persist state across Next.js HMR reloads
 const globalForPalworld = globalThis as unknown as {
@@ -262,7 +270,7 @@ export class PalworldAdapter implements ServerAdapter {
     }
 
     // Look for start script or launch the exe directly
-    const batPath = path.join(this.def.dir, this.def.startScript || "start_palworld.bat");
+    const batPath = path.join(this.def.dir, this.def.startScript || START_SCRIPT);
     const workDir = this.def.dir.replace(/\//g, "\\");
 
     let cmd: string;
@@ -367,7 +375,7 @@ export class PalworldAdapter implements ServerAdapter {
     const { Rcon } = await import("rcon-client");
     const rcon = await Rcon.connect({
       host: "127.0.0.1",
-      port: this.def.rconPort || 25575,
+      port: this.def.rconPort || DEFAULT_RCON_PORT,
       password: this.def.rconPassword || this.getAdminPassword(),
     });
     try {
@@ -387,7 +395,7 @@ export class PalworldAdapter implements ServerAdapter {
   // ---- REST API ----
 
   private get restApiBase(): string {
-    const port = this.def.restApiPort || 8212;
+    const port = this.def.restApiPort || DEFAULT_REST_API_PORT;
     return `http://127.0.0.1:${port}`;
   }
 
@@ -693,8 +701,8 @@ export class PalworldAdapter implements ServerAdapter {
       serverName: settings["ServerName"] || "Palworld Server",
       description: settings["ServerDescription"] || "",
       maxPlayers: parseInt(settings["ServerPlayerMaxNum"] || "32"),
-      gamePort: this.def.gamePort || 8211,
-      rconPort: this.def.rconPort || 25575,
+      gamePort: this.def.gamePort || DEFAULT_GAME_PORT,
+      rconPort: this.def.rconPort || DEFAULT_RCON_PORT,
       serverVersion,
       process: proc
         ? {
@@ -721,7 +729,7 @@ export class PalworldAdapter implements ServerAdapter {
     }
 
     const installDir = this.def.dir.replace(/\//g, "\\");
-    const appId = this.def.steamAppId || 2394010;
+    const appId = this.def.steamAppId || STEAM_APP_ID;
 
     this.addLog("[Dashboard] Starting SteamCMD update...");
 
@@ -821,10 +829,10 @@ export class PalworldAdapter implements ServerAdapter {
       // Set sensible defaults
       settings["ServerName"] = '"Kitsune Den - Palworld"';
       settings["RCONEnabled"] = "True";
-      settings["RCONPort"] = String(this.def.rconPort || 25575);
+      settings["RCONPort"] = String(this.def.rconPort || DEFAULT_RCON_PORT);
       settings["RESTAPIEnabled"] = "True";
-      settings["RESTAPIPort"] = String(this.def.restApiPort || 8212);
-      settings["PublicPort"] = String(this.def.gamePort || 8211);
+      settings["RESTAPIPort"] = String(this.def.restApiPort || DEFAULT_REST_API_PORT);
+      settings["PublicPort"] = String(this.def.gamePort || DEFAULT_GAME_PORT);
 
       const dir = path.dirname(this.settingsPath);
       fs.mkdirSync(dir, { recursive: true });

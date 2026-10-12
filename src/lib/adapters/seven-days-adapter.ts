@@ -22,6 +22,11 @@ import type {
   AdminData,
   SevenDaysAdminApi,
 } from "./types";
+import { recipeDefault } from "../recipes";
+
+// Fallbacks for fields servers.json leaves unset, from the 7D2D recipe.
+const DEFAULT_TELNET_PORT = recipeDefault("7d2d", "telnetPort");
+const DEFAULT_CONFIG_FILE = recipeDefault("7d2d", "configFile");
 
 const MAX_LOG_LINES = 2000;
 const STOP_TIMEOUT_MS = 30_000;
@@ -380,11 +385,11 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
   };
 
   private get configPath(): string {
-    return path.join(this.def.dir, this.def.configFile || "serverconfig.xml");
+    return path.join(this.def.dir, this.def.configFile || DEFAULT_CONFIG_FILE);
   }
 
   private get telnetPort(): number {
-    return this.def.telnetPort || 8081;
+    return this.def.telnetPort || DEFAULT_TELNET_PORT;
   }
 
   private get telnetPassword(): string {
@@ -523,7 +528,7 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
       };
     }
 
-    const configFile = this.def.configFile || "serverconfig.xml";
+    const configFile = this.def.configFile || DEFAULT_CONFIG_FILE;
     const logDir = path.join(this.def.dir, "logs");
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });

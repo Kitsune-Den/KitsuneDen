@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
+import { recipeDefault } from "@/lib/recipes";
 import { PalworldAdapter } from "@/lib/adapters/palworld-adapter";
 
 function getServerId(request: NextRequest): string {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     serverVersion: info.serverVersion,
-    steamAppId: adapter.def.steamAppId || 2394010,
+    steamAppId: adapter.def.steamAppId || recipeDefault("palworld", "steamAppId"),
     steamCmdConfigured: !!adapter.def.steamCmdPath,
   });
 }

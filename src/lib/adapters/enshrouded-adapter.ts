@@ -14,14 +14,17 @@ import type {
   PlayerData,
   PlayerEntry,
 } from "./types";
+import { recipeDefault } from "../recipes";
 
 const MAX_LOG_LINES = 2000;
 const STOP_TIMEOUT_MS = 30_000;
 const PROCESS_NAME = "enshrouded_server.exe";
-const STEAM_APP_ID = 2278520;
-const DEFAULT_GAME_PORT = 15637;
-const DEFAULT_QUERY_PORT = 15638;
-const CONFIG_FILENAME = "enshrouded_server.json";
+// Fallbacks for fields servers.json leaves unset, from the Enshrouded recipe.
+const STEAM_APP_ID = recipeDefault("enshrouded", "steamAppId");
+const DEFAULT_GAME_PORT = recipeDefault("enshrouded", "gamePort");
+const DEFAULT_QUERY_PORT = recipeDefault("enshrouded", "queryPort");
+const CONFIG_FILENAME = recipeDefault("enshrouded", "configFile");
+const START_SCRIPT = recipeDefault("enshrouded", "startScript");
 const SAVEGAME_DIRNAME = "savegame";
 
 const globalForEnshrouded = globalThis as unknown as {
@@ -245,7 +248,7 @@ export class EnshroudedAdapter implements ServerAdapter {
 
     const created = await this.ensureConfig();
 
-    const batPath = path.join(this.def.dir, this.def.startScript || "start_enshrouded.bat");
+    const batPath = path.join(this.def.dir, this.def.startScript || START_SCRIPT);
     const workDir = this.def.dir.replace(/\//g, "\\");
 
     let cmd: string;

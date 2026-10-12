@@ -15,6 +15,11 @@ import type {
   PlayerData,
   PlayerEntry,
 } from "./types";
+import { recipeDefault } from "../recipes";
+
+// Fallbacks for fields servers.json leaves unset, from the Minecraft recipe.
+const DEFAULT_RCON_PORT = recipeDefault("minecraft", "rconPort");
+const DEFAULT_JAR = recipeDefault("minecraft", "jar");
 
 const MAX_LOG_LINES = 2000;
 
@@ -210,7 +215,7 @@ export class MinecraftAdapter implements ServerAdapter {
           "-XX:+PerfDisableSharedMem",
           "-XX:MaxTenuringThreshold=1",
           "-jar",
-          this.def.jar || "server.jar",
+          this.def.jar || DEFAULT_JAR,
           "nogui",
         ];
 
@@ -513,7 +518,7 @@ export class MinecraftAdapter implements ServerAdapter {
     // on a LAN/tailnet peer. Default loopback preserves the all-local shape.
     const rcon = await Rcon.connect({
       host: this.def.rconHost || "127.0.0.1",
-      port: this.def.rconPort || 25575,
+      port: this.def.rconPort || DEFAULT_RCON_PORT,
       password: this.def.rconPassword || "",
     });
     try {

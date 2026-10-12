@@ -57,7 +57,7 @@ Putting each game in one place showed some problems:
 Each of these can be its own PR:
 
 1. ~~**Add Server form reads recipes.**~~ Done: the form pre-fills from `recipeDefaults()`, lists its games from `RECIPES`, and builds port hints (protocol, default, forward or keep private, notes) from the recipe in both the Add and Edit forms.
-2. **Adapters read recipes.** Swap the `|| 25575`, `|| 8081` and `STEAM_APP_ID` constants for `portDefault()` and `install.appId`. Then the tests check one source instead of two.
+2. ~~**Adapters read recipes.**~~ Done: adapter fallbacks (ports, Steam app ids, start scripts, config files, the Minecraft jar, Hytale's process filter) come from `recipeDefault()`, and a test fails if an adapter hardcodes a port or app id again. Process names stay in the adapters: they're for detecting a running server, which recipes don't model.
 3. **Networking card.** List each server's public ports with protocol from `ports`, and flag clashes between servers, such as the shared RCON default.
 4. **Recipe card in the picker.** When adding a server, show the tier, install method, connect sentence and gaps, the way PackRelay's Templates grid does.
 5. **Fix the gaps above,** starting with the Enshrouded port check and 7D2D backups.
