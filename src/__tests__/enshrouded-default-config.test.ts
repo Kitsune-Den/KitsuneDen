@@ -91,7 +91,9 @@ describe("EnshroudedAdapter.ensureConfig", () => {
 describe("EnshroudedAdapter.start", () => {
   it("surfaces generated passwords in the start result, not the log buffer", async () => {
     vi.useFakeTimers();
-    fs.writeFileSync(path.join(tmpDir, "enshrouded_server.exe"), "");
+    // The .bat path is checked as-is; the exe path gets backslashed (Windows-only),
+    // so the bat is what makes start() reach the launch step on CI (Linux) too.
+    fs.writeFileSync(path.join(tmpDir, "start_enshrouded.bat"), "");
     const adapter = new EnshroudedAdapter(def);
 
     const result = await adapter.start();
@@ -109,7 +111,9 @@ describe("EnshroudedAdapter.start", () => {
 
   it("does not repeat passwords when the config already exists", async () => {
     vi.useFakeTimers();
-    fs.writeFileSync(path.join(tmpDir, "enshrouded_server.exe"), "");
+    // The .bat path is checked as-is; the exe path gets backslashed (Windows-only),
+    // so the bat is what makes start() reach the launch step on CI (Linux) too.
+    fs.writeFileSync(path.join(tmpDir, "start_enshrouded.bat"), "");
     const adapter = new EnshroudedAdapter(def);
     await adapter.ensureConfig();
 
