@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Moon, Sun, Monitor } from "lucide-react";
 import Page from "@/components/shell/Page";
-import { getColorBlind, getThemePref, setColorBlind, setThemePref, type ThemePref } from "@/lib/theme";
+import { CB_KEY, THEME_KEY, parseThemePref, setColorBlind, setThemePref, type ThemePref } from "@/lib/theme";
+import { useStoredItem } from "@/lib/useStored";
 import { SHORTCUTS } from "@/lib/useHotkeys";
 
 const THEMES: { id: ThemePref; label: string; icon: React.ReactNode }[] = [
@@ -15,13 +15,10 @@ const THEMES: { id: ThemePref; label: string; icon: React.ReactNode }[] = [
 const SWATCHES = ["--green", "--amber", "--red", "--accent"];
 
 export default function SettingsPage() {
-  const [theme, setTheme] = useState<ThemePref>("dark");
-  const [cb, setCb] = useState(false);
-
-  useEffect(() => {
-    setTheme(getThemePref());
-    setCb(getColorBlind());
-  }, []);
+  // setThemePref / setColorBlind write through the same store, so these
+  // re-render on change without local state.
+  const theme = parseThemePref(useStoredItem(THEME_KEY)[0]);
+  const cb = useStoredItem(CB_KEY)[0] === "1";
 
   return (
     <Page title="Settings" subtitle="How the Den looks on this device">
@@ -41,10 +38,7 @@ export default function SettingsPage() {
                   <button
                     key={t.id}
                     aria-pressed={theme === t.id}
-                    onClick={() => {
-                      setTheme(t.id);
-                      setThemePref(t.id);
-                    }}
+                    onClick={() => setThemePref(t.id)}
                     className="inline-flex items-center gap-1.5"
                   >
                     {t.icon}
@@ -70,10 +64,7 @@ export default function SettingsPage() {
                 <input
                   type="checkbox"
                   checked={cb}
-                  onChange={(e) => {
-                    setCb(e.target.checked);
-                    setColorBlind(e.target.checked);
-                  }}
+                  onChange={(e) => setColorBlind(e.target.checked)}
                   className="w-4 h-4 accent-[var(--accent)]"
                 />
               </span>

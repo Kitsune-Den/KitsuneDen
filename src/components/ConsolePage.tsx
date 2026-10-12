@@ -1,7 +1,7 @@
 "use client";
 
 import { useServer } from "@/contexts/ServerContext";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SendHorizontal } from "lucide-react";
 
 // Panel-only echo lines, mixed into the log stream with a marker prefix so
@@ -11,23 +11,38 @@ const ECHO_OK = "\u0002";
 const ECHO_ERR = "\u0003";
 const historyKey = (id: string) => `kitsuneden-console-history:${id}`;
 
+function loadHistory(id: string): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(sessionStorage.getItem(historyKey(id)) || "[]");
+  } catch {
+    return [];
+  }
+}
+
 export default function ConsolePage() {
   const { serverId } = useServer();
   const [lines, setLines] = useState<string[]>([]);
   const [command, setCommand] = useState("");
-  const [history, setHistory] = useState<string[]>([]);
+  const [history, setHistory] = useState<string[]>(() => loadHistory(serverId));
   const [sending, setSending] = useState(false);
   const [historyIdx, setHistoryIdx] = useState(-1);
   const [autoScroll, setAutoScroll] = useState(true);
   const outputRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
-  const connectSSE = useCallback(() => {
-    if (abortRef.current) abortRef.current.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
+  // Switching servers starts a fresh console with that server's command
+  // history. Reset during render rather than in an effect so the old server's
+  // lines never paint under the new one.
+  const [linesServerId, setLinesServerId] = useState(serverId);
+  if (linesServerId !== serverId) {
+    setLinesServerId(serverId);
     setLines([]);
+    setHistory(loadHistory(serverId));
+    setHistoryIdx(-1);
+  }
+
+  useEffect(() => {
+    const controller = new AbortController();
 
     fetch(`/api/console?server=${serverId}`, {
       method: "POST",
@@ -74,20 +89,6 @@ export default function ConsolePage() {
       });
 
     return () => controller.abort();
-  }, [serverId]);
-
-  useEffect(() => {
-    const cleanup = connectSSE();
-    return cleanup;
-  }, [connectSSE]);
-
-  useEffect(() => {
-    try {
-      setHistory(JSON.parse(sessionStorage.getItem(historyKey(serverId)) || "[]"));
-    } catch {
-      setHistory([]);
-    }
-    setHistoryIdx(-1);
   }, [serverId]);
 
   useEffect(() => {

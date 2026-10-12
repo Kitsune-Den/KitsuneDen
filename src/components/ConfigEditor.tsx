@@ -48,6 +48,8 @@ export default function ConfigEditor() {
   const [format, setFormat] = useState<"properties" | "json">("json");
   const [viewMode, setViewMode] = useState<"form" | "raw">("form");
   const [showPassword, setShowPassword] = useState(false);
+  /** Admin secrets the API hid (write-only): blank = keep the saved value. */
+  const [redactedSecrets, setRedactedSecrets] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   /** null = nothing to report, "saved" = last save worked, any other string = the error */
@@ -152,7 +154,7 @@ export default function ConfigEditor() {
     voiceChatMode: "Proximity = positional/area voice. Disabled = voice off entirely.",
     enableVoiceChat: "Master toggle for in-game voice chat.",
     enableTextChat: "Master toggle for in-game text chat.",
-    userGroups: "Per-group permissions and passwords (Admin/Friend/Guest etc.). Edit as raw JSON.",
+    userGroups: "Per-group permissions and passwords (Admin/Friend/Guest etc.). Edit as raw JSON. Passwords of groups that can kick/ban are hidden and show as \"\" — leave them blank to keep them, or type a new one.",
   };
 
   const fieldHelp = {
@@ -247,6 +249,7 @@ export default function ConfigEditor() {
       const res = await fetch(`/api/config?server=${serverId}`);
       const data = await res.json();
       setFormat(data.format || "json");
+      setRedactedSecrets(Array.isArray(data.redactedSecrets) ? data.redactedSecrets : []);
       const nextConfig = (data.config as Record<string, unknown>) || {};
       // Inject defaults for 7D2D fields that may not exist in the XML yet
       const sandbox = currentServer?.type === "7d2d" && isSandboxEra(nextConfig, data.gameVersion);
@@ -749,8 +752,10 @@ export default function ConfigEditor() {
           />
         ) : (
           <input
-            type="text"
+            type={redactedSecrets.includes(key) ? "password" : "text"}
             value={String(value ?? "")}
+            placeholder={redactedSecrets.includes(key) ? "Saved \u2014 leave blank to keep" : undefined}
+            autoComplete={redactedSecrets.includes(key) ? "new-password" : undefined}
             onChange={(e) => setFormValues((prev) => ({ ...prev, [key]: e.target.value }))}
             className="w-full px-3 py-2 bg-den-bg text-den-text text-[13px] rounded-lg border border-den-border focus:border-den-border-light outline-none"
           />

@@ -127,7 +127,7 @@ async function handlePost(request: NextRequest) {
           zip.extractAllTo(extractDir, true);
           saved.push(folderName);
         }
-      } catch (e) {
+      } catch {
         // If zip extraction fails, save as raw file
         await fs.writeFile(path.join(modsDir, safeName), buffer);
         saved.push(safeName);
