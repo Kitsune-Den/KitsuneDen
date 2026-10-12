@@ -279,9 +279,10 @@ Back up before:
 |---|---|---|
 | Palworld | SteamCMD, app 2394010 | needs `steamCmdPath`; server must be stopped; 5-minute timeout |
 | Enshrouded | SteamCMD, app 2278520 | same requirements |
+| 7 Days to Die | SteamCMD, app 294420 | needs `steamCmdPath`; server must be stopped; 60-minute timeout. Stays on the installed branch (read from `steamapps\appmanifest_294420.acf`, passed as `-beta`) and puts `serverconfig.xml` (and a custom `configFile`) back afterwards, because `validate` resets it to the stock copy. Other shipped files edited in place are reset; keep those changes in a mod |
 | Hytale | the Hytale Launcher's downloaded files | open the launcher first so it fetches the update; server must be stopped |
 
-SteamCMD runs `+force_install_dir <dir> +login anonymous +app_update <id> validate +quit`.
+SteamCMD runs `+force_install_dir <dir> +login anonymous +app_update <id> validate +quit`, with `-beta <branch>` after the id for a 7D2D server on a branch.
 
 ---
 

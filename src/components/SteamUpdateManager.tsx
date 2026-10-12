@@ -3,30 +3,48 @@
 import { useServer } from "@/contexts/ServerContext";
 import { useState, useEffect, useCallback } from "react";
 import { Download, RefreshCw, AlertTriangle } from "lucide-react";
+import { gameMeta } from "@/lib/game-meta";
 
 interface UpdateInfo {
   serverVersion: string;
   steamAppId: number;
   steamCmdConfigured: boolean;
+  /** The Steam branch the install is on, when the game reports it. */
+  branch?: string;
 }
 
-export default function UpdateManager() {
+/** Where each SteamCMD game's update API lives. */
+const ENDPOINTS: Record<string, string> = {
+  palworld: "/api/palworld-update",
+  enshrouded: "/api/enshrouded-update",
+  "7d2d": "/api/7d2d-update",
+};
+
+/**
+ * The Update tab for games the Den updates with SteamCMD. One component for
+ * every such game; each has its own update route behind it.
+ */
+export default function SteamUpdateManager() {
   const { serverId, currentServer } = useServer();
+  const type = currentServer?.type ?? "";
+  const endpoint = ENDPOINTS[type];
+  const label = gameMeta(type).label;
   const [info, setInfo] = useState<UpdateInfo | null>(null);
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"info" | "success" | "error">("info");
 
   const loadInfo = useCallback(async () => {
+    if (!endpoint) return;
     try {
-      const res = await fetch(`/api/enshrouded-update?server=${serverId}`);
+      const res = await fetch(`${endpoint}?server=${serverId}`);
       if (res.ok) {
         setInfo(await res.json());
       }
     } catch {
       // ignore
     }
-  }, [serverId]);
+  }, [endpoint, serverId]);
 
   useEffect(() => {
     loadInfo();
@@ -40,17 +58,18 @@ export default function UpdateManager() {
     }
 
     setUpdating(true);
-    setMessage("Running SteamCMD update... This may take several minutes (multi-GB download).");
+    setMessage("Running SteamCMD update... This can take several minutes for a large download.");
     setMessageType("info");
 
     try {
-      const res = await fetch(`/api/enshrouded-update?server=${serverId}`, {
+      const res = await fetch(`${endpoint}?server=${serverId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
       const data = await res.json();
       if (data.success) {
-        setMessage("Update completed successfully! You can now start the server.");
+        const detail = typeof data.message === "string" && data.message !== "Update complete" ? ` ${data.message}` : "";
+        setMessage(`Update completed successfully!${detail} You can now start the server.`);
         setMessageType("success");
         loadInfo();
       } else {
@@ -65,13 +84,15 @@ export default function UpdateManager() {
     }
   };
 
+  if (!endpoint) return null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-den-text">Server Update</h2>
           <p className="text-sm text-den-text-muted mt-1">
-            Update Enshrouded dedicated server via SteamCMD
+            Update the {label} dedicated server via SteamCMD
           </p>
         </div>
         <button
@@ -92,8 +113,15 @@ export default function UpdateManager() {
           </div>
           <div>
             <span className="text-den-text-dim">Steam App ID</span>
-            <p className="text-den-text font-mono mt-1">{info?.steamAppId || 2278520}</p>
+            <p className="text-den-text font-mono mt-1">{info?.steamAppId ?? "--"}</p>
           </div>
+          {info?.branch && (
+            <div>
+              <span className="text-den-text-dim">Branch</span>
+              <p className="text-den-text font-mono mt-1">{info.branch}</p>
+              <p className="text-[11.5px] text-den-text-dim mt-0.5">Updates stay on this branch.</p>
+            </div>
+          )}
           <div>
             <span className="text-den-text-dim">SteamCMD</span>
             <p className={`mt-1 font-medium ${info?.steamCmdConfigured ? "text-den-green" : "text-den-red"}`}>
@@ -119,16 +147,16 @@ export default function UpdateManager() {
           </div>
         )}
 
+        {info && !info.steamCmdConfigured && (
+          <p className="mb-4 text-sm text-den-text-muted">Set the SteamCMD path in Server setup to enable updates.</p>
+        )}
+
         <button
           onClick={runUpdate}
           disabled={updating || currentServer?.status === "running" || !info?.steamCmdConfigured}
           className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all bg-gradient-to-r from-den-cyan/20 to-den-purple/20 border border-den-cyan/30 text-den-cyan hover:border-den-cyan/60 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {updating ? (
-            <RefreshCw size={16} className="animate-spin" />
-          ) : (
-            <Download size={16} />
-          )}
+          {updating ? <RefreshCw size={16} className="animate-spin" /> : <Download size={16} />}
           {updating ? "Updating..." : "Update via SteamCMD"}
         </button>
 

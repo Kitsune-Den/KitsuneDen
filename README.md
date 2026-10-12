@@ -25,7 +25,7 @@ KitsuneDen treats your servers like living things. Each one gets its own persona
 - **Players.** Whitelist, op, ban, kick, plus who's online right now (via RCON for Minecraft and Palworld, telnet for 7D2D).
 - **Mods and mod packs.** Upload, organize, and flip whole sets on.
 - **Config editor** with friendly widgets where they help (the 7D2D day/night slider is the favorite). Edits are staged: changed fields are marked until you save, and it offers a restart when one's needed.
-- **Worlds, backups, and updates** for the games that support them: SteamCMD for Palworld and Enshrouded, the launcher for Hytale.
+- **Worlds, backups, and updates** for the games that support them: SteamCMD for Palworld, Enshrouded and 7 Days to Die, the launcher for Hytale.
 - **Remote Minecraft.** The dashboard and the server don't have to share a machine. See [Remote Minecraft servers](#remote-minecraft-servers).
 - **Activity log.** Starts, stops, crashes, config saves and roster changes, for one server or the whole Den.
 - **Dark, light, or match your OS**, plus a colour-blind friendly status palette.
@@ -172,6 +172,7 @@ By default KitsuneDen reads and writes `servers.json` in the directory it's star
 | `telnetPort` | Optional | Telnet port |
 | `telnetPassword` | Optional | Telnet password |
 | `modsDir` | Optional | Mods directory name |
+| `steamCmdPath` | Optional | Path to steamcmd.exe for updates (Steam app id 294420). Updates stay on the installed branch and keep your `serverconfig.xml`. |
 
 **`hytale`**: Hytale
 

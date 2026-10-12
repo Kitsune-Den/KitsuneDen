@@ -117,6 +117,7 @@ Every route except `/api/auth/*` needs a valid session. Server-aware routes take
 | `/api/hytale-update` | GET, POST | Launcher update check / copy files |
 | `/api/palworld-update` | GET, POST | Version info / SteamCMD update |
 | `/api/enshrouded-update` | GET, POST | Version info / SteamCMD update |
+| `/api/7d2d-update` | GET, POST | Version, branch and app id / SteamCMD update on the installed branch |
 | `/api/airdrops/settings` | GET, PUT | KitsuneCommand airdrop settings |
 | `/api/airdrops/loot-tables` | GET, POST, PUT, DELETE | Loot tables and entries |
 | `/api/airdrops/history` | GET | Recent drops (`?limit=`, default 50) |
@@ -184,6 +185,8 @@ Deep night blues underneath, warm and bright accents on top. Check `globals.css`
 | `telnetPassword` | empty | Telnet password |
 | `modsDir` | `mods` | Mods folder, relative to `dir` or absolute |
 | `adminFilePath` | auto | Full path to `serveradmin.xml` |
+| `steamCmdPath` | | `steamcmd.exe` for updates |
+| `steamAppId` | 294420 | Steam app id |
 | `controlPanelPort` | | Shown in server info |
 | `controlPanelPassword` | | Accepted but not used |
 

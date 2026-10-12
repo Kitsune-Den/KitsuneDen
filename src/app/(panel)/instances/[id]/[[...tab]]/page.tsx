@@ -33,9 +33,8 @@ import BackupManager from "@/components/hytale/BackupManager";
 import ModsPage from "@/components/ModsPage";
 import ModPacks from "@/components/minecraft/ModPacks";
 import AirdropManager from "@/components/hytale/AirdropManager";
-import PalworldUpdateManager from "@/components/palworld/UpdateManager";
 import HytaleUpdateManager from "@/components/hytale/UpdateManager";
-import EnshroudedUpdateManager from "@/components/enshrouded/UpdateManager";
+import SteamUpdateManager from "@/components/SteamUpdateManager";
 import ActivityFeed from "@/components/ActivityFeed";
 
 type Caps = ServerInfo["capabilities"];
@@ -81,8 +80,8 @@ function TabBody({ tab, server, go }: { tab: string; server: ServerInfo; go: (t:
       return <AirdropManager />;
     case "update":
       if (server.type === "hytale") return <HytaleUpdateManager />;
-      if (server.type === "enshrouded") return <EnshroudedUpdateManager />;
-      return <PalworldUpdateManager />;
+      // Palworld, Enshrouded and 7D2D: SteamCMD, each through its own route.
+      return <SteamUpdateManager />;
     case "activity":
       return <ActivityFeed serverId={server.id} />;
     default:

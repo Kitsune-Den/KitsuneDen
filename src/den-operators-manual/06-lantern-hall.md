@@ -49,7 +49,7 @@ Much of that promise is kept. The separate Minecraft and Hytale dashboards becam
 ### Per-spirit care
 
 - **Minecraft**: live console, mod library and packs, JVM memory per server, online players via RCON
-- **7 Days to Die**: telnet console, a player history from the log, `serveradmin.xml` editing, a day/night slider
+- **7 Days to Die**: telnet console, a player history from the log, `serveradmin.xml` editing, a day/night slider, world backups, SteamCMD updates that keep the branch and the config
 - **Hytale**: worlds and warps, OP toggles, backup listing, launcher-based updates, KitsuneCommand airdrop management
 - **Palworld**: RCON and REST, kick/ban/broadcast/save, SteamCMD updates, save backups
 - **Enshrouded**: config, SteamCMD updates, save backups, and a best-effort player list from her logs

@@ -147,7 +147,10 @@ export const RECIPES: Record<GameType, GameRecipe> = {
     tier: "verified",
     evidence: "Tested in the maintainers' own Den. The config, Sandbox and admin editors are tested against 3.x.",
     platforms: { windows: true, linux: true },
-    install: { kind: "steamcmd", appId: 294420, anonymous: true, denCanInstall: false },
+    // Updates stay on the installed branch (steamapps/appmanifest betakey) and
+    // put serverconfig.xml back afterwards: `validate` restores the shipped
+    // copy, and PackRelay lost a server's port to exactly that (2026-10-03).
+    install: { kind: "steamcmd", appId: 294420, anonymous: true, denCanInstall: true },
     launch: {
       kind: "exe",
       entry: "7DaysToDieServer.exe",
@@ -184,10 +187,10 @@ export const RECIPES: Record<GameType, GameRecipe> = {
     ],
     connect: "Find it in the in-game server browser, or Connect to IP with the address.",
     steamClientAppId: 251570,
-    defaults: { configFile: "serverconfig.xml", modsDir: "Mods" },
+    defaults: { configFile: "serverconfig.xml", modsDir: "Mods", steamAppId: 294420 },
     gaps: [
       "Backups leave out random-gen map files (GeneratedWorlds, often hundreds of MB). The game rebuilds them from the seed, but only reliably on the same game version.",
-      "No SteamCMD update, though the app is anonymous and the other Steam games already have it.",
+      "An update puts back only serverconfig.xml (and a custom configFile). Any other shipped file edited in place, like the XMLs under Data\\Config, is reset to stock by SteamCMD; keep those changes in a mod under Mods instead.",
     ],
   },
 

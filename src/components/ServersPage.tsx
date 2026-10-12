@@ -37,6 +37,7 @@ const TYPE_FIELDS: Record<string, FieldDef[]> = {
     { key: "telnetPassword", label: "Telnet Password", type: "password", hint: "Password set in serverconfig.xml under TelnetPassword" },
     { key: "configFile", label: "Config File", type: "text", hint: "Config filename (e.g. serverconfig.xml or serverconfig-custom.xml)" },
     { key: "modsDir", label: "Mods Directory", type: "text", hint: "Mods folder name relative to install dir" },
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates. Updates stay on the installed branch and keep your serverconfig.xml." },
   ],
   minecraft: [
     { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port from server.properties" },
