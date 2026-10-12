@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withActivity } from "@/lib/activity-route";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
 import fs from "fs";
 import path from "path";
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
   });
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   const adapter = getAdapter(getServerId(request));
   if (!adapter) {
     return NextResponse.json({ error: "Unknown server" }, { status: 404 });
@@ -122,3 +123,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withActivity("backup", (body) => `Ran a ${body.type === "daily" ? "daily" : "hourly"} backup`, handlePost);

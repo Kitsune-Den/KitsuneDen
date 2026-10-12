@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
 import { resolveServerStatus } from "@/lib/adapters/reachability";
+import { recordActivity, noteExpectedStop } from "@/lib/activity";
 
 function getServerId(request: NextRequest): string {
   return request.nextUrl.searchParams.get("server") || getDefaultServerId();
@@ -25,13 +26,28 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { action, command } = body;
 
+  const serverId = adapter.def.id;
+  const serverName = adapter.def.name;
+  const log = (verb: string, result: { success: boolean; message: string }) => {
+    recordActivity({
+      level: result.success ? "info" : "error",
+      kind: "server",
+      message: result.success ? `${verb} ${serverName}` : `Couldn't ${verb.toLowerCase()} ${serverName}: ${result.message}`,
+      serverId,
+      serverName,
+    });
+    return NextResponse.json(result);
+  };
+
   switch (action) {
     case "start":
-      return NextResponse.json(await adapter.start());
+      return log("Started", await adapter.start());
     case "stop":
-      return NextResponse.json(await adapter.stop());
+      noteExpectedStop(serverId);
+      return log("Stopped", await adapter.stop());
     case "restart":
-      return NextResponse.json(await adapter.restart());
+      noteExpectedStop(serverId);
+      return log("Restarted", await adapter.restart());
     case "command": {
       if (!command) {
         return NextResponse.json(

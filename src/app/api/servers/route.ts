@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllAdapters, addServer, removeServer, updateServer } from "@/lib/adapters/adapter-registry";
 import { resolveServerStatus } from "@/lib/adapters/reachability";
+import { recordActivity, observeStatus } from "@/lib/activity";
 
 export async function GET() {
   const adapters = getAllAdapters();
 
   const servers = await Promise.all(
-    adapters.map(async (a) => ({
-      ...a.def,
-      status: await resolveServerStatus(a),
-      capabilities: a.capabilities,
-    }))
+    adapters.map(async (a) => {
+      const status = await resolveServerStatus(a);
+      observeStatus(a.def.id, a.def.name, status);
+      return {
+        ...a.def,
+        status,
+        capabilities: a.capabilities,
+      };
+    })
   );
 
   return NextResponse.json({ servers });
@@ -42,6 +47,7 @@ export async function PUT(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json(result, { status: 404 });
     }
+    recordActivity({ level: "info", kind: "setup", message: `Updated server settings for ${serverId}`, serverId });
 
     return NextResponse.json(result);
   } catch (err) {
@@ -77,6 +83,7 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
     }
+    recordActivity({ level: "info", kind: "setup", message: `Added ${name} to the Den`, serverId: id, serverName: name });
 
     return NextResponse.json(result);
   } catch (err) {
@@ -107,6 +114,12 @@ export async function DELETE(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json(result, { status: 404 });
     }
+    recordActivity({
+      level: "warn",
+      kind: "setup",
+      message: deleteFiles ? `Deleted ${serverId} and its files` : `Removed ${serverId} from the Den (files kept)`,
+      serverId,
+    });
 
     return NextResponse.json(result);
   } catch (err) {
