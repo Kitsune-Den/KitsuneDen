@@ -28,7 +28,7 @@ import { validatePathFields } from "./server-def-security";
  * gameConfigSecrets() fills them in server-side when the server is saved.
  */
 
-export type GameType = "minecraft" | "7d2d" | "hytale" | "palworld" | "enshrouded";
+export type GameType = "minecraft" | "7d2d" | "hytale" | "palworld" | "enshrouded" | "valheim";
 export type PortField = "gamePort" | "rconPort" | "telnetPort" | "restApiPort" | "queryPort";
 type Protocol = "tcp" | "udp" | "both";
 
@@ -43,7 +43,7 @@ interface PortSpec {
 }
 
 /** Games whose install folder can be read. */
-const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded"];
+const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded", "valheim"];
 
 /**
  * How far apart to look when the usual port is taken, where that isn't just
@@ -446,6 +446,31 @@ function detectHytale(dir: string, d: Detection) {
   d.fields.name = path.basename(dir);
 }
 
+/**
+ * Valheim has no config of its own (settings are launch flags the Den keeps
+ * in kitsuneden-valheim.json), so there are no config ports to read.
+ */
+function detectValheim(dir: string, d: Detection) {
+  if (!exists(path.join(dir, "valheim_server.exe"))) {
+    d.notes.push("No valheim_server.exe here yet. Once the SteamCMD path is set, the Update tab can install it.");
+  }
+  const settings = readText(path.join(dir, "kitsuneden-valheim.json"));
+  if (settings) {
+    try {
+      const c = JSON.parse(settings) as Record<string, unknown>;
+      if (typeof c.name === "string" && c.name.trim()) {
+        d.fields.name = c.name;
+        d.nameFromConfig = true;
+      }
+    } catch {
+      d.notes.push("kitsuneden-valheim.json isn't valid JSON, so it was skipped.");
+    }
+  }
+  const steam = findSteamCmd(dir);
+  if (steam) d.fields.steamCmdPath = steam;
+  if (!d.fields.name) d.fields.name = path.basename(dir);
+}
+
 export type DetectResult = { ok: true; detection: Detection } | { ok: false; error: string };
 
 /** Read what's already in an install folder. Never returns secret values. */
@@ -465,6 +490,7 @@ export function detectInstall(type: GameType, dir: string): DetectResult {
   else if (type === "7d2d") detect7d2d(dir, d);
   else if (type === "palworld") detectPalworld(dir, d);
   else if (type === "enshrouded") detectEnshrouded(dir, d);
+  else if (type === "valheim") detectValheim(dir, d);
   else detectHytale(dir, d);
   return { ok: true, detection: d };
 }

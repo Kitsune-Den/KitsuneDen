@@ -69,6 +69,13 @@ describe("advisePorts", () => {
     expect(ports.restApiPort!.value).toBe(8213);
   });
 
+  it("moves a second Valheim server past the first one's query port", async () => {
+    // Valheim's query port is game + 1, so the game port spans two.
+    const owners = portOwners([def({ name: "Midgard", type: "valheim", gamePort: 2456 })]);
+    const ports = await advisePorts("valheim", {}, owners, allFree);
+    expect(ports.gamePort).toMatchObject({ value: 2458, status: "adjusted" });
+  });
+
   it("moves Enshrouded's one port to the next free one", async () => {
     // One UDP port for joining and queries (its config's queryPort).
     const owners = portOwners([def({ name: "Shroud", type: "enshrouded", gamePort: 15637 })]);
@@ -166,6 +173,16 @@ describe("detectInstall", () => {
     expect(r.detection.configPorts).toEqual({ gamePort: 15639 });
   });
 
+  it("reads Valheim's settings file and says when the server isn't installed", () => {
+    write("kitsuneden-valheim.json", JSON.stringify({ name: "Midgard", world: "Dedicated" }));
+    const r = detectInstall("valheim", dir);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.detection.fields.name).toBe("Midgard");
+    expect(r.detection.nameFromConfig).toBe(true);
+    expect(r.detection.configPorts).toEqual({});
+    expect(r.detection.notes.join(" ")).toContain("No valheim_server.exe here yet");
+  });
+
   it("falls back to the folder name and says what's missing", () => {
     const r = detectInstall("7d2d", dir);
     if (!r.ok) throw new Error(r.error);
@@ -212,6 +229,7 @@ describe("PORT_SPECS", () => {
       hytale: ["gamePort 5520 udp step 1 span 1"],
       palworld: ["gamePort 8211 udp step 1 span 1", "rconPort 25575 tcp step 1 span 1", "restApiPort 8212 tcp step 1 span 1"],
       enshrouded: ["gamePort 15637 udp step 1 span 1"],
+      valheim: ["gamePort 2456 udp step 2 span 2"],
     });
   });
 });
