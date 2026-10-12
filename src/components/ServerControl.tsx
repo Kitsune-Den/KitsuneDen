@@ -68,7 +68,7 @@ export default function ServerControl({ compact }: ServerControlProps) {
         <button
           onClick={() => handleAction("start")}
           disabled={loading || status !== "stopped"}
-          className="p-2 bg-den-green hover:bg-[#6db563] disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors"
+          className="p-2 bg-den-green hover:brightness-110 disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors"
           title="Start"
         >
           <Play size={16} />
@@ -76,7 +76,7 @@ export default function ServerControl({ compact }: ServerControlProps) {
         <button
           onClick={() => handleAction("stop")}
           disabled={loading || status !== "running"}
-          className="p-2 bg-den-red hover:bg-[#e53935] disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors"
+          className="p-2 bg-den-red hover:brightness-110 disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors"
           title="Stop"
         >
           <Square size={16} />
@@ -84,7 +84,7 @@ export default function ServerControl({ compact }: ServerControlProps) {
         <button
           onClick={() => handleAction("restart")}
           disabled={loading || status !== "running"}
-          className="p-2 bg-den-amber hover:bg-[#fb8c00] disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors"
+          className="p-2 bg-den-amber hover:brightness-110 disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors"
           title="Restart"
         >
           <RotateCcw size={16} />
@@ -94,7 +94,7 @@ export default function ServerControl({ compact }: ServerControlProps) {
   }
 
   return (
-    <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl p-6">
+    <div className="den-card p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Server Control</h2>
         <div className="flex items-center gap-2">
@@ -103,7 +103,7 @@ export default function ServerControl({ compact }: ServerControlProps) {
               status === "running"
                 ? "bg-den-green"
                 : status === "starting" || status === "stopping"
-                ? "bg-yellow-500 animate-pulse"
+                ? "bg-den-amber animate-pulse"
                 : "bg-den-red"
             }`}
           />
@@ -115,21 +115,21 @@ export default function ServerControl({ compact }: ServerControlProps) {
         <button
           onClick={() => handleAction("start")}
           disabled={loading || status !== "stopped"}
-          className="flex items-center gap-2 px-4 py-2 bg-den-green hover:bg-[#6db563] disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-den-green hover:brightness-110 disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors text-sm font-medium"
         >
           <Play size={16} /> Start
         </button>
         <button
           onClick={() => handleAction("stop")}
           disabled={loading || status !== "running"}
-          className="flex items-center gap-2 px-4 py-2 bg-den-red hover:bg-[#e53935] disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-den-red hover:brightness-110 disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors text-sm font-medium"
         >
           <Square size={16} /> Stop
         </button>
         <button
           onClick={() => handleAction("restart")}
           disabled={loading || status !== "running"}
-          className="flex items-center gap-2 px-4 py-2 bg-den-amber hover:bg-[#fb8c00] disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-den-amber hover:brightness-110 disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors text-sm font-medium"
         >
           <RotateCcw size={16} /> Restart
         </button>

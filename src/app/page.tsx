@@ -8,7 +8,6 @@ import ServerSwitcher from "@/components/ServerSwitcher";
 import Particles from "@/components/Particles";
 import DashboardPage from "@/components/DashboardPage";
 import ConsolePage from "@/components/ConsolePage";
-import ServerControl from "@/components/ServerControl";
 import ConfigEditor from "@/components/ConfigEditor";
 import PlayerManager from "@/components/PlayerManager";
 import WorldViewer from "@/components/hytale/WorldViewer";
@@ -44,22 +43,20 @@ export default function Home() {
             setDocsKey(key);
             setActivePage("docs");
           }}
+          activeDoc={docsKey}
         />
         <main className="ml-[240px] max-[900px]:ml-[60px] flex-1 flex flex-col min-h-screen relative z-[1]">
           <Topbar activePage={activePage} />
 
           {/* Server Switcher Bar */}
-          <div className="px-6 py-3 bg-den-base/50 border-b border-den-border">
+          <div className="px-6 py-3 bg-den-base/40 border-b border-den-border">
             <ServerSwitcher />
           </div>
 
           {/* Page Content */}
-          <div
-            className="flex-1 overflow-y-auto p-6"
-            style={{ background: "linear-gradient(135deg, #0d1b2a 0%, #1b2838 40%, #1a2040 100%)" }}
-          >
-            <div className="animate-[pageIn_0.2s_ease-out]" key={activePage}>
-              {activePage === "dashboard" && <DashboardPage />}
+          <div className="flex-1 overflow-y-auto p-6 den-canvas">
+            <div className="animate-[pageIn_0.2s_ease-out] max-w-[1600px] mx-auto" key={activePage}>
+              {activePage === "dashboard" && <DashboardPage onNavigate={setActivePage} />}
               {activePage === "console" && <ConsolePage />}
               {activePage === "servers" && <ServersPage />}
               {activePage === "config" && <ConfigEditor />}
@@ -75,13 +72,6 @@ export default function Home() {
           </div>
         </main>
       </div>
-
-      {/* Server Control floating panel - shown on dashboard */}
-      {activePage === "dashboard" && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <ServerControl compact />
-        </div>
-      )}
     </ServerProvider>
   );
 }

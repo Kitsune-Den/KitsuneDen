@@ -1272,9 +1272,9 @@ export default function ConfigEditor() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-          <h3 className="text-sm font-bold">
+      <div className="den-card overflow-hidden">
+        <div className="den-card-header">
+          <h3 className="den-card-title">
             Server Configuration
             <span className="ml-2 text-den-text-dim text-xs font-normal">
               ({currentServer?.type === "7d2d"
@@ -1308,7 +1308,7 @@ export default function ConfigEditor() {
                     : "text-den-text-muted hover:bg-den-surface"
                 }`}
               >
-                Raw JSON
+                Raw
               </button>
             </div>
             <button
@@ -1695,9 +1695,9 @@ export default function ConfigEditor() {
       </div>
 
       {(currentServer?.capabilities.hasMods || currentServer?.capabilities.hasBackups) && (
-        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-den-border">
-            <h3 className="text-sm font-bold">Quick Links</h3>
+        <div className="den-card overflow-hidden">
+          <div className="den-card-header">
+            <h3 className="den-card-title">Quick Links</h3>
           </div>
           <div className="p-5 flex flex-wrap gap-3">
             {currentServer?.capabilities.hasMods && (
@@ -1725,9 +1725,9 @@ export default function ConfigEditor() {
       )}
 
       {currentServer?.capabilities.hasMods && (
-        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-            <h3 className="text-sm font-bold">Mods Summary</h3>
+        <div className="den-card overflow-hidden">
+          <div className="den-card-header">
+            <h3 className="den-card-title">Mods Summary</h3>
             <span className="text-[11px] text-den-text-dim font-medium">
               {mods.length} installed
             </span>
@@ -1742,7 +1742,7 @@ export default function ConfigEditor() {
                 {mods.slice(0, 5).map((mod) => (
                   <div
                     key={mod.name}
-                    className="flex items-center justify-between text-[12px] border-b border-[rgba(42,51,85,0.5)] last:border-0 py-2"
+                    className="flex items-center justify-between text-[12px] border-b border-den-border/60 last:border-0 py-2"
                   >
                     <span className="text-den-text">{mod.name}</span>
                     <span className="text-den-text-dim font-mono">{formatBytes(mod.sizeBytes)}</span>

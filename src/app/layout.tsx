@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains", display: "swap" });
+
 export const metadata: Metadata = {
-  title: "Steam & Settlements - Server Dashboard",
-  description: "Minecraft server dashboard for Steam & Settlements",
+  title: "KitsuneDen",
+  description: "A warm, unified dashboard for your home game servers",
 };
 
 export default function RootLayout({
@@ -12,14 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" className={`dark ${inter.variable} ${jetbrains.variable}`}>
       <body className="antialiased bg-den-bg text-den-text">
         {children}
       </body>

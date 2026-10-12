@@ -9,7 +9,7 @@ export default function Particles() {
     const container = containerRef.current;
     if (!container) return;
 
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 18; i++) {
       const p = document.createElement("div");
       p.style.position = "absolute";
       p.style.borderRadius = "50%";
@@ -17,11 +17,11 @@ export default function Particles() {
       p.style.animation = `particleFloat ${6 + Math.random() * 6}s ease-in-out infinite`;
       p.style.animationDelay = `${Math.random() * 8}s`;
       p.style.left = `${Math.random() * 100}%`;
-      const size = 2 + Math.random() * 2;
+      const size = 1.5 + Math.random() * 2;
       p.style.width = `${size}px`;
       p.style.height = `${size}px`;
-      // Alternate between cyan and amber particles
-      const hue = Math.random() > 0.5 ? "199" : "36";
+      // Mostly lantern-orange embers, with the odd cyan spark
+      const hue = Math.random() > 0.6 ? "199" : "26";
       p.style.background = `hsl(${hue}, 80%, 65%)`;
       container.appendChild(p);
     }

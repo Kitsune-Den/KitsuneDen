@@ -13,171 +13,208 @@
 
 # Chapter 3: The Spirits
 
-*Every system in the Den has a personality -- a way it behaves, a way it breaks, a way it wants to be cared for. This chapter introduces each spirit as she truly is.*
+*Every system in the Den has a personality: a way it behaves, a way it breaks, a way it wants to be cared for. This chapter introduces each spirit as she truly is.*
 
 ---
 
 ## 1. The Minecraft Rig
 
-**Nature:** Predictable, structured, now commanding.
+**Nature:** Predictable, structured, and now able to reach across the house.
 
-She has grown. What was once a single-server dashboard is now a multi-instance commander, managing two game servers and switching between them with quiet confidence. The server switcher with its live status dots is her watching both roads at once -- green for running, dim for stopped, and she always knows which is which.
+She is the eldest spirit and the most complete. Locally, she owns her server outright: she spawns the Java process, reads every line it prints, writes commands to its stdin, and knows the moment it says "Done (". Whether the server runs Fabric, NeoForge, or plain vanilla makes little difference to her. Only the launch changes: `jar` mode for a classic `java -jar`, `argfile` mode for NeoForge's `@user_jvm_args.txt @win_args.txt` style.
 
-The Minecraft Rig is the most mature spirit in the Den. Built on Next.js 16.1.6 with TypeScript and strict mode, she enforces order on herself. Ten components, eleven API routes, SSE streaming, and a full multi-server architecture -- she carries all of it without complaint.
+Her modpack system is her library. `mods-library\` holds the whole collection; `mods\` holds what is active. Activating a pack copies its mods from the library into `mods\`. It adds; it never removes, so clear out `mods\` yourself when you want a clean swap.
 
-Her modpack system is her library. Curated, organized, swappable. She keeps a `mods-library\` for the full collection and a `mods\` folder for what is currently active. When the Operator switches packs, she merges the selected set into the active folder. Everything has its place.
-
-The memory sparkline graph is her heartbeat monitor -- a tiny canvas element drawing a rolling history of JVM heap usage. You can glance at it and know instantly whether a server is breathing easy or straining under load.
-
-She speaks through her console. SSE-streamed log output, colorized and live, with a command input that remembers your history. She logs everything, and she makes it easy to read.
+She has also learned to tend servers she doesn't own. Give her an `rconHost` and she speaks to a server on another machine over RCON: stopping it, sending commands, managing its roster, and seeing who is online. Give her a `lifecycle` block as well and she can wake that server over SSH. She is careful about it, too. Typed `stop`, `restart`, or `shutdown` commands are refused for remote servers, because a stray word in the console shouldn't leave a world dark with no way to relight it from here.
 
 ### Technical Profile
 
 | Trait | Detail |
 |---|---|
-| Framework | Next.js 16.1.6, App Router, TypeScript (strict) |
-| Styling | Tailwind CSS 4, 16 custom CSS properties |
-| Components | 10 (DashboardContent, ServerSwitcher, ServerControl, Console, ServerStats, ConnectionInfo, ConfigEditor, ModManager, ModPacks, PlayerManager) |
-| API Routes | 11 (server, console, config, mods, modpacks, players, stats, memory, network, servers) |
-| Context | ServerContext.tsx (serverId + setServerId) |
-| Libraries | server-process.ts (multi-server process manager), rcon.ts (RCON client) |
-| Streaming | SSE for console output |
-| Port | 3000 |
+| Type | `minecraft` |
+| Launch | `jar` or `argfile`, using `javaPath` or `java` from PATH |
+| Commands | stdin (local), RCON (remote) |
+| Online players | RCON `list`, merged with the roster files |
+| Roster | `ops.json`, `whitelist.json`, `banned-players.json` (local); RCON commands (remote) |
+| Config | `server.properties` |
+| Memory | `dashboard-config.json` (default 2 GB min / 4 GB max) |
+| Journal | stdout/stderr of the spawned process, 2000 lines in memory |
 
 ### Care Tips
 
-- **Never mix Fabric and NeoForge mods.** They are incompatible ecosystems. The Rig manages them in separate directories, but the Operator must respect the boundary.
-- **Keep `dashboard-config.json` values reasonable.** Don't allocate more memory than the machine has. The Rig will faithfully pass whatever values you set to the JVM, even if they are too high.
-- **She logs everything to the console.** If something goes wrong, the console is the first place to look. Her 2000-line buffer keeps a generous history.
-- **Test server switches.** After making changes to one server, switch to the other and back to confirm the UI resets cleanly.
+- **Never mix Fabric and NeoForge mods.** They are incompatible ecosystems. Keep a separate server directory, and a separate `mods-library\`, for each loader.
+- **Enable RCON, even for local servers.** Online players come from RCON `list`. Without it, the Players page shows only the roster files.
+- **Keep `dashboard-config.json` honest.** She passes whatever heap size you give her straight to the JVM, even if the machine doesn't have it.
+- **Don't hand-tune `user_jvm_args.txt`** in argfile mode. She rewrites it on every start.
+- **For remote servers, RCON must be reachable from the dashboard host.** Many servers bind RCON to 127.0.0.1 or sit behind a firewall by default. That is a fix on the server's machine, not in the Den.
 
 ---
 
 ## 2. The Hytale Cart
 
-**Nature:** Energetic, capable, slightly chaotic.
+**Nature:** Energetic, capable, a little independent.
 
-The Hytale Cart is the younger spirit. She doesn't have the Rig's refined architecture or her TypeScript discipline, but she works -- and she works reliably. Live log streaming, server start/stop, basic file management. She gets the job done.
+The Hytale Cart doesn't let the dashboard hold her hand. She is launched through her own start script in her own window, and the dashboard finds her afterward by looking for a `java.exe` whose command line contains `HytaleServer` (or whatever `processFilter` says). She takes no live commands from the console. Stopping her is abrupt: the dashboard terminates that process rather than asking politely.
 
-Her backup system is her safety net, and it is one of her best features. PowerShell scripts run on schedule: hourly backups with 1-day retention, daily backups with 7-day retention. Like a fox who buries food in multiple hiding spots, she makes sure there is always something to fall back on.
+Her treasures are in `universe\`: worlds, warps, player saves, and NPC memories. The dashboard can show her worlds and warps, toggle the OP group for players in `permissions.json`, and, if the KitsuneCommand mod is installed, manage airdrop settings, loot tables, and drop history straight from the mod's SQLite database.
 
-She now lives inside the unified dashboard. The old monolithic `server.js` is retired, and the Cart shares the Rig's patterns.
-
-Her `universe\` folder is her treasure. Two worlds, five warps, three players, and NPC memories. This is the living data of the Hytale server, the thing that matters most when backups run and when disaster strikes.
+She updates from the Hytale Launcher. When the launcher has downloaded a newer `HytaleServer.jar` and `Assets.zip`, the Update page copies them into her directory (keeping `.bak` copies of the old ones).
 
 ### Technical Profile
 
 | Trait | Detail |
 |---|---|
-| Framework | Unified Next.js dashboard |
-| Frontend | React + Tailwind |
-| Real-time | Live log streaming |
-| Port | 3000 |
-| Server Managed | HytaleServer.jar on port 5520 |
-| Config | F:\KitsuneDen\config.json ("Kitsune Den", Adventure, 20 players) |
-| Backups | PowerShell: hourly (1-day retention), daily (7-day retention) |
+| Type | `hytale` |
+| Launch | `startScript` (default `start.bat`) |
+| Stop | process terminate |
+| Commands | none |
+| Config | `config.json` |
+| Players | `permissions.json` (OP toggle), names resolved from `universe\players\` |
+| Backups | your `backupScript` (PowerShell), listed from `backups\hourly\` and `backups\daily\` |
+| Updates | copy from `%APPDATA%\Hytale\install\release\package\game\latest` |
+| Journal | the newest `logs\*.log` |
 
 ### Care Tips
 
-- **Add logging.** The Cart's own operational logging is minimal. More structured logging would make debugging easier.
-- **Introduce modularity gradually.** Don't rewrite everything at once. Extract routes into separate files, then WebSocket handling, then process management. One piece at a time.
-- **Keep her aligned with the Rig's infrastructure.** The long-term goal is consistency in one dashboard. The Rig's patterns (separate route handlers, typed contexts, theme system) are the target.
-- **Protect the `universe\` folder.** This is irreplaceable data. The backup scripts exist for a reason -- make sure they run.
+- **Protect `universe\`.** It is irreplaceable. Make sure the backup script actually runs, and check the Backups page now and then.
+- **Save before you stop.** The dashboard's Stop is a hard terminate. Let the server save first if you can.
+- **Open the Hytale Launcher before updating.** The Update page copies from the launcher's files; if the launcher hasn't fetched the new version, there's nothing newer to copy.
+- **Stop the server before updating.** The update refuses to run while she is awake.
 
 ---
 
-## 3. The NeoForge Spirit
+## 3. The Seven Days Watch (7 Days to Die)
 
-**Nature:** Young, quiet, waiting.
+**Nature:** Vigilant, a little gruff, remembers every face.
 
-She is the newest arrival in the Den. Installed, configured, and connected to the dashboard, but she has not yet spoken her first word. Her `mods\` folder is empty. Her `modpacks.json` contains only a bare "Default" pack with nothing in it. She is a stage set for a performance that hasn't begun.
+The Seven Days Watch speaks through telnet. The dashboard launches `7DaysToDieServer.exe` headless and tells it to write its journal to `logs\7d2d-server.log`, which the console tails every two seconds. Commands typed into the console travel over telnet, and Stop sends a telnet `shutdown` before falling back to a force-kill after 30 seconds.
 
-The NeoForge Spirit lives at `F:\MinecraftServer\server-neoforge\`, and she launches differently than her Fabric sister. Where Fabric uses `java -jar fabric-server-launch.jar`, NeoForge uses the argfile pattern: `java @user_jvm_args.txt @win_args.txt`. The dashboard knows this -- it writes JVM arguments to `user_jvm_args.txt` instead of passing them on the command line.
+She remembers. The Players page lists everyone who has authenticated in her log, not just those online now, with their Steam ID and an online or offline tag. Who is online right now comes from a telnet `listplayers`, which runs whether or not the dashboard launched her, so it works for servers run by a service too.
 
-She sits on port 25566 with her own RCON at 25576, cleanly separated from Fabric's 25565/25575. The Rig's server switcher shows her status alongside Fabric, and all the same controls work: start, stop, restart, memory allocation, mod management, config editing.
-
-She'll come alive when the crew settles on a modpack. The candidates are still being discussed -- possibly "Create Lets Create" or something similar. Whatever is chosen will define her personality. For now, she waits.
+Her admin file (`serveradmin.xml`) is editable from the dashboard: admins and permission levels, the whitelist, the blacklist, and per-command permission levels. Her config editor knows `serverconfig.xml`, including a day/night slider that keeps `DayNightLength` and `DayLightLength` in step.
 
 ### Technical Profile
 
 | Trait | Detail |
 |---|---|
-| Loader | NeoForge 21.4.156 |
-| Launch Mode | argfile (`java @user_jvm_args.txt @win_args.txt`) |
-| Game Port | 25566 |
-| RCON Port | 25576 |
-| Memory | 2G min / 4G max (dashboard-config.json) |
-| Mods | Empty (awaiting pack selection) |
-| Location | F:\MinecraftServer\server-neoforge\ |
+| Type | `7d2d` |
+| Launch | `7DaysToDieServer.exe -configfile=<configFile> -logfile logs\7d2d-server.log -batchmode -nographics -dedicated` |
+| Commands | telnet on 127.0.0.1:`telnetPort` (default 8081) |
+| Status probe | TCP connect to the telnet port |
+| Config | `serverconfig.xml` (or `configFile`) |
+| Admin file | `adminFilePath`, else `AdminFileName` from the config, looked for in `dir`, `dir\saves`, and `%APPDATA%\7DaysToDie\Saves` |
+| Mods | `modsDir` (default `mods`); uploaded `.zip` files are extracted |
+| Memory | managed by the game, not the dashboard |
+| Journal | `logs\7d2d-server.log` |
 
 ### Care Tips
 
-- **Match the server version to the chosen pack.** NeoForge modpacks are version-sensitive. Whatever pack the crew picks, confirm the NeoForge version matches.
-- **Fabric mods do not work here.** This is a hard boundary. Fabric API, Lithium, and other Fabric mods are incompatible with NeoForge. The Rig keeps the mod directories separate for this reason.
-- **Check `user_jvm_args.txt` after memory changes.** The dashboard writes this file when the Operator adjusts memory allocation. If something looks wrong with JVM settings, this file is the source of truth.
-- **She shares `libraries\` with NeoForge's runtime.** Don't delete files from `libraries\` -- they are managed by the NeoForge installer.
+- **Set `telnetPort` and `telnetPassword`.** Without telnet she can't take commands, can't report who's online, and the status probe has nothing to knock on.
+- **Her memory has limits.** The known-players list is read from `logs\7d2d-server.log`, and the dashboard empties that file each time it launches her. A dashboard-started restart wipes the list until players log in again. A server started some other way only appears there if it writes to that same log path.
+- **Restart after config changes.** `serverconfig.xml` is read at boot.
 
 ---
 
-## 4. The Unified Lantern
+## 4. The Palworld Ranch
 
-The unified dashboard is the Den's lantern. It serves the same purpose -- to illuminate both worlds for the Operator -- with one steady flame.
+**Nature:** Cheerful, chatty, two ways to reach her.
+
+The Palworld Ranch listens on RCON and, if you enable it, on a REST API. The dashboard prefers RCON and falls back to REST when RCON doesn't answer. Through them she can save the world, broadcast a message, kick or ban a player, and report who is online. Stop is polite at first: an RCON `Shutdown 5`, a wait of up to 30 seconds, and only then a terminate.
+
+The **Promote/Demote** buttons keep a dashboard-side list of trusted players in `palworld-admins.json`. That list colors the Players page; it doesn't grant in-game admin by itself. In-game admin still comes from the server's `AdminPassword`.
+
+She updates through SteamCMD (app id 2394010 unless `steamAppId` says otherwise). The dashboard can also zip her saves on demand.
+
+### Technical Profile
+
+| Trait | Detail |
+|---|---|
+| Type | `palworld` |
+| Launch | `startScript` (default `start_palworld.bat`), else `PalServer-Win64-Shipping-Cmd.exe` |
+| Commands | RCON on 127.0.0.1:`rconPort` (default 25575), fire-and-forget |
+| REST | 127.0.0.1:`restApiPort` (default 8212), basic auth as `admin` |
+| Passwords | `rconPassword` / `restApiPassword`, falling back to `AdminPassword` from `PalWorldSettings.ini` |
+| Players | online only (RCON `ShowPlayers`, else REST `/v1/api/players`); bans from `Pal\Saved\SaveGames\banlist.txt` |
+| Config | `Pal\Saved\Config\WindowsServer\PalWorldSettings.ini` |
+| Backups | zips of `Pal\Saved\SaveGames\` + settings, in `<dir>\..\backups\palworld\hourly\` or `daily\` |
+| Journal | the newest log in `Pal\Saved\Logs\` |
+
+### Care Tips
+
+- **Mind the RCON port.** Her default is 25575, the same as Minecraft's. On a shared machine, give one of them a different port.
+- **Stop her before updating.** SteamCMD refuses to run while she's awake, and so does the dashboard.
+- **The admin password stays on the server.** The Players page never receives `rconPassword`; manage it in `PalWorldSettings.ini` or the Configuration page.
 
 ---
 
-## 5. The Journals (Logs)
+## 5. The Enshrouded Hearth
 
-Every spirit keeps a journal, and knowing how to read them is essential to understanding what happened, what is happening, and what went wrong.
+**Nature:** Quiet, self-sufficient, keeps her own counsel.
 
-### Minecraft Logs
+The Enshrouded Hearth has no RCON and no API. The dashboard can start her, stop her (by terminating `enshrouded_server.exe`; she saves on her own tick), edit her config, back up her `savegame\` folder, and update her through SteamCMD (app id 2278520). It cannot send her commands.
 
-The Minecraft Rig maintains a **2000-line in-memory buffer** for each server instance. Log lines are SSE-streamed to the dashboard in real-time, where they are displayed in the Console component with color coding:
+Her player list is a best guess: the dashboard watches her log for connect and disconnect lines and builds an "Online" or "Seen" list from what it has read since it started.
 
-- **Amber** for dashboard system messages
-- **Red** for errors and warnings
-- **Gold** for commands sent by the Operator
+If she has no `enshrouded_server.json` when you press Start, the dashboard writes one with sensible defaults, including three user groups (Admin, Friend, Guest).
 
-The buffer is per-server -- Fabric and NeoForge each have their own 2000-line history. When you switch servers in the dashboard, you see that server's logs, not a mixed stream.
+### Technical Profile
 
-Server log files also exist on disk in each server's directory, but the in-dashboard console is the primary interface.
+| Trait | Detail |
+|---|---|
+| Type | `enshrouded` |
+| Launch | `startScript` (default `start_enshrouded.bat`), else `enshrouded_server.exe` |
+| Commands | none |
+| Status | process list (she has no TCP port to probe) |
+| Ports | `gamePort` 15637, `queryPort` 15638 (both UDP) |
+| Config | `enshrouded_server.json` (or `configFile`) |
+| Players | best-effort scrape of the in-memory log |
+| Backups | zips of `savegame\` in `<dir>\..\backups\enshrouded\hourly\` or `daily\` |
+| Journal | the newest `logs\*.log` |
 
-### Hytale Logs
+### Care Tips
 
-The Hytale Cart writes dated log files to `F:\KitsuneDen\logs\`. These are persistent -- they survive restarts and can be reviewed after the fact.
-
-Live log output is also streamed to the dashboard, giving the Operator a real-time view.
+- **Note the group passwords.** When the dashboard writes a fresh config, the Admin and Friend groups get random passwords, shown once in the start message. Change them in the Configuration page if you'd rather pick your own.
+- **Forward UDP, not TCP.** Both her ports are UDP.
+- **Expect a thin player list after a dashboard restart.** It only knows what it has read since it woke.
 
 ---
 
-## 6. The Rituals (Task Scheduler)
+## 6. The Unified Lantern
+
+The dashboard is the Den's lantern. One flame, five kinds of spirit, as many servers as `servers.json` lists. It asks each spirit the way she prefers to be asked, and shows only the rooms she actually has.
+
+---
+
+## 7. The Journals (Logs)
+
+Every spirit keeps a journal. The dashboard holds the last **2000 lines per server** in memory and streams them to the Console page as they arrive. Lines from the dashboard itself start with `[Dashboard]`; commands you send are echoed back.
+
+The memory buffer resets when the dashboard restarts. For anything older, go to the files on disk listed in each spirit's profile above. For a remote Minecraft server, the real journal stays on that machine.
+
+---
+
+## 8. The Rituals (Startup)
 
 The spirits wake through rituals, and rituals demand consistency.
 
-- **Keep paths absolute.** A relative path in a scheduled task is a path that points nowhere after a working directory changes.
-- **Test manually first.** Run `npm run dev` by hand before trusting it to Task Scheduler. Watch for errors. Confirm the dashboard starts.
-- **Check after Windows updates.** Major updates can reset scheduled tasks or change security policies. Verify the ritual still runs after every update.
-- **A disrupted ritual confuses a spirit.** If the startup script fails silently, the dashboards won't be running, and the Operator won't know until they try to open one. Task Scheduler's "restart on failure" setting helps, but it isn't a substitute for monitoring.
+- **Keep paths absolute.** A relative path in a scheduled task points nowhere once the working directory changes.
+- **Test by hand first.** Run the same command you'll give Task Scheduler, watch for errors, and confirm the login page loads.
+- **Check after Windows updates.** Major updates can reset scheduled tasks or tighten security policies.
+- **A disrupted ritual confuses a spirit.** If startup fails silently, nobody knows until they try to open the dashboard. "Restart on failure" helps; it is not monitoring.
 
-The startup flow: Windows boots, Task Scheduler waits 30 seconds, then runs `npm run dev` as `DARA-PC\darab` with highest privileges. One dashboard comes to life. The Den is awake.
+The settings themselves are in Chapter 4.
 
 ---
 
-## 7. The Gateways (Ports)
+## 9. The Gateways (Ports)
 
-Six ports, each a doorway into or out of the Den.
+Each spirit has her doorways, listed in full in Appendix B. Three things to remember:
 
-| Port | Spirit | Purpose |
-|---|---|---|
-| 3000 | Unified Dashboard | The Operator's window into the Den |
-| 25565 | Fabric Server | Where players connect to the modded vanilla world |
-| 25566 | NeoForge Server | Where players will connect to the heavy modpack world |
-| 25575 | Fabric RCON | Remote console for Fabric server commands |
-| 25576 | NeoForge RCON | Remote console for NeoForge server commands |
-| 5520 | Hytale Server | Where players connect to the Hytale world |
+- The dashboard itself listens on **3001**.
+- Minecraft RCON and Palworld RCON both default to **25575**. Two spirits, one door: move one.
+- 7 Days to Die, Palworld, and Enshrouded play over **UDP**. Forward them as UDP on the router.
 
-Port conflicts cause immediate distress. If two processes try to bind the same port, one will fail -- sometimes silently, sometimes with a clear error. If a spirit won't start, check whether her gateway is already occupied.
-
-These six numbers are the Den's addresses. Keep them documented, keep them unique, and keep them sacred.
+Keep the numbers documented, unique, and sacred.
 
 ---
 

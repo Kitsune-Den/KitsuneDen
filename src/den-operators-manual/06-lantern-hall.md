@@ -15,104 +15,106 @@
 
 *Where the Den has been, where it is now, and where it wants to go. A living roadmap.*
 
-Stand at the center of the workshop and look around. The shelves are stocked, the tools are sharp, the lanterns are lit. But a workshop is never finished — there's always another shelf to build, another corner to illuminate. This chapter is the view from that vantage point: honest about what exists, clear about what remains, and warm about the direction ahead.
+Stand at the center of the workshop and look around. The shelves are stocked, the tools are sharp, the lanterns are lit. A workshop is never finished, though; there's always another shelf to build. This chapter is the view from the middle of the room: honest about what exists, clear about what remains.
 
 ---
 
 ## 1. What the Lantern Hall Was
 
-The Lantern Hall was originally envisioned as a future unified control panel — a single interface where every Den service, every dashboard, every log stream and health check could be viewed and managed together.
+The Lantern Hall began as a name for a future: one control panel where every Den service, every log stream, and every health check could be seen and managed together.
 
-In early documentation, it was described as something not yet built, but already part of the Den's identity. It was a name for the direction the Den was heading — a promise of coherence and calm, written down before the code existed to fulfill it.
-
-The name held a purpose even then: it gave the Den a place to grow toward.
+Back then it was written down before the code existed, a promise of coherence and calm. The name gave the Den somewhere to grow toward.
 
 ---
 
 ## 2. What Has Already Been Achieved
 
-The Den has grown significantly since those early notes. Many features originally imagined for the Lantern Hall now exist — unified in a single dashboard, proven in daily use.
+Much of that promise is kept. The separate Minecraft and Hytale dashboards became one app, and the one app learned new games.
 
-### The Minecraft Rig
+### One hall, many lanterns
 
-The Minecraft dashboard has become a full-featured operations center:
+- **Adapter architecture**: every game is one class behind one interface. Minecraft, Hytale, 7 Days to Die, Palworld, and Enshrouded all live in the same hall
+- **Capability-driven UI**: each server shows only the pages it can use
+- **Servers from the UI**: add, edit, and remove servers without hand-editing JSON, with a folder picker for install paths
+- **Honest status**: a TCP reachability probe means servers run by services or other machines report their real state
+- **A front door**: the shared-password gate, with signed 7-day sessions
+- **The manual, in-app**: these chapters are readable from the dashboard's Docs menu
 
-- **Unified service controls** — The server switcher manages both Fabric and NeoForge from a single interface, with seamless context switching between instances
-- **Real-time monitoring** — Memory bars, sparkline graphs, CPU usage, uptime counters, and process PID tracking via the ServerStats component
-- **Live log viewer** — SSE-powered console with colorized output, command input field, command history (arrow up/down), and a 2000-line scrollback buffer
-- **Server health status** — Live status dots (green for running, red for stopped, yellow for transitioning) on each server tab, plus a `/api/servers` endpoint for programmatic health checks
-- **Mod management** — Upload `.jar` files through the browser, organize mods into a library, create and swap between named mod packs per server
-- **Player management** — Whitelist, op, ban, and kick players directly from the dashboard, with live player list display
-- **Configuration editing** — Server properties editor with smart dropdowns for fields like gamemode and difficulty, reading from and writing to `server.properties`
-- **Connection info** — Auto-detected LAN and public IP addresses with click-to-copy for easy sharing
-- **Memory management** — Per-server JVM heap allocation (min and max) controlled through dashboard dropdowns, with automatic handling of `-Xms`/`-Xmx` flags (Fabric) and `user_jvm_args.txt` (NeoForge)
-- **Consistent visual identity** — The Kitsune Den theme, defined through 16 CSS custom properties, applied across every component for a unified look and feel
+### Reaching across the house
 
-### The Hytale Cart
+- **Remote Minecraft** through `rconHost`: status, console commands, stop, online players, and roster changes, all over RCON
+- **SSH lifecycle**: start and restart remote Minecraft servers through the machine's own OpenSSH client
+- **Safety rails**: typed `stop` / `restart` / `shutdown` are refused for remote servers, so a typo can't strand a world
 
-Hytale operations are now integrated into the unified dashboard:
+### Per-spirit care
 
-- **Server control** — Start, stop, and restart the Hytale server through the browser
-- **Live logs** — streaming log output in the unified console
-- **Automated backups** — hourly and daily backups managed through the UI
+- **Minecraft**: live console, mod library and packs, JVM memory per server, online players via RCON
+- **7 Days to Die**: telnet console, a player history from the log, `serveradmin.xml` editing, a day/night slider
+- **Hytale**: worlds and warps, OP toggles, backup listing, launcher-based updates, KitsuneCommand airdrop management
+- **Palworld**: RCON and REST, kick/ban/broadcast/save, SteamCMD updates, save backups
+- **Enshrouded**: config, SteamCMD updates, save backups, and a best-effort player list from her logs
 
-The Lantern Hall vision isn't a distant dream — much of it is already here, in one application.
+### Care for the workshop itself
+
+- Vitest suites for the adapters, auth, reachability, remote exec, and the Minecraft guards
+- GitHub Actions running tests and a build on every pull request
 
 ---
 
 ## 3. What Remains
 
-The vision is not complete. Here is what the Den still needs, organized by time horizon.
+The vision is not complete. Here is what the Den still wants, by time horizon.
 
 ### Near-Term
 
-These are small, concrete improvements that would strengthen what already exists:
+Small, concrete things that would strengthen what exists:
 
-- **Add structured logging for Hytale events** — timestamped, leveled log output for easier troubleshooting
-- **Set up Task Scheduler for dashboard auto-start** — boot-time startup should be reliable (and Bitdefender-proof)
+- **Quiet the buttons that can't help.** Remote Minecraft servers without a `lifecycle` block still show Start and Restart; they refuse politely, but the capabilities could hide them instead
+- **Put the missing fields in the form.** `rconHost`, `lifecycle`, `launchMode`, and `argFiles` still need hand-editing in `servers.json`
+- **Bring back the memory controls.** The memory panel exists in `ServerControl`, but only its compact button row is on screen today
+- **Show Minecraft backups.** The API can zip a Minecraft world, but the Backups page is hidden for her
+- **Rate-limit the login.** Fine on a tailnet; necessary before the Den ever faces the open internet
 
 ### Medium-Term
 
-These are architectural improvements that would make both dashboards easier to maintain and extend:
+Architectural improvements:
 
-- **Deepen the Hytale feature set** — align world tooling, backups, and config UX with Minecraft's parity
-- **Improve mod tooling** — richer mod pack diagnostics and compatibility checks
+- **Remote hosts for more spirits.** Only Minecraft has `rconHost`; the others assume they share a machine with the dashboard
+- **Graceful stops everywhere.** Hytale and Enshrouded are stopped by terminating their process
+- **Backups for 7 Days to Die**, and scheduling built into the dashboard rather than left to Task Scheduler
+- **Richer mod tooling**: pack swaps that clear old mods, compatibility checks, clearer diagnostics
 
-### Long-Term -- The True Lantern Hall
+### Long-Term: The True Lantern Hall
 
-This is the full vision: a single application that manages the entire Den.
-
-- **Expand the server switcher** — add more games and services as the Den grows
-- **Shared component library** — ServerControl, Console, PlayerManager, Stats — built once, used everywhere
-- **Cross-server log aggregation** — View all server logs in one unified stream, filterable by source
-- **System-wide health dashboard** — All servers and ports in one view showing the health of the entire Den
-- **Backup management UI** — View backup history, trigger manual backups, restore from previous snapshots — all through the browser
+- **Cross-server log aggregation**: every journal in one stream, filterable by spirit
+- **A whole-Den health view**: every server and port at a glance, without switching
+- **Restore from backup**: browse snapshots and restore them from the browser
+- **Per-user accounts**: the gate was built so a real user system can slot in without changing the cookie shape
 
 ---
 
 ## 4. Guiding Principles
 
-These principles have guided every decision in the Den so far. They will continue to guide what comes next.
+These have guided every decision in the Den so far. They'll guide what comes next.
 
 - **Calm.** No clutter, no noise. Every element on screen should earn its place.
-- **Consistent.** Shared UI patterns, shared naming conventions, shared structure. Moving between dashboards should feel like moving between rooms in the same house.
-- **Extensible.** The architecture should welcome new services without requiring rewrites. Adding a new game server should feel like hanging a new lantern, not rebuilding the hall.
-- **Honest.** Logs and health checks should be visible and clear. The Den never hides problems — it illuminates them so the Operator can respond.
-- **Cozy-Professional.** Warm, readable, intentional — but a real tool for real work. The Den has personality, but it never sacrifices precision for charm.
+- **Consistent.** Shared patterns, shared naming, shared structure. Moving between spirits should feel like moving between rooms in the same house.
+- **Extensible.** A new game is one adapter class. Adding a server should feel like hanging a new lantern, not rebuilding the hall.
+- **Honest.** Logs and status should be visible and true. The Den never hides problems; it lights them up so the Operator can respond.
+- **Careful.** Anything that can't be undone (deleting files, stopping a server you can't restart) should be hard to do by accident.
+- **Cozy-Professional.** Warm, readable, intentional, and still a real tool for real work. Personality never costs precision.
 
 ---
 
 ## 5. The Path Forward
 
-The Lantern Hall isn't a single project to build — it's a direction to walk. Each improvement to either dashboard, each shared pattern adopted, each structural alignment brings the Den closer to the vision.
+The Lantern Hall isn't a single project to finish. It's a direction to walk.
 
-The architecture is ready. The Minecraft dashboard has proven that a Next.js application can manage multiple server instances through a clean API layer and a reactive frontend. The patterns are tested — SSE for logs, REST for control, JSON files for configuration, child processes for server management. The theme is established — 16 CSS custom properties that give every component a consistent, warm identity.
+The architecture is ready for it. One interface describes every game; one registry wakes every server; one probe tells the truth about who is awake. SSE for logs, REST for control, JSON files for configuration, and child processes, RCON, telnet, or SSH for reaching the spirits themselves. The patterns are tested and the theme is settled.
 
-What remains is steady work, one lantern at a time.
+What remains is steady work, one lantern at a time. Some of it is small: a missing form field, a hidden button. Some of it is structural: remote hosts for every spirit, a real restore flow.
 
-Some of that work is small — a structured log here, a dashboard polish there. Some of it is structural — expanding capabilities, improving diagnostics, tightening UX.
-
-But none of it is urgent. The Den works today. Backups run on schedule, servers start and stop reliably. The Lantern Hall is not a fix for something broken — it's the natural next shape of something that already works well.
+None of it is urgent. The Den works today. Servers start and stop, players come and go, backups land where they should. The Lantern Hall is not a fix for something broken. It's the next shape of something that already works.
 
 Walk toward it at whatever pace feels right. The lanterns will be there when you arrive.
 

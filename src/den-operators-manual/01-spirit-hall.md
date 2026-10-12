@@ -13,83 +13,61 @@
 
 # Chapter 1: The Spirit Hall
 
-*A high view of everything that lives in the Den -- every spirit, every lantern, every gateway. Start here.*
+*A high view of everything that lives in the Den: every spirit, every lantern, every gateway. Start here.*
 
 ---
 
-## 1. The Minecraft Rig
+## 1. The Unified Lantern (The Dashboard)
 
-**Location:** `F:\MinecraftServer\dashboard`
-**Framework:** Next.js 16.1.6, TypeScript, Tailwind CSS
-**Port:** 3000
-**Nature:** Stable, structured, now multi-server capable
+**Location:** wherever you cloned KitsuneDen (the repo root)
+**Framework:** Next.js 16.1.6 (App Router), React 19, TypeScript, Tailwind CSS 4
+**Port:** 3001 (set in the `dev` and `start` scripts in `package.json`)
+**Nature:** Steady, watchful, one flame for every world
 
-She is the eldest spirit in the Den, and the most refined. The Minecraft Rig has grown from managing a single server into a multi-instance commander, overseeing two game servers through a clean server switcher UI.
+The Den used to be a scatter of dashboards, one per game. Now there is one lantern. A single Next.js app reads `servers.json`, wakes an **adapter** for each server listed there, and gives the Operator one window into all of them.
 
-### The Two Servers She Commands
+Each adapter knows how its game likes to be spoken to: a child process's stdin for a local Minecraft server, RCON for a remote one, telnet for 7 Days to Die, RCON and a REST API for Palworld, and quiet log-watching for the games that offer nothing else. The dashboard only shows the pages a server can actually use (mods, mod packs, worlds, backups, updates, airdrops), based on that adapter's capabilities.
 
-| Server | Loader | Game Port | RCON Port | Status |
-|---|---|---|---|---|
-| **Fabric 1.21.4** | Fabric Loader 0.18.4 | 25565 | 25575 | Mature, modded vanilla experience |
-| **NeoForge 21.4.156** | NeoForge | 25566 | 25576 | Heavy modpack rig, awaiting its first pack |
+### What she can do
 
-Fabric is the proven road -- Fabric API, Lithium, the mods the crew knows. NeoForge is the new road, installed and configured but still quiet, waiting for the guys to settle on a modpack.
-
-### What She Can Do
-
-- **Live SSE Console** -- real-time server output streamed to the browser, with command input and history (up/down arrows)
-- **Mod Pack System** -- create, activate, and manage curated sets of mods with a library upload system
-- **Memory Management** -- JVM allocation controls with min/max dropdowns per server
-- **Player Management** -- whitelist, op, ban, and kick controls with live player lists
-- **Server Stats** -- memory usage bars, canvas sparkline graphs, CPU and uptime grid
-- **Config Editor** -- grouped server.properties editor with dropdowns for gamemode and difficulty
-- **Connection Info** -- LAN and public IP display with click-to-clipboard
-- **Server Switcher** -- tab buttons with live status dots for switching between Fabric and NeoForge
-
-### Startup
-
-She launches via Task Scheduler or `npm run dev` in the dashboard root. She is the reference implementation -- the most mature spirit in the Den.
+- **Server switcher**: every server in `servers.json`, with a live status indicator, refreshed every 5 seconds
+- **Add, edit, and remove servers from the UI**: with a native folder picker for the install directory
+- **Live console**: streamed server output, plus command input for games that accept commands
+- **Lifecycle controls**: start, stop, and restart from the top bar
+- **Players**: rosters, online status, and the admin actions each game supports
+- **Config editor**: `server.properties`, `serverconfig.xml`, `config.json`, `PalWorldSettings.ini`, or `enshrouded_server.json`, with friendly widgets where they help (like the 7D2D day/night slider)
+- **Mods and mod packs**: uploads, a mod library, and swappable packs for Minecraft
+- **Backups, updates, and airdrops**: for the games that support them
+- **Connection info**: LAN and public IP with the game port, ready to share
+- **Docs**: this manual, readable in-app
 
 ---
 
-## 2. The Hytale Cart
+## 2. The Spirits She Tends
 
-**Location:** `F:\KitsuneDen`
-**Framework:** Managed inside the unified dashboard (Next.js)
-**Port:** 3000 (shared UI)
-**Nature:** Capable, energetic, integrated into the Rig's lantern
+Five kinds of spirit live in the Den today. Chapter 3 introduces each one properly; this is the roll call.
 
-The Hytale Cart is younger and rougher, but she works. She manages `HytaleServer.jar` on port 5520, with her server config living at `F:\KitsuneDen\config.json` -- server name "Kitsune Den", Adventure mode, 20 player slots.
+| Spirit | `type` | Speaks through | Knows she's awake by |
+|---|---|---|---|
+| **The Minecraft Rig** (Fabric, NeoForge, vanilla) | `minecraft` | stdin when local, RCON when remote | the "Done (" line, plus a TCP probe of the game port |
+| **The Hytale Cart** | `hytale` | nothing (no live commands) | finding her `java.exe` in the process list |
+| **The Seven Days Watch** (7 Days to Die) | `7d2d` | telnet | a TCP probe of the telnet port |
+| **The Palworld Ranch** | `palworld` | RCON, with the REST API as backup | a TCP probe of RCON or REST, plus the process list |
+| **The Enshrouded Hearth** | `enshrouded` | nothing (no RCON, no API) | finding `enshrouded_server.exe` in the process list |
 
-### What She Can Do
-
-- **Live Logs** -- server output visible in the unified dashboard
-- **Server Control** -- start, stop, and manage the Hytale server process
-- **Backup System** -- hourly and daily backups
-- **World and Config Views** -- world listing, config editing, and mod visibility
-
-### The Universe
-
-Her `universe\` folder holds the treasure: 2 worlds, 3 players, and 5 warps. This is the living data of the Hytale server.
-
-### Startup
-
-Managed through the unified dashboard on port 3000.
+A Minecraft server can also live on another machine in the house. Give her an `rconHost` and the Den will watch, command, and stop her over the network; add a `lifecycle` block and the Den can start and restart her over SSH too. Chapter 2 covers the machinery.
 
 ---
 
-## 3. The Dashboard (Unified Lantern)
+## 3. The Gate (Shared-Password Auth)
 
-The unified dashboard is the Den's lantern -- it illuminates both worlds for the Operator.
+The Den has a front door now. Every page and every API call passes through `src/proxy.ts`, which checks for a signed session cookie.
 
-They share a common purpose:
-- Clear UI that shows you what matters
-- Reliable startup that doesn't need babysitting
-- Health checks so you know when something is wrong
-- Live logs so you can watch the world breathe
-- Consistent structure so switching between them feels natural
+- One shared password, set in `KITSUNEDEN_PASSWORD`
+- Sessions signed with `KITSUNEDEN_SESSION_SECRET` (32 characters or more) and valid for 7 days
+- If either is missing, the login page shows a setup banner and API calls answer `503`
 
-The Minecraft Rig is the gold standard. The Hytale Cart now shares the same lantern.
+Both live in `.env` at the repo root (copy `.env.example` to start). Chapter 4 has the setup ritual.
 
 ---
 
@@ -97,61 +75,66 @@ The Minecraft Rig is the gold standard. The Hytale Cart now shares the same lant
 
 Every spirit keeps a journal. Knowing where to find them is half the work of running the Den.
 
-**Minecraft:**
-- In-dashboard live console via SSE -- the primary way to watch the servers
-- Server log files on disk for each server instance
+The dashboard keeps the last **2000 lines** per server in memory and streams them to the Console page. Behind that buffer, each spirit writes somewhere different:
 
-**Hytale:**
-- `F:\KitsuneDen\logs\` -- dated log files written by the server
-- Live log streaming in the unified dashboard
+| Spirit | Where the journal comes from |
+|---|---|
+| Minecraft (local) | stdout/stderr of the Java process the dashboard spawned |
+| Minecraft (remote) | dashboard messages and RCON replies only; the real log stays on the remote host |
+| Hytale | the newest `logs\*.log` in the server directory |
+| 7 Days to Die | `logs\7d2d-server.log`, which the dashboard tells the server to write when it launches her |
+| Palworld | the newest log in `Pal\Saved\Logs\` |
+| Enshrouded | the newest `logs\*.log` in the server directory |
+
+The in-memory buffer does not survive a dashboard restart. The files on disk do.
 
 ---
 
-## 5. The Rituals (Task Scheduler / Startup)
+## 5. The Rituals (Startup)
 
-The Den's spirits wake through rituals -- scheduled tasks that bring the dashboard to life.
+The Den's spirits wake through rituals: scheduled tasks that bring the dashboard to life after the machine boots.
 
-**The Startup Command:**
-`npm run dev` launches the unified dashboard on port 3000.
+**The startup commands:**
+- `npm run dev`: development mode on port 3001
+- `npm run build`, then `npm run start`: production mode on port 3001
 
-**Why Task Scheduler, Not shell:startup:**
-Bitdefender blocks `.bat` files placed in `shell:startup`. Task Scheduler is the reliable path.
+Starting the dashboard does not start any game servers. Those wake when you press Start, or through whatever service manager already runs them.
 
-**Task Scheduler Settings:**
-- **Trigger:** Run at startup
-- **Privileges:** Highest
-- **Delay:** 30 seconds (let Windows settle)
-- **Failure:** Restart on failure
-- **User account:** `DARA-PC\darab`
+**Why Task Scheduler, not shell:startup:**
+Antivirus (Bitdefender, in the Den's case) blocks `.bat` files placed in `shell:startup`. Task Scheduler is the reliable path. Chapter 4 has the settings.
 
-Test your rituals manually before trusting them to run unattended.
+Test your rituals by hand before trusting them to run unattended.
 
 ---
 
 ## 6. The Gateways (Ports)
 
-Six ports, six doorways. Each one serves a specific purpose, and no two may share the same number.
+Every spirit needs her doorways, and no two may share a number on the same machine.
 
-| Service | Port | Type |
+| Service | Default port | Protocol |
 |---|---|---|
-| Unified Dashboard | 3000 | HTTP |
-| Fabric MC Server | 25565 | Game |
-| NeoForge MC Server | 25566 | Game |
-| Fabric RCON | 25575 | RCON |
-| NeoForge RCON | 25576 | RCON |
-| Hytale Server | 5520 | Game |
+| KitsuneDen dashboard | 3001 | HTTP |
+| Minecraft game | 25565 (configured as `gamePort`) | TCP |
+| Minecraft RCON | 25575 | TCP |
+| 7 Days to Die game | 26900 (configured as `gamePort`) | UDP |
+| 7 Days to Die telnet | 8081 | TCP |
+| Hytale game | configured as `gamePort` | see Appendix B |
+| Palworld game | 8211 | UDP |
+| Palworld RCON | 25575 | TCP |
+| Palworld REST API | 8212 | TCP |
+| Enshrouded game / query | 15637 / 15638 | UDP |
 
-A port conflict causes immediate distress -- if two spirits try to claim the same gateway, neither will function correctly. Keep these numbers sacred.
+Notice that Minecraft RCON and Palworld RCON both default to **25575**. If both live on one machine, move one of them. A port conflict causes immediate distress: if two spirits claim the same gateway, one of them will not wake.
+
+The full reference, with notes, is Appendix B.
 
 ---
 
-## 7. The Lantern Hall (Future Unified Panel)
+## 7. The Lantern Hall
 
-The Lantern Hall is the Den's long-term vision: a single interface managing Minecraft, Hytale, and whatever future services join the Den.
+The Lantern Hall was the Den's long-term dream: one interface for every game, every log, every health check.
 
-It now exists as the unified dashboard. The server switcher is the first step, and the pattern is proven.
-
-The vision: one panel, all servers, all dashboards, all spirits visible at a glance. When the time comes, the architecture is ready to grow.
+Most of it now exists. The unified dashboard is the hall; each adapter is another lantern hung inside it. Chapter 6 covers what has been built and what is still waiting for light.
 
 ---
 
