@@ -11,15 +11,17 @@ import {
 } from "../lib/activity";
 
 let dir: string;
+let previousFile: string | undefined;
 
 beforeEach(() => {
+  previousFile = process.env.KITSUNEDEN_ACTIVITY_FILE;
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "den-activity-"));
   process.env.KITSUNEDEN_ACTIVITY_FILE = path.join(dir, "nested", "activity.jsonl");
   _resetActivityState();
 });
 
 afterEach(() => {
-  delete process.env.KITSUNEDEN_ACTIVITY_FILE;
+  process.env.KITSUNEDEN_ACTIVITY_FILE = previousFile;
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
