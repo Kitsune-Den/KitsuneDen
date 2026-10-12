@@ -19,7 +19,7 @@ KitsuneDen treats your servers like living things. Each one gets its own persona
 ## What it does
 
 - **Every server at a glance.** A grid of server cards with live status, memory, players online and uptime, plus quick start/stop/restart.
-- **Add servers from the UI.** Pick a game, browse to the install folder, fill in the ports. No hand-editing JSON unless you want to.
+- **Add servers from the UI.** Pick a game and browse to the install folder. The Den reads the server's own config to fill in the name, ports, jar or start script, checks every port against your other servers and what's already listening, and offers the best free one. No hand-editing JSON unless you want to.
 - **A page per server.** Status, console, config, players, mods, backups and more as tabs, each with its own URL.
 - **Live console** with command input and history.
 - **Players.** Whitelist, op, ban, kick, plus who's online right now (via RCON for Minecraft and Palworld, telnet for 7D2D).
@@ -72,22 +72,16 @@ cd KitsuneDen
 npm install
 ```
 
-### Set the password
+### Pick a password (first run)
 
-KitsuneDen won't let anyone in until you give it a password and a session secret.
+There's nothing to configure. Start the Den (see [Run it](#run-it)) and open it in a browser. Until it has a password, every page goes to a **Welcome to the Den** screen.
 
-```bash
-cp .env.example .env
-```
+1. Find the **setup code**. It's printed in the window or log running the Den, and saved to `data/setup-code.txt`. It proves you're the person setting it up, so nobody else on your network can claim the Den first.
+2. Enter the code, pick the shared password, and you're in.
 
-Then open `.env` and fill in real values:
+The Den keeps an scrypt hash of the password (never the password itself) and a generated session secret in `data/den-auth.json`. Change the password later under **Settings**, optionally signing everyone else out. Sessions last 7 days.
 
-| Variable | What it is |
-|---|---|
-| `KITSUNEDEN_PASSWORD` | The shared password. Everyone you let into the Den knows this one. |
-| `KITSUNEDEN_SESSION_SECRET` | HMAC key for signing session cookies. 32+ random characters. `openssl rand -base64 48` works. |
-
-If either one is missing, the login page shows a setup banner instead of a password box and the API answers `503`. Sessions last 7 days. Rotating the secret logs everyone out, which is exactly what you want if the password leaks.
+Prefer config files? Copy `.env.example` to `.env` and set `KITSUNEDEN_PASSWORD` (and optionally `KITSUNEDEN_SESSION_SECRET`, 32+ characters). Values in `.env` win over first-run setup, and the setup screen never appears.
 
 The session cookie is only marked `Secure` when the request came in over HTTPS (directly, or through a proxy or tunnel that sets `X-Forwarded-Proto: https`), so signing in over plain `http://<LAN-IP>:3001` works.
 
@@ -281,17 +275,21 @@ export const capabilities: ServerCapabilities = {
 
 ## Auto-start on Windows
 
-KitsuneDen is happiest as a scheduled task. Antivirus tends to get twitchy about `.bat` files in the startup folder.
+KitsuneDen is happiest as a scheduled task (antivirus tends to get twitchy about `.bat` files in the startup folder). A script sets it up:
 
-1. Build once: `npm run build`
-2. Open **Task Scheduler** and create a task:
-   - **Trigger:** At startup, with a 30 second delay
-   - **Action:** Start a program. Program: `cmd.exe`. Arguments: `/c npm run start`. Start in: your KitsuneDen folder.
-   - **Run with highest privileges**
-   - **Restart on failure**
-3. Run it by hand once before you trust it to come up on its own.
+```bash
+npm run build
+powershell -ExecutionPolicy Bypass -File scripts\install-startup-task.ps1
+```
 
-The [Operator's Manual](src/den-operators-manual/07-appendices.md) has more on running it as a service.
+That registers a **KitsuneDen** task that runs the Den hidden when you sign in, restarts it if it crashes, and never starts a second copy. Add `-AtStartup` (from an admin PowerShell) to start it at boot instead, before anyone signs in.
+
+- **Start or stop it:** `Start-ScheduledTask KitsuneDen` / `Stop-ScheduledTask KitsuneDen`. Stopping really stops the Den and frees port 3001.
+- **Update:** `git pull`, `Stop-ScheduledTask KitsuneDen`, `npm run build`, `Start-ScheduledTask KitsuneDen`.
+- **Logs:** `data\den-server.log`.
+- **Remove it:** run the installer again with `-Uninstall`.
+
+The task runs `scripts/run-den.ps1`, copied into `data\` so switching branches can't pull it out from under a running Den.
 
 ---
 

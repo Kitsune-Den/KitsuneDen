@@ -170,3 +170,50 @@ describe("adapter-registry server management", () => {
     });
   });
 });
+
+// A fresh install (first-run setup) has no servers.json at all.
+describe("adapter-registry with no servers.json", () => {
+  let tmpDir: string;
+  let configPath: string;
+  let prevEnv: string | undefined;
+
+  const resetRegistry = () => {
+    const g = globalThis as unknown as { __denConfig?: unknown; __denAdapters?: unknown };
+    g.__denConfig = undefined;
+    g.__denAdapters = undefined;
+  };
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "kitsuneden-registry-empty-"));
+    configPath = path.join(tmpDir, "servers.json");
+    prevEnv = process.env.KITSUNEDEN_SERVERS_CONFIG;
+    process.env.KITSUNEDEN_SERVERS_CONFIG = configPath;
+    resetRegistry();
+  });
+
+  afterEach(() => {
+    if (prevEnv === undefined) delete process.env.KITSUNEDEN_SERVERS_CONFIG;
+    else process.env.KITSUNEDEN_SERVERS_CONFIG = prevEnv;
+    resetRegistry();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("lists no servers instead of throwing", () => {
+    expect(getAllAdapters()).toEqual([]);
+    expect(getAllAdapters()).toEqual([]);
+  });
+
+  it("creates servers.json when the first server is added", async () => {
+    const result = await addServer({ ...baseConfig.servers[0], id: "first" });
+    expect(result.success).toBe(true);
+    const written = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    expect(written.servers.map((s: { id: string }) => s.id)).toEqual(["first"]);
+    expect(getAdapter("first")).toBeDefined();
+  });
+
+  it("still errors on a corrupt servers.json, every time", () => {
+    fs.writeFileSync(configPath, "{ not json");
+    expect(() => getAllAdapters()).toThrow();
+    expect(() => getAllAdapters()).toThrow();
+  });
+});
