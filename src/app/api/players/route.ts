@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withActivity, playerLabel } from "@/lib/activity-route";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
 import { MinecraftAdapter } from "@/lib/adapters/minecraft-adapter";
 import type { SevenDaysAdapter } from "@/lib/adapters/seven-days-adapter";
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(players);
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   const adapter = getAdapter(getServerId(request));
   if (!adapter) {
     return NextResponse.json({ error: "Unknown server" }, { status: 404 });
@@ -441,3 +442,39 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ success: false, message: "Unknown action" }, { status: 400 });
 }
+
+export const POST = withActivity("players", (body) => {
+  const who = playerLabel(body);
+  switch (body.action) {
+    case "admin-add":
+    case "op-add":
+    case "promote":
+      return `Made ${who} an admin`;
+    case "admin-remove":
+    case "op-remove":
+    case "demote":
+      return `Removed admin from ${who}`;
+    case "whitelist-add":
+      return `Whitelisted ${who}`;
+    case "whitelist-remove":
+      return `Removed ${who} from the whitelist`;
+    case "blacklist-add":
+    case "ban-add":
+    case "ban":
+      return `Banned ${who}`;
+    case "blacklist-remove":
+    case "ban-remove":
+      return `Unbanned ${who}`;
+    case "kick":
+      return `Kicked ${who}`;
+    case "save":
+      return "Saved the world";
+    case "broadcast":
+      return "Broadcast a message";
+    case "command-update":
+    case "command-remove":
+      return "Changed command permissions";
+    default:
+      return body.action ? `Player action: ${String(body.action)}` : `Updated roster for ${who}`;
+  }
+}, handlePost);

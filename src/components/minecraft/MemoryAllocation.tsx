@@ -53,10 +53,10 @@ export default function MemoryAllocation() {
     "bg-den-surface text-den-text px-2 py-1.5 rounded-lg text-sm font-mono border border-den-border-light focus:outline-none focus:ring-1 focus:ring-den-cyan/40";
 
   return (
-    <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-den-border flex items-center gap-2">
+    <section className="den-card overflow-hidden">
+      <div className="den-card-header !justify-start gap-2">
         <MemoryStick size={16} className="text-den-text-muted" />
-        <h3 className="text-sm font-bold">Memory Allocation</h3>
+        <h3 className="den-card-title">Memory allocation</h3>
       </div>
       <div className="p-5">
         <div className="flex items-center gap-4 flex-wrap">
@@ -97,7 +97,7 @@ export default function MemoryAllocation() {
           <button
             onClick={saveMemory}
             disabled={memSaved}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-den-cyan hover:bg-[#29b6f6] disabled:bg-den-border disabled:text-den-text-dim text-den-bg rounded-lg transition-colors font-medium"
+            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-den-accent-deep hover:brightness-110 disabled:bg-den-border disabled:text-den-text-dim text-white rounded-lg transition-colors font-medium"
           >
             <Save size={14} />
             {memSaved ? "Saved" : "Save"}
@@ -107,6 +107,6 @@ export default function MemoryAllocation() {
           {message || "Applied the next time the dashboard starts the server."}
         </p>
       </div>
-    </div>
+    </section>
   );
 }

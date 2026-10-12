@@ -15,7 +15,7 @@
 
 *Quick-reference tables, glossary, and cheat sheets. The notes pinned above the workbench.*
 
-This chapter is meant to be skimmed, not read. Keep it open in a tab, pin it to the wall, or memorize the parts you reach for most. Everything here is the kind of information you need quickly and don't want to hunt for.
+This chapter is for skimming. Keep it open in a tab and reach for whatever you need.
 
 ---
 
@@ -23,152 +23,259 @@ This chapter is meant to be skimmed, not read. Keep it open in a tab, pin it to 
 
 | Term | Meaning |
 |---|---|
-| **Spirit** | A service or dashboard with a defined role and personality |
-| **Ritual** | A Task Scheduler job or startup script that brings a service to life |
-| **Lantern** | A dashboard or UI that illuminates system state |
-| **Gateway** | A port used for communication |
-| **Journal** | A log file or log stream written by a service |
-| **Workshop** | The Den's filesystem and operational environment |
-| **Operator** | The human steward of the Den (Dara, or a collaborator) |
-| **Mod Pack** | A curated collection of mods that can be activated as a set |
-| **Server Switcher** | The UI element for switching between Fabric and NeoForge instances |
-| **SSE** | Server-Sent Events, used for real-time console streaming in the Minecraft dashboard |
-| **RCON** | Remote Console protocol for sending commands to Minecraft servers |
-| **Argfile** | A text file containing JVM arguments, used by NeoForge instead of command-line flags |
+| **Spirit** | A game server (or service) with a defined role and personality |
+| **Ritual** | A scheduled task or startup command that brings something to life |
+| **Lantern** | A dashboard or UI that illuminates system state; the Den has one now |
+| **Gateway** | A port |
+| **Journal** | A log file or log stream |
+| **Workshop** | The Den's machines, folders, and operational environment |
+| **Operator** | The human steward of the Den |
+| **The Gate** | The shared-password login in front of every page and API route |
+| **Adapter** | The class that teaches the Den how to talk to one kind of game |
+| **Capabilities** | Flags on each adapter that decide which pages a server gets |
+| **Reachability probe** | The TCP knock that decides whether a server is reported as running |
+| **`rconHost`** | The machine a remote Minecraft server lives on |
+| **Lifecycle block** | The `lifecycle` settings that let the Den start a remote Minecraft server over SSH |
+| **Stub directory** | The local `dir` a remote Minecraft entry points at; it isn't the real server folder |
+| **Mod Library** | `mods-library\`, the reservoir of Minecraft mods that packs draw from |
+| **Mod Pack** | A named set of library mods that can be activated together |
+| **Server grid** | The home page: one card per server, with live status and quick controls |
+| **Activity log** | `data\activity.jsonl`, the record of starts, stops, crashes, saves and roster changes |
+| **SSE** | Server-Sent Events, the stream that carries console output to the browser |
+| **RCON** | Remote Console, used by Minecraft and Palworld |
+| **Argfile** | A text file of JVM arguments (`@file`), used by NeoForge's launch style |
+| **KitsuneCommand** | A Hytale mod whose SQLite database powers the Airdrops page |
 
 ---
 
 ## B. Port Reference
 
-| Service | Port | Type | Notes |
+| Service | Default | Protocol | Notes |
 |---|---|---|---|
-| Unified Dashboard | 3000 | HTTP | Next.js dev server |
-| Fabric MC Server | 25565 | Game | Default MC port |
-| NeoForge MC Server | 25566 | Game | Offset by 1 from Fabric |
-| Fabric RCON | 25575 | RCON | Password in `.env.local` |
-| NeoForge RCON | 25576 | RCON | Password in `server.properties` |
-| Hytale Server | 5520 | Game | Bound to `0.0.0.0` |
+| KitsuneDen dashboard | 3001 | HTTP | From `package.json` scripts |
+| Minecraft game | 25565 | TCP | Set `gamePort`; second server often 25566 |
+| Minecraft RCON | 25575 | TCP | `rconPort`; **same default as Palworld RCON** |
+| 7 Days to Die game | 26900 | UDP | `gamePort` (from the example config) |
+| 7 Days to Die telnet | 8081 | TCP | `telnetPort`; also the status probe |
+| Hytale game | 5520 | UDP | `gamePort`; Hytale's default as the Den has run it |
+| Palworld game | 8211 | UDP | `gamePort` |
+| Palworld RCON | 25575 | TCP | `rconPort`; also the status probe |
+| Palworld REST API | 8212 | TCP | `restApiPort`; probe fallback |
+| Enshrouded game | 15637 | UDP | `gamePort` |
+| Enshrouded query | 15638 | UDP | `queryPort` |
+| SSH (remote lifecycle) | 22 | TCP | `lifecycle.port` |
 
 ---
 
 ## C. Directory Reference
 
-The full directory tree, abbreviated for quick reference:
-
 ```
-F:\MinecraftServer\
-  dashboard\              Next.js 16.1.6 dashboard (port 3000)
-  server\                 Fabric 1.21.4 server (port 25565)
-  server-neoforge\        NeoForge 21.4.156 server (port 25566)
-  start_dashboard.bat     Optional dashboard launcher
-
-F:\KitsuneDen\
-  dashboard\              Legacy Hytale dashboard (retired)
-  HytaleServer.jar        Hytale server (port 5520)
-  config.json             Server configuration
-  universe\               Worlds, players, warps
-  backups\                Automated hourly + daily
-  start_kitsune_den.bat   Launches Hytale server
-  backup_kitsune_den.ps1  Backup automation
+KitsuneDen\
+  servers.json             Your servers (gitignored)
+  servers.example.json     Template
+  .env / .env.example      Auth settings
+  src\
+    proxy.ts               The Gate
+    app\api\               API routes (Appendix D)
+    app\login\             Login page
+    components\            UI pages and panels
+    contexts\              ServerContext (selected server)
+    lib\adapters\          One adapter per game + registry + reachability
+    lib\auth.ts            Password + session signing
+    lib\auth-edge.ts       Session verification for the proxy
+    lib\remote-exec.ts     SSH + PowerShell for remote lifecycle
+    lib\kitsune-db.ts      KitsuneCommand SQLite access
+    den-operators-manual\  This manual
+    __tests__\             Vitest suites
 ```
+
+Game servers live wherever you installed them. Each entry's `dir` points the way.
 
 ---
 
-## D. API Reference (Minecraft Dashboard)
+## D. API Reference
 
-All 11 API routes. Every route accepts `?server=fabric|neoforge` (defaults to `fabric`).
+Every route except `/api/auth/*` needs a valid session. Server-aware routes take `?server=<id>` and default to the first server in `servers.json`.
 
 | Endpoint | Methods | Purpose |
 |---|---|---|
-| `/api/servers` | GET | List all server instances with status |
-| `/api/server` | GET, POST | Server status / start, stop, restart, command |
-| `/api/console` | GET, POST | Log buffer / SSE live stream |
-| `/api/config` | GET, PUT | Read/write `server.properties` |
-| `/api/mods` | GET, POST, DELETE | List/upload/remove active mods |
-| `/api/modpacks` | GET, POST, PUT, DELETE | Pack CRUD, activation, library management |
-| `/api/players` | GET, POST | Player lists / whitelist, op, ban, kick |
-| `/api/stats` | GET | System + server memory, CPU, uptime |
-| `/api/memory` | GET, PUT | JVM memory config (min/max GB) |
-| `/api/network` | GET | Local IPv4 address detection |
-
-**Query parameter:** All routes support `?server=fabric` or `?server=neoforge` to target a specific server instance. If omitted, the route defaults to the Fabric server.
-
----
-
-## E. Kitsune Den Color Palette
-
-The Den's visual identity is built on 16 CSS custom properties. These tokens are used across every component in both dashboards.
-
-| Token | Hex | Purpose |
-|---|---|---|
-| `den-bg` | `#1a1410` | Page background |
-| `den-surface` | `#231e17` | Card backgrounds |
-| `den-surface-hover` | `#2d261d` | Hover states |
-| `den-border` | `#3d3428` | Standard borders |
-| `den-border-light` | `#4d422f` | Subtle separators |
-| `den-text` | `#f0e6d6` | Primary text |
-| `den-text-muted` | `#a89880` | Secondary text |
-| `den-text-dim` | `#6b5d4d` | Disabled text |
-| `den-amber` | `#d4a04a` | Primary accent |
-| `den-amber-glow` | `#e8b44e` | Hover emphasis |
-| `den-gold` | `#c49030` | Deep gold highlights |
-| `den-red` | `#c44d3a` | Errors, stop states |
-| `den-green` | `#5a9a52` | Online, success |
-| `den-green-glow` | `#6db563` | Active indicators |
-| `den-lantern` | `#e8944e` | Warm orange accent |
-| `den-forest` | `#4a7a48` | Deep green, sparse use |
-
-The palette is warm, low-contrast, and easy on the eyes during long sessions. Dark backgrounds with amber and gold accents — like a workshop lit by lantern light.
+| `/api/auth/login` | POST | `{ password }` → sets the session cookie |
+| `/api/auth/logout` | POST | Clears the session cookie |
+| `/api/servers` | GET, POST, PUT, DELETE | List with status + capabilities / add / update / remove (optionally deleting files) |
+| `/api/server` | GET, POST | Resolved status / `{ action: start, stop, restart, command }` |
+| `/api/console` | GET, POST | Current log buffer / SSE live stream |
+| `/api/config` | GET, POST | Read / save the game's config file |
+| `/api/players` | GET, POST | Player data / per-game player actions |
+| `/api/stats` | GET | Process + host stats, plus game-specific server info |
+| `/api/memory` | GET, PUT | Minecraft `dashboard-config.json` (min/max GB) |
+| `/api/network` | GET | LAN IPv4 + public IP (via api.ipify.org) |
+| `/api/mods` | GET, POST, DELETE | List / upload (zips extracted) / remove mods |
+| `/api/mods-library` | GET, POST | Minecraft library list / upload or copy from `mods\` |
+| `/api/modpacks` | GET, POST, DELETE | Packs + library / create, update, or `action: activate` / delete |
+| `/api/backups` | GET, POST | List / run a backup (`{ type: hourly or daily }`) |
+| `/api/worlds` | GET | Hytale worlds, warps, default world |
+| `/api/7d2d-worlds` | GET | 7D2D world folders from `Data\Worlds\` |
+| `/api/hytale-update` | GET, POST | Launcher update check / copy files |
+| `/api/palworld-update` | GET, POST | Version info / SteamCMD update |
+| `/api/enshrouded-update` | GET, POST | Version info / SteamCMD update |
+| `/api/airdrops/settings` | GET, PUT | KitsuneCommand airdrop settings |
+| `/api/airdrops/loot-tables` | GET, POST, PUT, DELETE | Loot tables and entries |
+| `/api/airdrops/history` | GET | Recent drops (`?limit=`, default 50) |
+| `/api/browse-folder` | GET | Opens a folder picker on the dashboard host |
+| `/api/docs` | GET | `?file=` README or a manual chapter |
+| `/api/activity` | GET | Recent events, newest first (`?server=`, `?kind=server,crash,config,players,backup,mods,setup,auth`, `?limit=` up to 500) |
 
 ---
 
-## F. Configuration Files Reference
+## E. The Den Theme
 
-| File | Location | Purpose |
+Theme tokens live in `src/app/globals.css` as Tailwind `@theme` variables named `--color-den-*` and are used as classes like `bg-den-surface` or `text-den-amber`.
+
+| Family | Tokens | Used for |
 |---|---|---|
-| `.env.local` | `F:\MinecraftServer\dashboard\` | Dashboard RCON config, server paths |
-| `server.properties` | Each server's root directory | MC server settings, ports, RCON |
-| `dashboard-config.json` | Each server's root directory | JVM memory allocation |
-| `modpacks.json` | Each server's root directory | Mod pack definitions + active pack |
-| `config.json` | `F:\KitsuneDen\` | Hytale server name, MOTD, game mode |
-| `permissions.json` | `F:\KitsuneDen\` | Hytale player roles and groups |
-| `user_jvm_args.txt` | `F:\MinecraftServer\server-neoforge\` | NeoForge JVM args (auto-managed) |
+| Layers | `den-bg`, `den-base`, `den-surface`, `den-card`, `den-card-hover`, `den-elevated` | page, panels, cards, raised elements |
+| Borders | `den-border`, `den-border-light` | separation |
+| Text | `den-text`, `den-text-muted`, `den-text-dim` | primary, secondary, tertiary |
+| Accents | `den-amber`, `den-cyan`, `den-green`, `den-red`, `den-purple`, `den-lantern` (most with `-dim` or `-glow` variants) | status, actions, highlights |
+
+Deep night blues underneath, warm and bright accents on top. Check `globals.css` for current values before copying any color elsewhere.
+
+---
+
+## F. Configuration Reference
+
+### `servers.json`, every server
+
+| Field | Required | Description |
+|---|---|---|
+| `id` | yes | Unique id; used in `?server=` |
+| `name` | yes | Display name |
+| `type` | yes | `minecraft`, `hytale`, `7d2d`, `palworld`, or `enshrouded` |
+| `dir` | yes | Server's root folder |
+| `gamePort` | varies | Port players connect to; also the probe port for Minecraft and Hytale |
+
+### Minecraft (`minecraft`)
+
+| Field | Default | Description |
+|---|---|---|
+| `loader`, `version` | | Shown in the UI |
+| `launchMode` | `jar` behavior | `"jar"` or `"argfile"` |
+| `jar` | `server.jar` | Jar filename (jar mode) |
+| `argFiles` | | Arg files, relative to `dir` (argfile mode) |
+| `javaPath` | `java` | Full path to `java.exe` |
+| `rconPort` | 25575 | RCON port |
+| `rconPassword` | empty | RCON password |
+| `rconHost` | 127.0.0.1 | Host for RCON and the status probe; setting it makes the entry remote |
+| `lifecycle` | | SSH start/restart block (Chapter 2, section 5): `kind`, `host`, `port`, `user`, `identityFile`, `startCommand`, `stopCommand` |
+
+### Hytale (`hytale`)
+
+| Field | Default | Description |
+|---|---|---|
+| `startScript` | `start.bat` | Launch script in `dir` |
+| `backupScript` | | PowerShell backup script, absolute or relative to `dir` |
+| `processFilter` | `HytaleServer` | Text to find in the Java command line |
+
+### 7 Days to Die (`7d2d`)
+
+| Field | Default | Description |
+|---|---|---|
+| `configFile` | `serverconfig.xml` | Server config filename |
+| `telnetPort` | 8081 | Telnet port |
+| `telnetPassword` | empty | Telnet password |
+| `modsDir` | `mods` | Mods folder, relative to `dir` or absolute |
+| `adminFilePath` | auto | Full path to `serveradmin.xml` |
+| `controlPanelPort` | | Shown in server info |
+| `controlPanelPassword` | | Accepted but not used |
+
+### Palworld (`palworld`)
+
+| Field | Default | Description |
+|---|---|---|
+| `startScript` | `start_palworld.bat` | Launch script; falls back to the exe |
+| `rconPort` | 25575 | RCON port |
+| `rconPassword` | ini `AdminPassword` | RCON password |
+| `restApiPort` | 8212 | REST API port |
+| `restApiPassword` | ini `AdminPassword` | REST password (user `admin`) |
+| `steamCmdPath` | | `steamcmd.exe` for updates |
+| `steamAppId` | 2394010 | Steam app id |
+
+### Enshrouded (`enshrouded`)
+
+| Field | Default | Description |
+|---|---|---|
+| `startScript` | `start_enshrouded.bat` | Launch script; falls back to the exe |
+| `configFile` | `enshrouded_server.json` | Config filename |
+| `queryPort` | 15638 | Steam query port |
+| `steamCmdPath` | | `steamcmd.exe` for updates |
+| `steamAppId` | 2278520 | Steam app id |
+
+### Top level
+
+| Field | Description |
+|---|---|
+| `dashboard.port` | Ignored if present (older configs had it). The port comes from `package.json` (3001) |
+
+### Environment (`.env`)
+
+| Variable | Description |
+|---|---|
+| `KITSUNEDEN_PASSWORD` | The shared password. Required |
+| `KITSUNEDEN_SESSION_SECRET` | HMAC key for session cookies, 32+ characters. Required. Changing it signs everyone out |
+
+### Files in each server's directory
+
+| File | Spirit | Purpose |
+|---|---|---|
+| `server.properties` | Minecraft | Game settings, ports, RCON |
+| `dashboard-config.json` | Minecraft | JVM min/max memory |
+| `modpacks.json` | Minecraft | Pack definitions + active pack |
+| `user_jvm_args.txt` | Minecraft (argfile) | Rewritten by the dashboard on each start |
+| `serverconfig.xml` | 7 Days to Die | Game settings |
+| `serveradmin.xml` | 7 Days to Die | Admins, whitelist, blacklist, command permissions |
+| `config.json`, `permissions.json` | Hytale | Server settings; player groups |
+| `PalWorldSettings.ini` | Palworld | Under `Pal\Saved\Config\WindowsServer\` |
+| `palworld-admins.json` | Palworld | The dashboard's own admin list |
+| `enshrouded_server.json` | Enshrouded | Server settings and user groups |
 
 ---
 
 ## G. Common Commands
 
-### Dashboard Startup
+### Dashboard
 
 ```
-cd F:\MinecraftServer\dashboard && npm run dev
+npm run dev          development, port 3001
+npm run build        production build
+npm run start        production server, port 3001
+npm test             Vitest suites
+npm run typecheck    tsc --noEmit (also run in CI)
 ```
 
-### Build Check
+### Manual server launch
 
 ```
-cd F:\MinecraftServer\dashboard && npx next build
+cd <server dir>
+start.bat            (or run.bat, start_palworld.bat, ...)
 ```
 
-### Manual Server Launch
+### Process hunting
 
 ```
-cd F:\MinecraftServer\server && start.bat
-cd F:\MinecraftServer\server-neoforge && run.bat
-cd F:\KitsuneDen && start_kitsune_den.bat
-```
-
-### Process Hunting
-
-```
+netstat -ano | findstr :3001
 netstat -ano | findstr :25565
-netstat -ano | findstr :25566
-netstat -ano | findstr :3000
+netstat -ano | findstr :25575
 tasklist | findstr java
 tasklist | findstr node
 ```
 
-### PowerShell Execution Policy Fix
+### SSH lifecycle check
+
+```
+ssh -i <identityFile> -o BatchMode=yes <user>@<host> "powershell -NoProfile -Command Get-Date"
+```
+
+### PowerShell execution policy
 
 ```
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
@@ -178,45 +285,48 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 ## H. Task Scheduler Settings
 
-The recommended configuration for auto-starting dashboards on boot:
-
 | Setting | Value |
 |---|---|
-| Trigger | At startup |
+| Trigger | At startup, delayed 30 seconds |
 | Privileges | Run with highest privileges |
-| Delay | 30 seconds |
 | On failure | Restart the task |
-| User account | `DARA-PC\darab` |
-| Action | Run `npm run dev` |
+| User account | The account that owns the KitsuneDen folder and game servers |
+| Action | `cmd.exe /c npm run start` |
+| Start in | The KitsuneDen repo root |
 
-Task Scheduler is preferred over `shell:startup` because Bitdefender's behavioral analysis can block `.bat` files executed from startup locations. Task Scheduler jobs are not flagged the same way.
+Run `npm run build` once before relying on the task. Task Scheduler is preferred over `shell:startup` because antivirus behavioral analysis (Bitdefender, in the Den's case) can block `.bat` files launched from startup locations.
 
 ---
 
 ## I. Troubleshooting Quick Reference
 
-For the full story behind each issue, see Chapter 5. This table is for when you already know the problem and just need the first step.
+For the full story behind each issue, see Chapter 5.
 
-| Problem | First Check |
+| Problem | First check |
 |---|---|
-| Dashboard won't load | Is the process running? Check terminal. |
-| Server won't start | Check console errors. Is the port free? |
-| Port conflict | `netstat -ano \| findstr :<port>` |
-| PowerShell blocks npm | Use `cmd /c "npm run dev"` |
-| Mods not loading | Correct loader? Correct MC version? |
-| RCON not working | `enable-rcon=true`? Server fully started? |
-| High memory | Both servers running? Lower max memory. |
-| Build fails | `npx next build` -- read the error output |
+| Dashboard won't load | Is Node running? Right port (3001)? Does `servers.json` exist? |
+| Setup banner / 503 | Both `.env` variables set? Secret 32+ chars? Dashboard restarted? |
+| Login loops | Production mode over plain HTTP? Use HTTPS or localhost |
+| Server won't start | Read the console. Port free? `javaPath` right? |
+| Port conflict | `netstat -ano \| findstr :<port>`; MC and Palworld RCON share 25575 |
+| Status says stopped | Is the probe port set and correct? |
+| Remote MC silent | RCON reachable from this machine? Firewall? |
+| SSH start fails | Does the `ssh -o BatchMode=yes` test work as the dashboard's account? |
+| PowerShell blocks npm | `cmd /c "npm run dev"` |
+| Mods not loading | Right loader? Right version? Leftovers in `mods\`? |
+| RCON not working | Enabled in the game config? Password matches `servers.json`? |
+| High memory | How many servers are awake? Lower `maxMemoryGB` |
+| Type errors | `npx tsc --noEmit` (the build won't tell you) |
 
 ---
 
 ## J. Credits & Stewardship
 
-This manual was written and maintained by:
+This manual was written and is maintained by:
 
-- **Dara** -- Keeper of Lanterns, Operator of the Den
-- **Sage** -- Collaborator and co-builder
-- **Claude** -- Collaborator and co-builder
+- **Dara**: Keeper of Lanterns, Operator of the Den
+- **Sage**: Collaborator and co-builder
+- **Claude**: Collaborator and co-builder
 
 The Kitsune Den is a living workshop. Treat it with care, curiosity, and calm hands.
 

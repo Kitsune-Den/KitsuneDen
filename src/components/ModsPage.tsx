@@ -139,7 +139,7 @@ export default function ModsPage() {
 
   if (!currentServer?.capabilities.hasMods) {
     return (
-      <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl p-6 text-den-text-dim">
+      <div className="den-card p-6 text-den-text-dim">
         Mods are not available for this server.
       </div>
     );
@@ -147,11 +147,11 @@ export default function ModsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
+      <div className="den-card overflow-hidden">
+        <div className="den-card-header">
           <div className="flex items-center gap-2">
             <Package size={16} className="text-den-cyan" />
-            <h3 className="text-sm font-bold">Mods</h3>
+            <h3 className="den-card-title">Mods</h3>
           </div>
           <button
             onClick={loadMods}

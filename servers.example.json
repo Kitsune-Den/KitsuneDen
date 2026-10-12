@@ -67,8 +67,5 @@
       "gamePort": 15637,
       "queryPort": 15638
     }
-  ],
-  "dashboard": {
-    "port": 3000
-  }
+  ]
 }

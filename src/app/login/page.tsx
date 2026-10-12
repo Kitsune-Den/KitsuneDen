@@ -58,22 +58,30 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-den-bg text-den-text p-6">
-      <div className="w-full max-w-md bg-den-card border border-den-border rounded-lg p-8 shadow-2xl">
-        <div className="flex items-center gap-3 mb-6">
-          <span className="text-3xl" aria-hidden>🦊</span>
-          <h1 className="text-2xl font-bold">KitsuneDen</h1>
+    <div className="min-h-screen flex items-center justify-center den-canvas text-den-text p-6">
+      <div className="w-full max-w-sm den-card p-8">
+        <div className="flex flex-col items-center text-center mb-7">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center text-[30px] leading-none bg-gradient-to-br from-den-lantern/25 to-den-lantern/5 border border-den-lantern/30 shadow-[0_0_28px_-6px_var(--color-den-lantern)] mb-4"
+            aria-hidden
+          >
+            🦊
+          </div>
+          <h1 className="text-xl font-bold tracking-tight">
+            Kitsune<span className="text-den-lantern">Den</span>
+          </h1>
+          <p className="text-[13px] text-den-text-dim mt-1">The lanterns are lit. Come on in.</p>
         </div>
 
         {setupMode ? (
-          <div className="bg-den-elevated border border-den-amber rounded p-4 text-sm">
+          <div className="bg-den-amber/5 border border-den-amber/40 rounded-lg p-4 text-sm">
             <p className="font-semibold text-den-amber mb-2">Setup required</p>
             <p className="text-den-text-muted mb-2">
               The server is missing <code className="text-den-cyan">KITSUNEDEN_PASSWORD</code>{" "}
               or <code className="text-den-cyan">KITSUNEDEN_SESSION_SECRET</code> (32+ chars).
               Add both to your environment (or <code>.env</code>) and restart:
             </p>
-            <pre className="bg-den-base p-3 rounded text-xs overflow-x-auto text-den-text">
+            <pre className="bg-den-bg p-3 rounded-lg text-xs overflow-x-auto text-den-text font-mono">
               KITSUNEDEN_PASSWORD=&quot;some-shared-password&quot;{"\n"}
               KITSUNEDEN_SESSION_SECRET=&quot;32+ random chars&quot;
             </pre>
@@ -84,7 +92,7 @@ export default function LoginPage() {
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
-              <label htmlFor="password" className="block text-sm text-den-text-muted mb-2">
+              <label htmlFor="password" className="block text-[13px] font-medium text-den-text-muted mb-2">
                 Den password
               </label>
               <input
@@ -94,13 +102,13 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-den-base border border-den-border rounded px-3 py-2 text-den-text focus:outline-none focus:border-den-cyan"
+                className="w-full bg-den-bg/70 border border-den-border rounded-lg px-3 py-2.5 text-den-text focus:outline-none focus:border-den-cyan/60 focus:ring-4 focus:ring-den-cyan/10 transition"
                 disabled={busy}
               />
             </div>
 
             {error && (
-              <div className="text-sm text-red-400 bg-red-950/30 border border-red-900 rounded px-3 py-2">
+              <div className="text-sm text-den-red bg-den-red/10 border border-den-red/30 rounded-lg px-3 py-2">
                 {error}
               </div>
             )}
@@ -108,7 +116,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={busy || password.length === 0}
-              className="w-full bg-den-cyan-dim hover:bg-den-cyan text-den-bg font-semibold py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-den-accent-deep hover:bg-den-accent-fill text-white font-semibold py-2.5 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {busy ? "Signing in…" : "Enter the Den"}
             </button>

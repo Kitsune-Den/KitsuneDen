@@ -77,7 +77,7 @@ export default function BackupManager() {
         <button
           onClick={() => runBackup("hourly")}
           disabled={running}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg text-sm font-semibold hover:brightness-110 hover:shadow-[0_0_16px_rgba(79,195,247,0.3)] disabled:opacity-50 transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-den-accent-deep text-white border border-den-accent-fill rounded-lg text-sm font-semibold hover:brightness-110 disabled:opacity-50 transition-all"
         >
           <Clock size={16} />
           Run Hourly Backup
@@ -101,9 +101,9 @@ export default function BackupManager() {
       {/* Two-column backup lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Hourly */}
-        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-            <h3 className="text-sm font-bold">Hourly Backups</h3>
+        <div className="den-card overflow-hidden">
+          <div className="den-card-header">
+            <h3 className="den-card-title">Hourly Backups</h3>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-den-elevated text-den-text-muted border border-den-border">
               {hourly.length}
             </span>
@@ -131,9 +131,9 @@ export default function BackupManager() {
         </div>
 
         {/* Daily */}
-        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-            <h3 className="text-sm font-bold">Daily Backups</h3>
+        <div className="den-card overflow-hidden">
+          <div className="den-card-header">
+            <h3 className="den-card-title">Daily Backups</h3>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-den-elevated text-den-text-muted border border-den-border">
               {daily.length}
             </span>

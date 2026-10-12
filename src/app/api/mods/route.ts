@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withActivity } from "@/lib/activity-route";
 import fs from "fs/promises";
 import path from "path";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   const adapter = getAdapter(getServerId(request));
   if (!adapter || !adapter.capabilities.hasMods) {
     return NextResponse.json({ error: "Mods not available for this server" }, { status: 404 });
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ success: true, files: saved });
 }
 
-export async function DELETE(request: NextRequest) {
+async function handleDelete(request: NextRequest) {
   const adapter = getAdapter(getServerId(request));
   if (!adapter || !adapter.capabilities.hasMods) {
     return NextResponse.json({ error: "Mods not available for this server" }, { status: 404 });
@@ -175,3 +176,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: false, message: msg }, { status: 500 });
   }
 }
+
+export const POST = withActivity("mods", () => "Uploaded mods", handlePost);
+
+export const DELETE = withActivity("mods", (body) => `Deleted mod ${typeof body.name === "string" && body.name ? body.name : ""}`.trim(), handleDelete);
