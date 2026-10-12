@@ -1,7 +1,7 @@
 "use client";
 
 import { useServer } from "@/contexts/ServerContext";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function ConsolePage() {
   const { serverId } = useServer();
@@ -11,14 +11,17 @@ export default function ConsolePage() {
   const [historyIdx, setHistoryIdx] = useState(-1);
   const [autoScroll, setAutoScroll] = useState(true);
   const outputRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
-  const connectSSE = useCallback(() => {
-    if (abortRef.current) abortRef.current.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
+  // Switching servers starts a fresh console. Reset during render rather than
+  // in the effect so the old server's lines never paint under the new one.
+  const [linesServerId, setLinesServerId] = useState(serverId);
+  if (linesServerId !== serverId) {
+    setLinesServerId(serverId);
     setLines([]);
+  }
+
+  useEffect(() => {
+    const controller = new AbortController();
 
     fetch(`/api/console?server=${serverId}`, {
       method: "POST",
@@ -66,11 +69,6 @@ export default function ConsolePage() {
 
     return () => controller.abort();
   }, [serverId]);
-
-  useEffect(() => {
-    const cleanup = connectSSE();
-    return cleanup;
-  }, [connectSSE]);
 
   useEffect(() => {
     if (autoScroll && outputRef.current) {

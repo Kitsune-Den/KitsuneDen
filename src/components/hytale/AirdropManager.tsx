@@ -96,6 +96,12 @@ export default function AirdropManager() {
 
 // ======== LOOT TABLES TAB ========
 
+async function fetchLootTables(serverId: string): Promise<LootTable[]> {
+  const res = await fetch(`/api/airdrops/loot-tables?server=${serverId}`);
+  const data = await res.json();
+  return data.tables || [];
+}
+
 function LootTablesTab({ serverId }: { serverId: string }) {
   const [tables, setTables] = useState<LootTable[]>([]);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -106,22 +112,31 @@ function LootTablesTab({ serverId }: { serverId: string }) {
 
   const loadTables = useCallback(async () => {
     try {
-      const res = await fetch(`/api/airdrops/loot-tables?server=${serverId}`);
-      const data = await res.json();
-      setTables(data.tables || []);
+      setTables(await fetchLootTables(serverId));
     } catch {
       /* ignore */
     }
   }, [serverId]);
 
   useEffect(() => {
-    loadTables();
-  }, [loadTables]);
+    let cancelled = false;
+    fetchLootTables(serverId)
+      .then((t) => {
+        if (!cancelled) setTables(t);
+      })
+      .catch(() => {
+        /* ignore */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [serverId]);
 
   const toggleExpand = (id: number) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -677,19 +692,21 @@ function SettingsTab({ serverId }: { serverId: string }) {
 function HistoryTab({ serverId }: { serverId: string }) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
-  const loadHistory = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/airdrops/history?server=${serverId}`);
-      const data = await res.json();
-      setHistory(data.history || []);
-    } catch {
-      /* ignore */
-    }
-  }, [serverId]);
-
   useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/airdrops/history?server=${serverId}`);
+        const data = await res.json();
+        if (!cancelled) setHistory(data.history || []);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [serverId]);
 
   return (
     <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">

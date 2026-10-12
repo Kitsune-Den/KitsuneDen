@@ -1,7 +1,7 @@
 "use client";
 
 import { useServer } from "@/contexts/ServerContext";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import StatCard from "@/components/StatCard";
 import MemoryAllocation from "@/components/minecraft/MemoryAllocation";
 import { Activity, Users, Globe, Cpu, Copy, Check } from "lucide-react";
@@ -56,26 +56,34 @@ export default function DashboardPage() {
   const [publicIp, setPublicIp] = useState("...");
   const [copied, setCopied] = useState("");
 
-  const fetchData = useCallback(async () => {
-    if (!serverId) return;
-    try {
-      const [statsRes, logsRes] = await Promise.all([
-        fetch(`/api/stats?server=${serverId}`),
-        fetch(`/api/console?server=${serverId}`),
-      ]);
-      setStats(await statsRes.json());
-      const logsData = await logsRes.json();
-      setLogs((logsData.logs || []).slice(-15));
-    } catch {
-      // ignore
-    }
-  }, [serverId]);
-
   useEffect(() => {
+    if (!serverId) return;
+    // Drop responses that land after a server switch or unmount.
+    let cancelled = false;
+
+    const fetchData = async () => {
+      try {
+        const [statsRes, logsRes] = await Promise.all([
+          fetch(`/api/stats?server=${serverId}`),
+          fetch(`/api/console?server=${serverId}`),
+        ]);
+        const statsData = await statsRes.json();
+        const logsData = await logsRes.json();
+        if (cancelled) return;
+        setStats(statsData);
+        setLogs((logsData.logs || []).slice(-15));
+      } catch {
+        // ignore
+      }
+    };
+
     fetchData();
     const interval = setInterval(fetchData, 10000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [serverId]);
 
   useEffect(() => {
     fetch("/api/network")
