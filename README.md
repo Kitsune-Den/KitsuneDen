@@ -19,7 +19,7 @@ KitsuneDen treats your servers like living things. Each one gets its own persona
 ## What it does
 
 - **Every server at a glance.** A grid of server cards with live status, memory, players online and uptime, plus quick start/stop/restart.
-- **Add servers from the UI.** Pick a game, browse to the install folder, fill in the ports. No hand-editing JSON unless you want to.
+- **Add servers from the UI.** Pick a game and browse to the install folder. The Den reads the server's own config to fill in the name, ports, jar or start script, checks every port against your other servers and what's already listening, and offers the best free one. No hand-editing JSON unless you want to.
 - **A page per server.** Status, console, config, players, mods, backups and more as tabs, each with its own URL.
 - **Live console** with command input and history.
 - **Players.** Whitelist, op, ban, kick, plus who's online right now (via RCON for Minecraft and Palworld, telnet for 7D2D).

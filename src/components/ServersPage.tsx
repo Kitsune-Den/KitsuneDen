@@ -2,9 +2,10 @@
 
 import { useState, useCallback } from "react";
 import { useServer } from "@/contexts/ServerContext";
-import { Trash2, Pencil, Plus, FolderOpen } from "lucide-react";
+import { Trash2, Pencil, Plus, FolderOpen, Sparkles, Loader, TriangleAlert, Info } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
 import { gameMeta, statusMeta } from "@/lib/game-meta";
+import { PORT_FIELDS, useServerAutofill } from "./servers/useServerAutofill";
 
 
 interface DeleteTarget {
@@ -83,12 +84,14 @@ export default function ServersPage() {
   const [addDraft, setAddDraft] = useState<Record<string, string | number>>({});
   const [addSaving, setAddSaving] = useState(false);
   const [addMessage, setAddMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const autofill = useServerAutofill(showAdd, addType, addDraft, setAddDraft);
 
   const openAdd = () => {
     setAddType("7d2d");
     setAddDraft({});
     setAddMessage(null);
     setShowAdd(true);
+    autofill.reset("7d2d");
   };
 
   const handleSaveAdd = async () => {
@@ -111,7 +114,8 @@ export default function ServersPage() {
 
     try {
       const fields = [...SHARED_FIELDS, ...(TYPE_FIELDS[addType] || [])];
-      const server: Record<string, unknown> = { id, type: addType };
+      // Detected launch settings (jar, launch mode, arg files) have no inputs; form values win.
+      const server: Record<string, unknown> = { ...autofill.hiddenFields(), id, type: addType };
       for (const f of fields) {
         const val = addDraft[f.key];
         if (f.type === "number" && val !== "" && val !== undefined) {
@@ -124,7 +128,7 @@ export default function ServersPage() {
       const res = await fetch("/api/servers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ server }),
+        body: JSON.stringify({ server, syncPortsToGame: autofill.syncPorts }),
       });
       const data = await res.json();
 
@@ -529,7 +533,7 @@ export default function ServersPage() {
             </label>
             <select
               value={addType}
-              onChange={(e) => { setAddType(e.target.value); setAddDraft({}); }}
+              onChange={(e) => { setAddType(e.target.value); setAddDraft({}); autofill.reset(e.target.value); }}
               className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text focus:outline-none focus:border-den-cyan/50 transition-colors"
             >
               <option value="7d2d">7 Days to Die</option>
@@ -543,19 +547,32 @@ export default function ServersPage() {
           <div className="text-[10px] font-bold text-den-text-dim tracking-widest pt-2 pb-1">
             CONNECTION
           </div>
-          {[...SHARED_FIELDS, ...(TYPE_FIELDS[addType] || [])].map((field) => (
+          {[...SHARED_FIELDS, ...(TYPE_FIELDS[addType] || [])].map((field) => {
+            const autoLabel = autofill.autoLabel(field.key);
+            const advice = autofill.portAdvice(field.key);
+            const secretIn = field.type === "password" ? autofill.secretFoundIn(field.key) : null;
+            const configWas = autofill.configPortMismatch(field.key);
+            return (
             <div key={field.key}>
-              <label className="block text-[11px] text-den-text-muted font-medium mb-1">
+              <label className="flex items-center gap-1.5 text-[11px] text-den-text-muted font-medium mb-1">
                 {field.label}
+                {autoLabel && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-den-accent" title={`Auto-filled ${autoLabel}`}>
+                    <Sparkles size={10} aria-hidden /> auto
+                  </span>
+                )}
               </label>
               <div className={field.key === "dir" ? "flex gap-2" : ""}>
                 <input
                   type={field.type === "password" ? "password" : field.type === "number" ? "number" : "text"}
                   value={addDraft[field.key] ?? ""}
-                  onChange={(e) =>
-                    setAddDraft((prev) => ({ ...prev, [field.key]: e.target.value }))
-                  }
-                  className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text font-mono focus:outline-none focus:border-den-cyan/50 transition-colors"
+                  placeholder={secretIn ? `Found in ${secretIn}. Leave blank to use it.` : undefined}
+                  onChange={(e) => {
+                    autofill.markEdited(field.key);
+                    setAddDraft((prev) => ({ ...prev, [field.key]: e.target.value }));
+                  }}
+                  onBlur={(PORT_FIELDS as readonly string[]).includes(field.key) ? autofill.recheckPorts : undefined}
+                  className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text font-mono focus:outline-none focus:border-den-cyan/50 transition-colors placeholder:font-sans placeholder:text-den-text-dim"
                 />
                 {field.key === "dir" && (
                   <button
@@ -570,9 +587,65 @@ export default function ServersPage() {
                   </button>
                 )}
               </div>
-              {field.hint && <div className="text-[11px] text-den-text-dim mt-1">{field.hint}</div>}
+              {advice && advice.status === "conflict" ? (
+                <div className="mt-1 flex items-center gap-2 flex-wrap text-[11px] text-den-amber">
+                  <TriangleAlert size={12} aria-hidden />
+                  <span>{advice.reason}.</span>
+                  {advice.suggestion && (
+                    <button
+                      type="button"
+                      onClick={() => autofill.useSuggestion(field.key as (typeof PORT_FIELDS)[number])}
+                      className="btn btn-sm !h-6 !px-2 !text-[11px]"
+                    >
+                      Use {advice.suggestion}
+                    </button>
+                  )}
+                </div>
+              ) : advice && advice.status === "adjusted" && autoLabel ? (
+                <div className="text-[11px] text-den-text-dim mt-1">{advice.reason}. This one is free.</div>
+              ) : configWas ? (
+                <div className="text-[11px] text-den-text-dim mt-1">
+                  {autofill.configFile?.split("/").pop()} says {configWas}.
+                </div>
+              ) : autoLabel ? (
+                <div className="text-[11px] text-den-text-dim mt-1">Auto-filled {autoLabel}.</div>
+              ) : (
+                field.hint && <div className="text-[11px] text-den-text-dim mt-1">{field.hint}</div>
+              )}
+              {field.key === "dir" && (autofill.detecting || autofill.dirError || autofill.notes.length > 0) && (
+                <div className="mt-2 space-y-1 text-[11.5px]">
+                  {autofill.detecting && (
+                    <div className="flex items-center gap-1.5 text-den-text-dim">
+                      <Loader size={12} className="animate-spin" aria-hidden /> Checking the folder and free ports…
+                    </div>
+                  )}
+                  {autofill.dirError && <div className="text-den-red">{autofill.dirError}</div>}
+                  {autofill.notes.map((n) => (
+                    <div key={n} className="flex items-start gap-1.5 text-den-text-muted">
+                      <Info size={12} className="mt-0.5 shrink-0" aria-hidden /> {n}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
+            );
+          })}
+          {autofill.configPortChanged && (
+            <label className="flex items-start gap-2 text-[12px] cursor-pointer rounded-lg border border-den-border bg-den-surface/60 px-3 py-2">
+              <input
+                type="checkbox"
+                className="mt-0.5 accent-[var(--accent)]"
+                checked={autofill.syncPorts}
+                onChange={(e) => autofill.setSyncPorts(e.target.checked)}
+              />
+              <span>
+                Also change the port in <code className="font-mono">{autofill.configFile?.split("/").pop()}</code> to match
+                <span className="block text-den-text-dim text-[11px]">
+                  The game reads its port from there. A backup is kept as <code className="font-mono">.bak</code>.
+                </span>
+              </span>
+            </label>
+          )}
           {addMessage && (
             <div
               className={`px-3 py-2 rounded-lg text-[12px] border ${

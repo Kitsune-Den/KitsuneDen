@@ -56,7 +56,7 @@ function execAsync(cmd: string, timeout = 8000): Promise<string> {
 
 // ---- PalWorldSettings.ini parser ----
 
-function parseOptionSettings(content: string): Record<string, string> {
+export function parseOptionSettings(content: string): Record<string, string> {
   const result: Record<string, string> = {};
   // Find the OptionSettings line: OptionSettings=(Key=Value,Key=Value,...)
   const match = content.match(/OptionSettings=\(([^)]*)\)/);

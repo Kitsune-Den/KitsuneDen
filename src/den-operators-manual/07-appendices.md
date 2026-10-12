@@ -122,6 +122,7 @@ Every route except `/api/auth/*` needs a valid session. Server-aware routes take
 | `/api/airdrops/loot-tables` | GET, POST, PUT, DELETE | Loot tables and entries |
 | `/api/airdrops/history` | GET | Recent drops (`?limit=`, default 50) |
 | `/api/browse-folder` | GET | Opens a folder picker on the dashboard host |
+| `/api/servers/detect` | GET | Add Server autofill: `?type=` (and `dir=`, typed ports) → suggested fields, port advice (free / moved / clash + suggestion), which passwords the game's config has |
 | `/api/docs` | GET | `?file=` README or a manual chapter |
 | `/api/setup` | GET, POST | First-run status (prints the setup code) / `{ code, password }` sets the password and signs you in. Public, works only before a password exists |
 | `/api/account/password` | GET, POST | Where the password comes from / `{ current, next, signOutOthers }` changes it |
