@@ -124,9 +124,9 @@ export default function ConsolePage() {
   };
 
   return (
-    <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden h-[calc(100vh-200px)]">
-      <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-        <h3 className="text-sm font-bold">Live Console</h3>
+    <div className="den-card overflow-hidden h-[calc(100vh-200px)]">
+      <div className="den-card-header">
+        <h3 className="den-card-title flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-den-cyan" />Output</h3>
         <div className="flex items-center gap-3">
           <label className="text-xs text-den-text-muted flex items-center gap-1.5 cursor-pointer">
             <input
@@ -166,7 +166,7 @@ export default function ConsolePage() {
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Enter command..."
+          placeholder="Type a command and press Enter…"
           className="flex-1 bg-transparent text-den-text font-mono text-sm outline-none placeholder:text-den-text-dim"
         />
       </div>

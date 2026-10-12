@@ -2,15 +2,24 @@
 
 import { ReactNode } from "react";
 
+export type StatTone = "cyan" | "green" | "red" | "purple" | "amber";
+
+const TONES: Record<StatTone, { icon: string; ring: string }> = {
+  cyan: { icon: "text-den-cyan bg-den-cyan/10", ring: "border-den-cyan/30" },
+  green: { icon: "text-den-green bg-den-green/10", ring: "border-den-green/35" },
+  red: { icon: "text-den-red bg-den-red/10", ring: "border-den-red/35" },
+  purple: { icon: "text-den-purple bg-den-purple/10", ring: "border-den-purple/30" },
+  amber: { icon: "text-den-amber bg-den-amber/10", ring: "border-den-amber/30" },
+};
+
 interface StatCardProps {
   icon: ReactNode;
   value: string;
   suffix?: string;
   label: string;
-  iconColor?: string;
-  iconBg?: string;
-  borderColor?: string;
-  accentBar?: boolean;
+  tone?: StatTone;
+  /** Tint the card border with the tone, for the one card that should draw the eye */
+  highlight?: boolean;
 }
 
 export default function StatCard({
@@ -18,40 +27,23 @@ export default function StatCard({
   value,
   suffix,
   label,
-  iconColor = "text-den-cyan",
-  iconBg = "bg-den-cyan-glow",
-  borderColor,
-  accentBar = false,
+  tone = "cyan",
+  highlight = false,
 }: StatCardProps) {
+  const t = TONES[tone];
   return (
-    <div
-      className={`relative overflow-hidden bg-gradient-to-br from-den-card to-den-surface border rounded-xl p-5 flex items-center gap-4 transition-all hover:before:opacity-100 ${
-        borderColor ? `border-[${borderColor}]` : "border-den-border"
-      }`}
-      style={borderColor ? { borderColor } : undefined}
-    >
-      {/* Top accent bar */}
-      <div
-        className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-den-cyan to-[#29b6f6] transition-opacity ${
-          accentBar ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-        }`}
-      />
-
-      <div
-        className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${iconBg} ${iconColor}`}
-      >
+    <div className={`den-card p-4 flex items-center gap-4 min-w-0 ${highlight ? t.ring : ""}`}>
+      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${t.icon}`}>
         {icon}
       </div>
-      <div>
-        <div className="text-[22px] font-extrabold tracking-tight leading-tight">
+      <div className="min-w-0">
+        <div className="text-den-text-muted text-[12px] font-medium">{label}</div>
+        <div className="text-[20px] font-semibold tracking-tight leading-tight truncate tabular-nums">
           {value}
           {suffix && (
-            <span className="text-sm font-medium text-den-text-dim ml-1">
-              {suffix}
-            </span>
+            <span className="text-[13px] font-medium text-den-text-dim ml-1">{suffix}</span>
           )}
         </div>
-        <div className="text-xs text-den-text-muted mt-0.5">{label}</div>
       </div>
     </div>
   );

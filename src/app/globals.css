@@ -1,47 +1,53 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: "Courier New", monospace;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "Cascadia Code", Consolas, monospace;
 
-  /* Hytale-inspired deep blue palette */
-  --color-den-bg: #0b0e1a;
-  --color-den-base: #0f1323;
-  --color-den-surface: #151a30;
-  --color-den-card: #1a2040;
-  --color-den-card-hover: #1e2650;
-  --color-den-elevated: #222a4a;
+  /* Night-sky ink: deep, low-saturation navy so the accents carry the color */
+  --color-den-bg: #090c14;
+  --color-den-base: #0d111b;
+  --color-den-surface: #121725;
+  --color-den-card: #151b2a;
+  --color-den-card-hover: #1a2133;
+  --color-den-elevated: #1e2639;
 
-  --color-den-border: #2a3355;
-  --color-den-border-light: #353f65;
+  --color-den-border: #232b40;
+  --color-den-border-light: #313a55;
 
-  --color-den-text: #e8ecf4;
-  --color-den-text-muted: #8b95b0;
-  --color-den-text-dim: #5a6380;
+  --color-den-text: #e9edf5;
+  --color-den-text-muted: #9aa3ba;
+  --color-den-text-dim: #6c7690;
 
   /* Accent colors */
   --color-den-cyan: #4fc3f7;
   --color-den-cyan-dim: #2a7da8;
-  --color-den-cyan-glow: rgba(79, 195, 247, 0.15);
+  --color-den-cyan-glow: rgba(79, 195, 247, 0.12);
 
-  --color-den-purple: #ab47bc;
-  --color-den-purple-dim: #8e24aa;
+  --color-den-purple: #b07fe0;
+  --color-den-purple-dim: #8e5cc4;
 
-  --color-den-green: #66bb6a;
-  --color-den-green-dim: #2e7d32;
-  --color-den-green-glow: rgba(102, 187, 106, 0.15);
+  --color-den-green: #5fc77a;
+  --color-den-green-dim: #2e7d4a;
+  --color-den-green-glow: rgba(95, 199, 122, 0.12);
 
-  --color-den-amber: #ffa726;
-  --color-den-amber-dim: #e65100;
+  --color-den-amber: #ffb547;
+  --color-den-amber-dim: #e07b00;
 
-  --color-den-red: #ef5350;
-  --color-den-red-dim: #c62828;
+  --color-den-red: #f0605d;
+  --color-den-red-dim: #c03a37;
 
-  --color-den-lantern: #e8944e;
+  /* The fox: brand mark, lantern light */
+  --color-den-lantern: #f0914a;
+  --color-den-lantern-dim: #c8682a;
 }
 
 *, *::before, *::after {
   box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
@@ -49,12 +55,22 @@ body {
   background: var(--color-den-bg);
   color: var(--color-den-text);
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-den-cyan) 30%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-den-cyan) 70%, transparent);
+  outline-offset: 2px;
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -63,30 +79,91 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--color-den-border);
-  border-radius: 3px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-den-border-light);
+  background-clip: padding-box;
+}
+
+@layer components {
+  /* Page canvas: a faint lantern glow in the corner instead of a flat fill */
+  .den-canvas {
+    background:
+      radial-gradient(1200px 600px at 100% -10%, color-mix(in srgb, var(--color-den-lantern) 7%, transparent), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, color-mix(in srgb, var(--color-den-cyan) 5%, transparent), transparent 60%),
+      var(--color-den-bg);
+  }
+
+  /* The standard panel every page is built from */
+  .den-card {
+    background: linear-gradient(180deg, var(--color-den-card), color-mix(in srgb, var(--color-den-card) 55%, var(--color-den-surface)));
+    border: 1px solid var(--color-den-border);
+    border-radius: 14px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.03),
+      0 1px 2px rgba(0, 0, 0, 0.25),
+      0 8px 24px -12px rgba(0, 0, 0, 0.4);
+  }
+
+  .den-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--color-den-border);
+  }
+
+  .den-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    color: var(--color-den-text);
+  }
+
+  .den-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-den-border) 60%, transparent);
+  }
+
+  .den-row:last-child {
+    border-bottom: 0;
+  }
+
+  .den-eyebrow {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-den-text-dim);
+  }
 }
 
 /* Ambient particles */
 @keyframes particleFloat {
   0% { opacity: 0; transform: translateY(100vh) scale(0); }
-  20% { opacity: 0.4; }
-  80% { opacity: 0.2; }
+  20% { opacity: 0.35; }
+  80% { opacity: 0.15; }
   100% { opacity: 0; transform: translateY(-20vh) scale(1); }
 }
 
 /* Status pulse */
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 4px rgba(102, 187, 106, 0.4); }
-  50% { box-shadow: 0 0 12px rgba(102, 187, 106, 0.8); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-den-green) 45%, transparent); }
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-den-green) 0%, transparent); }
 }
 
 /* Page transition */
 @keyframes pageIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -98,6 +175,14 @@ body {
 
 /* Modal animation */
 @keyframes modalIn {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
