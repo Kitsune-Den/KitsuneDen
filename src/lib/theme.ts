@@ -5,30 +5,19 @@
  * already has the right theme.
  */
 
+import { readStored as read, writeStored as write } from "@/lib/stored";
+
 export type ThemePref = "dark" | "light" | "system";
 
-const THEME_KEY = "kitsuneden-theme";
-const CB_KEY = "kitsuneden-colorblind";
+export const THEME_KEY = "kitsuneden-theme";
+export const CB_KEY = "kitsuneden-colorblind";
 
-function read(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function write(key: string, value: string) {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // private mode / blocked storage: preference just won't persist
-  }
+export function parseThemePref(v: string | null): ThemePref {
+  return v === "light" || v === "system" ? v : "dark";
 }
 
 export function getThemePref(): ThemePref {
-  const v = read(THEME_KEY);
-  return v === "light" || v === "system" ? v : "dark";
+  return parseThemePref(read(THEME_KEY));
 }
 
 export function getColorBlind(): boolean {

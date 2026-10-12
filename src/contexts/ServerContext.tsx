@@ -71,9 +71,9 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const [servers, setServers] = useState<ServerInfo[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    if (routeId) setLastId(routeId);
-  }, [routeId]);
+  // Remember the last server route so pages outside /instances/[id] keep
+  // their focus. Adjusted during render, not in an effect.
+  if (routeId && routeId !== lastId) setLastId(routeId);
 
   const serverId = routeId ?? lastId;
 

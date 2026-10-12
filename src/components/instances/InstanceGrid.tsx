@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { LayoutGrid, List, Play, Square, RotateCcw, Settings2, Loader, Plus, CircleDot, Circle } from "lucide-react";
 import { useServer, type ServerInfo } from "@/contexts/ServerContext";
 import { gameMeta, statusMeta } from "@/lib/game-meta";
+import { useStoredItem } from "@/lib/useStored";
 import GameArt, { GameIconGlyph } from "@/components/instances/GameArt";
 import { useLifecycle } from "@/components/instances/InstanceControls";
 import { useInstanceStats, formatSince, type InstanceStats } from "@/components/instances/useInstanceStats";
@@ -195,21 +196,8 @@ function InstanceRow({ server }: { server: ServerInfo }) {
 }
 
 export function useViewMode(): ["grid" | "list", (v: "grid" | "list") => void] {
-  const [view, setView] = useState<"grid" | "list">("grid");
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(VIEW_KEY) === "list") setView("list");
-    } catch {}
-  }, []);
-  return [
-    view,
-    (v) => {
-      setView(v);
-      try {
-        localStorage.setItem(VIEW_KEY, v);
-      } catch {}
-    },
-  ];
+  const [stored, setStored] = useStoredItem(VIEW_KEY);
+  return [stored === "list" ? "list" : "grid", setStored];
 }
 
 export function ViewToggle({ view, onChange }: { view: "grid" | "list"; onChange: (v: "grid" | "list") => void }) {
