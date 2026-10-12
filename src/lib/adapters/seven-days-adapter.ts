@@ -123,84 +123,122 @@ export function syncKnownPlayers(logFile: string, cacheFile: string): Map<string
   return known;
 }
 
+// ---- XML helpers ----
+//
+// serverconfig.xml and serveradmin.xml are read and written with regexes, not
+// a DOM, so every value has to be escaped on the way out and decoded on the
+// way in. Before this, a `"` in a config value or a player name closed the
+// attribute early: `x"/><property name="TelnetPassword" value="y` set a second
+// property, and a name like `a" permission_level="0` became an admin entry.
+
+/** Escape a value for a double-quoted XML attribute. Newlines/tabs become
+ * character references so attribute-value normalization doesn't eat them. */
+export function escapeXmlAttr(value: unknown): string {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\r/g, "&#13;")
+    .replace(/\n/g, "&#10;")
+    .replace(/\t/g, "&#9;");
+}
+
+const NAMED_ENTITIES: Record<string, string> = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">" };
+
+/** Decode the predefined XML entities and numeric character references. */
+export function decodeXmlEntities(value: string): string {
+  return value.replace(/&(?:#(\d+)|#x([0-9a-fA-F]+)|(amp|quot|apos|lt|gt));/g, (match, dec, hex, name) => {
+    if (name) return NAMED_ENTITIES[name];
+    const code = dec !== undefined ? parseInt(dec, 10) : parseInt(hex, 16);
+    try {
+      return String.fromCodePoint(code);
+    } catch {
+      return match; // out of range — leave it as written
+    }
+  });
+}
+
+const XML_COMMENT = /<!--[\s\S]*?-->/g;
+
+/** Apply `fn` to the parts of `xml` outside comments. The stock files ship
+ * commented-out example entries; those must be neither read nor edited. */
+function mapOutsideComments(xml: string, fn: (chunk: string) => string): string {
+  return xml
+    .split(/(<!--[\s\S]*?-->)/)
+    .map((part, i) => (i % 2 === 1 ? part : fn(part)))
+    .join("");
+}
+
+/** Read one attribute from a tag's attribute string, decoded. */
+function readAttr(attrs: string, name: string): string {
+  const m = attrs.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`));
+  return m ? decodeXmlEntities(m[1]) : "";
+}
+
+/** Self-closing <tag ... /> entries. Quoted values may contain "/" or ">"
+ * (an escaped name like "AC/DC"), which the old `[^/]*` pattern cut short. */
+function selfClosingTags(section: string, tag: string): string[] {
+  const re = new RegExp(`<${tag}\\s+((?:[^"/>]|"[^"]*")*?)\\s*\\/>`, "g");
+  return Array.from(section.matchAll(re), (m) => m[1]);
+}
+
 // ---- serveradmin.xml support ----
 
-function parseAdminXml(filePath: string): AdminData {
+export function parseAdminXml(filePath: string): AdminData {
   const data: AdminData = { users: [], whitelist: [], blacklist: [], commands: [] };
   try {
-    const xml = fs.readFileSync(filePath, "utf8");
+    const xml = fs.readFileSync(filePath, "utf8").replace(XML_COMMENT, "");
 
     // Parse admin users - support both old (<admins>) and new (<users>) tags
     const adminsSection =
       xml.match(/<(?:admins|users)>([\s\S]*?)<\/(?:admins|users)>/)?.[1] || "";
-    // Match user entries - handle attribute order variations
-    const userRe = /<user\s+([^/]*?)\s*\/>/g;
-    let m;
-    while ((m = userRe.exec(adminsSection)) !== null) {
-      const attrs = m[1];
-      // Skip commented out entries
-      if (attrs.includes("<!--")) continue;
-      const platform = attrs.match(/platform="([^"]*)"/)?.[1] || "";
-      const userid = attrs.match(/userid="([^"]*)"/)?.[1] || "";
-      const steamID = attrs.match(/steamID="([^"]*)"/)?.[1] || "";
-      const name = attrs.match(/name="([^"]*)"/)?.[1] || "";
-      const permLevel = attrs.match(/permission_level="(\d+)"/)?.[1] || "1000";
+    for (const attrs of selfClosingTags(adminsSection, "user")) {
+      const steamID = readAttr(attrs, "steamID");
+      const permLevel = readAttr(attrs, "permission_level");
       data.users.push({
-        platform: platform || (steamID ? "Steam" : ""),
-        userId: userid || steamID,
-        name,
-        permissionLevel: parseInt(permLevel),
+        platform: readAttr(attrs, "platform") || (steamID ? "Steam" : ""),
+        userId: readAttr(attrs, "userid") || steamID,
+        name: readAttr(attrs, "name"),
+        permissionLevel: /^\d+$/.test(permLevel) ? parseInt(permLevel) : 1000,
       });
     }
 
     // Parse whitelist
     const wlSection =
       xml.match(/<whitelist>([\s\S]*?)<\/whitelist>/)?.[1] || "";
-    const wlRe = /<user\s+([^/]*?)\s*\/>/g;
-    while ((m = wlRe.exec(wlSection)) !== null) {
-      const attrs = m[1];
-      if (attrs.includes("<!--")) continue;
-      const platform = attrs.match(/platform="([^"]*)"/)?.[1] || "";
-      const userid = attrs.match(/userid="([^"]*)"/)?.[1] || "";
-      const steamID = attrs.match(/steamID="([^"]*)"/)?.[1] || "";
-      const name = attrs.match(/name="([^"]*)"/)?.[1] || "";
+    for (const attrs of selfClosingTags(wlSection, "user")) {
+      const steamID = readAttr(attrs, "steamID");
       data.whitelist.push({
-        platform: platform || (steamID ? "Steam" : ""),
-        userId: userid || steamID,
-        name,
+        platform: readAttr(attrs, "platform") || (steamID ? "Steam" : ""),
+        userId: readAttr(attrs, "userid") || steamID,
+        name: readAttr(attrs, "name"),
       });
     }
 
     // Parse blacklist
     const blSection =
       xml.match(/<blacklist>([\s\S]*?)<\/blacklist>/)?.[1] || "";
-    const blRe = /<blacklisted\s+([^/]*?)\s*\/>/g;
-    while ((m = blRe.exec(blSection)) !== null) {
-      const attrs = m[1];
-      if (attrs.includes("<!--")) continue;
-      const platform = attrs.match(/platform="([^"]*)"/)?.[1] || "";
-      const userid = attrs.match(/userid="([^"]*)"/)?.[1] || "";
-      const steamID = attrs.match(/steamID="([^"]*)"/)?.[1] || "";
-      const name = attrs.match(/name="([^"]*)"/)?.[1] || "";
-      const unbanDate = attrs.match(/unbandate="([^"]*)"/)?.[1] || "";
-      const reason = attrs.match(/reason="([^"]*)"/)?.[1] || "";
+    for (const attrs of selfClosingTags(blSection, "blacklisted")) {
+      const steamID = readAttr(attrs, "steamID");
       data.blacklist.push({
-        platform: platform || (steamID ? "Steam" : ""),
-        userId: userid || steamID,
-        name,
-        unbanDate,
-        reason,
+        platform: readAttr(attrs, "platform") || (steamID ? "Steam" : ""),
+        userId: readAttr(attrs, "userid") || steamID,
+        name: readAttr(attrs, "name"),
+        unbanDate: readAttr(attrs, "unbandate"),
+        reason: readAttr(attrs, "reason"),
       });
     }
 
     // Parse commands/permissions - support both <commands> and <permissions> tags
     const cmdSection =
       xml.match(/<(?:commands|permissions)>([\s\S]*?)<\/(?:commands|permissions)>/)?.[1] || "";
-    const cmdRe = /<permission\s+cmd="([^"]+)"\s+permission_level="(\d+)"\s*\/>/g;
-    while ((m = cmdRe.exec(cmdSection)) !== null) {
+    for (const attrs of selfClosingTags(cmdSection, "permission")) {
+      const cmd = readAttr(attrs, "cmd");
+      if (!cmd) continue;
       data.commands.push({
-        cmd: m[1],
-        permissionLevel: parseInt(m[2]) || 0,
+        cmd,
+        permissionLevel: parseInt(readAttr(attrs, "permission_level")) || 0,
       });
     }
   } catch {
@@ -209,7 +247,14 @@ function parseAdminXml(filePath: string): AdminData {
   return data;
 }
 
-function writeAdminXml(filePath: string, data: AdminData): void {
+/** Permission levels are 0–1000 integers. Anything else (the players route
+ * passes request-body values through) falls back instead of being written. */
+function permissionLevelOf(value: unknown, fallback: number): number {
+  const n = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
+  return typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 1000 ? n : fallback;
+}
+
+export function writeAdminXml(filePath: string, data: AdminData): void {
   // Read existing file to detect format (old vs new)
   let useNewFormat = true;
   try {
@@ -221,30 +266,32 @@ function writeAdminXml(filePath: string, data: AdminData): void {
 
   const userTag = useNewFormat ? "users" : "admins";
   const cmdTag = useNewFormat ? "commands" : "permissions";
+  const a = escapeXmlAttr;
 
   const userLines = data.users.map((u) => {
+    const level = permissionLevelOf(u.permissionLevel, 1000);
     if (useNewFormat) {
-      return `    <user platform="${u.platform}" userid="${u.userId}" name="${u.name}" permission_level="${u.permissionLevel}" />`;
+      return `    <user platform="${a(u.platform)}" userid="${a(u.userId)}" name="${a(u.name)}" permission_level="${level}" />`;
     }
-    return `    <user steamID="${u.userId}" name="${u.name}" permission_level="${u.permissionLevel}" />`;
+    return `    <user steamID="${a(u.userId)}" name="${a(u.name)}" permission_level="${level}" />`;
   });
 
   const wlLines = data.whitelist.map((w) => {
     if (useNewFormat) {
-      return `    <user platform="${w.platform}" userid="${w.userId}" name="${w.name}" />`;
+      return `    <user platform="${a(w.platform)}" userid="${a(w.userId)}" name="${a(w.name)}" />`;
     }
-    return `    <user steamID="${w.userId}" name="${w.name}" />`;
+    return `    <user steamID="${a(w.userId)}" name="${a(w.name)}" />`;
   });
 
   const blLines = data.blacklist.map((b) => {
     if (useNewFormat) {
-      return `    <blacklisted platform="${b.platform}" userid="${b.userId}" name="${b.name}" unbandate="${b.unbanDate}" reason="${b.reason}" />`;
+      return `    <blacklisted platform="${a(b.platform)}" userid="${a(b.userId)}" name="${a(b.name)}" unbandate="${a(b.unbanDate)}" reason="${a(b.reason)}" />`;
     }
-    return `    <blacklisted steamID="${b.userId}" name="${b.name}" unbandate="${b.unbanDate}" reason="${b.reason}" />`;
+    return `    <blacklisted steamID="${a(b.userId)}" name="${a(b.name)}" unbandate="${a(b.unbanDate)}" reason="${a(b.reason)}" />`;
   });
 
   const cmdLines = data.commands.map(
-    (c) => `    <permission cmd="${c.cmd}" permission_level="${c.permissionLevel}" />`
+    (c) => `    <permission cmd="${a(c.cmd)}" permission_level="${permissionLevelOf(c.permissionLevel, 0)}" />`
   );
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -276,14 +323,14 @@ ${cmdLines.join("\n")}
   fs.writeFileSync(filePath, xml, "utf8");
 }
 
-function parseXmlConfig(filePath: string): Record<string, string> {
+export function parseXmlConfig(filePath: string): Record<string, string> {
   try {
-    const xml = fs.readFileSync(filePath, "utf8");
+    const xml = fs.readFileSync(filePath, "utf8").replace(XML_COMMENT, "");
     const props: Record<string, string> = {};
     const re = /<property\s+name="([^"]+)"\s+value="([^"]*)"\s*\/>/g;
     let m;
     while ((m = re.exec(xml)) !== null) {
-      props[m[1]] = m[2];
+      props[decodeXmlEntities(m[1])] = decodeXmlEntities(m[2]);
     }
     return props;
   } catch {
@@ -291,30 +338,43 @@ function parseXmlConfig(filePath: string): Record<string, string> {
   }
 }
 
-function writeXmlConfig(
+/** 7D2D property names are plain identifiers. Anything else is refused: the
+ * name is used in a RegExp and written into the file. */
+const CONFIG_KEY = /^[A-Za-z][A-Za-z0-9_.-]*$/;
+
+export function writeXmlConfig(
   filePath: string,
   changes: Record<string, string>
 ): void {
+  // Validate everything before touching the file, so a bad key writes nothing.
+  for (const key of Object.keys(changes)) {
+    if (!CONFIG_KEY.test(key)) throw new Error(`Invalid config property name: ${JSON.stringify(key)}`);
+  }
+
   let xml = fs.readFileSync(filePath, "utf8");
   const added: string[] = [];
   for (const [key, value] of Object.entries(changes)) {
-    const re = new RegExp(
-      `(<property\\s+name="${key}"\\s+value=")([^"]*)("\\s*/>)`,
-      "g"
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(<property\\s+name="${escapedKey}"\\s+value=")([^"]*)("\\s*/>)`, "g");
+    const escapedValue = escapeXmlAttr(value);
+    let found = false;
+    xml = mapOutsideComments(xml, (chunk) =>
+      // Function replacer: a string replacement would expand $&, $1, $' in
+      // the value.
+      chunk.replace(re, (_m, pre: string, _old: string, post: string) => {
+        found = true;
+        return pre + escapedValue + post;
+      })
     );
-    if (re.test(xml)) {
-      // Reset lastIndex after test() so replace() works from the start
-      re.lastIndex = 0;
-      xml = xml.replace(re, `$1${value}$3`);
-    } else {
-      // Property doesn't exist yet — queue it for insertion
-      added.push(`\t<property name="${key}"\t\t\t\tvalue="${value}"/>`);
+    if (!found) {
+      // Property doesn't exist yet (or only as a commented-out example)
+      added.push(`\t<property name="${key}"\t\t\t\tvalue="${escapedValue}"/>`);
     }
   }
   // Insert new properties before the closing </ServerSettings> tag
   if (added.length > 0) {
     const insertBlock = "\n\t<!-- Added by Dashboard -->\n" + added.join("\n") + "\n";
-    xml = xml.replace(/([\t ]*<\/ServerSettings>)/, insertBlock + "$1");
+    xml = xml.replace(/([\t ]*<\/ServerSettings>)/, (closing) => insertBlock + closing);
   }
   fs.writeFileSync(filePath, xml, "utf8");
 }
