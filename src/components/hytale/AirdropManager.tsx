@@ -104,19 +104,34 @@ function LootTablesTab({ serverId }: { serverId: string }) {
   const [newDesc, setNewDesc] = useState("");
   const [message, setMessage] = useState("");
 
+  const fetchTables = useCallback(async (): Promise<LootTable[]> => {
+    const res = await fetch(`/api/airdrops/loot-tables?server=${serverId}`);
+    const data = await res.json();
+    return data.tables || [];
+  }, [serverId]);
+
   const loadTables = useCallback(async () => {
     try {
-      const res = await fetch(`/api/airdrops/loot-tables?server=${serverId}`);
-      const data = await res.json();
-      setTables(data.tables || []);
+      setTables(await fetchTables());
     } catch {
       /* ignore */
     }
-  }, [serverId]);
+  }, [fetchTables]);
 
   useEffect(() => {
-    loadTables();
-  }, [loadTables]);
+    // Drop a response that lands after a server switch or unmount.
+    let cancelled = false;
+    fetchTables()
+      .then((next) => {
+        if (!cancelled) setTables(next);
+      })
+      .catch(() => {
+        /* ignore */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchTables]);
 
   const toggleExpand = (id: number) => {
     setExpanded((prev) => {
@@ -677,19 +692,23 @@ function SettingsTab({ serverId }: { serverId: string }) {
 function HistoryTab({ serverId }: { serverId: string }) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
-  const loadHistory = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/airdrops/history?server=${serverId}`);
-      const data = await res.json();
-      setHistory(data.history || []);
-    } catch {
-      /* ignore */
-    }
-  }, [serverId]);
-
   useEffect(() => {
+    // Drop a response that lands after a server switch or unmount.
+    let cancelled = false;
+    const loadHistory = async () => {
+      try {
+        const res = await fetch(`/api/airdrops/history?server=${serverId}`);
+        const data = await res.json();
+        if (!cancelled) setHistory(data.history || []);
+      } catch {
+        /* ignore */
+      }
+    };
     loadHistory();
-  }, [loadHistory]);
+    return () => {
+      cancelled = true;
+    };
+  }, [serverId]);
 
   return (
     <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">

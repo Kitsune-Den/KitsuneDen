@@ -22,28 +22,33 @@ interface DocsPageProps {
 }
 
 export default function DocsPage({ docKey, onSelect }: DocsPageProps) {
-  const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  // Each result is tagged with the doc it belongs to; until the current
+  // docKey's result arrives, we're loading.
+  const [doc, setDoc] = useState<{ key: string; content: string; error: string } | null>(null);
+  const current = doc?.key === docKey ? doc : null;
+  const loading = current === null;
+  const content = current?.content ?? "";
+  const error = current?.error ?? "";
 
   useEffect(() => {
-    setLoading(true);
-    setError("");
+    // Ignore a response for a doc the user has already navigated away from.
+    let cancelled = false;
     fetch(`/api/docs?file=${encodeURIComponent(docKey)}`)
       .then((res) => res.json())
       .then((data) => {
+        if (cancelled) return;
         if (data.content) {
-          setContent(data.content);
+          setDoc({ key: docKey, content: data.content, error: "" });
         } else {
-          setContent("");
-          setError(data.error || "Failed to load doc.");
+          setDoc({ key: docKey, content: "", error: data.error || "Failed to load doc." });
         }
       })
       .catch(() => {
-        setContent("");
-        setError("Failed to load doc.");
-      })
-      .finally(() => setLoading(false));
+        if (!cancelled) setDoc({ key: docKey, content: "", error: "Failed to load doc." });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [docKey]);
 
   return (

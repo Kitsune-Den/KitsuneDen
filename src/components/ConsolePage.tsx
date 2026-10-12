@@ -13,12 +13,18 @@ export default function ConsolePage() {
   const outputRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Clear the output when switching servers. Done during render rather than
+  // in connectSSE so the effect doesn't set state synchronously.
+  const [linesServerId, setLinesServerId] = useState(serverId);
+  if (linesServerId !== serverId) {
+    setLinesServerId(serverId);
+    setLines([]);
+  }
+
   const connectSSE = useCallback(() => {
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-
-    setLines([]);
 
     fetch(`/api/console?server=${serverId}`, {
       method: "POST",

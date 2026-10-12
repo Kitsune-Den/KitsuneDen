@@ -1,6 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
+
+// The query string never changes while this page is mounted (success does a
+// full navigation), so there's nothing to subscribe to.
+const subscribeToSearch = () => () => {};
+const getSearch = () => window.location.search;
+const getServerSearch = () => "";
 
 /**
  * /login — the gate. Shared password, posted to /api/auth/login.
@@ -14,15 +20,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [setupMode, setSetupMode] = useState(false);
-  const [nextPath, setNextPath] = useState("/");
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setSetupMode(params.get("setup") === "1");
-    const next = params.get("next");
-    if (next && next.startsWith("/")) setNextPath(next);
-  }, []);
+  // Read from window rather than useSearchParams() so the page doesn't need a
+  // Suspense boundary; the server snapshot keeps hydration consistent.
+  const params = new URLSearchParams(useSyncExternalStore(subscribeToSearch, getSearch, getServerSearch));
+  const setupMode = params.get("setup") === "1";
+  const next = params.get("next");
+  const nextPath = next && next.startsWith("/") ? next : "/";
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
