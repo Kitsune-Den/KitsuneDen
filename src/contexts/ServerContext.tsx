@@ -19,6 +19,8 @@ interface ServerInfo {
   gamePort?: number;
   /** Set for Minecraft servers that live on another host. */
   rconHost?: string;
+  /** Secret fields that are set server-side. Values are never sent to the browser. */
+  secretsSet?: string[];
   capabilities: {
     hasRcon: boolean;
     hasMods: boolean;

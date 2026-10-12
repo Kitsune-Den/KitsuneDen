@@ -95,6 +95,8 @@ cp .env.example .env
 
 If either is missing, the login page renders a setup-required banner instead of a password prompt, and API calls return `503`. The session lasts 7 days; rotating `KITSUNEDEN_SESSION_SECRET` invalidates every active session (forces a re-login), which is what you want when a password leaks.
 
+The session cookie is marked `Secure` only when the request arrived over HTTPS (directly, or via a proxy/tunnel that sets `X-Forwarded-Proto: https`), so logging in over plain `http://<LAN-IP>:3001` works.
+
 **Trade-off:** shared password means no per-user audit trail and rotation means telling everyone the new password. Fine for a small home dashboard; if you ever need per-user accounts, the gate is structured to swap in without breaking the cookie shape.
 
 ### Run

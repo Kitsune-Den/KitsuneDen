@@ -7,23 +7,27 @@
  * - A successful login sets an HttpOnly cookie containing a signed payload:
  *     base64url(JSON.stringify({ v: 1, iat: <unix-seconds> })) + "." + hmacSha256
  *   We don't need claims-rich JWTs; just "this came from us and isn't expired."
- * - HMAC key is KITSUNEDEN_SESSION_SECRET (any random string ≥ 32 bytes).
- *   If unset we still boot in dev with an in-memory key + loud warning, so a
- *   fresh `npm run dev` works without a six-step setup — but a server restart
- *   invalidates all sessions and we yell about it.
+ * - HMAC key is KITSUNEDEN_SESSION_SECRET (any random string ≥ 32 chars).
+ *   It is required. The edge proxy (auth-edge.ts) can only verify against the
+ *   env secret, so an in-process random fallback here would mint cookies the
+ *   proxy rejects — a silent login loop. Instead login fails with a 503 that
+ *   names the missing variable, and the proxy sends pages to /login?setup=1.
  *
  * Trade-off: shared password = no per-user audit trail. Rotation means
  * telling everyone the new password. Acceptable for "home dashboard for
  * me + Maltaine + friends"; revisit if the access circle widens.
  */
 
-import { createHmac, timingSafeEqual, randomBytes } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const SESSION_COOKIE_NAME = "kitsuneden_session";
 
 /** 7 days. Long enough that you don't re-login mid-week; short enough that a
  * forgotten laptop in a coffee shop isn't open forever. */
 export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+/** Keep in sync with getSessionSecretEdge() in auth-edge.ts. */
+export const MIN_SESSION_SECRET_LENGTH = 32;
 
 interface SessionPayload {
   v: 1;
@@ -36,28 +40,29 @@ interface SessionPayload {
  * the behavior we want (rotating the secret should invalidate sessions). */
 let cachedSecret: Buffer | null = null;
 
+export const SESSION_SECRET_ERROR =
+  `KITSUNEDEN_SESSION_SECRET is missing or shorter than ${MIN_SESSION_SECRET_LENGTH} characters. ` +
+  "Set it in the environment and restart.";
+
+function readSecretFromEnv(): string | null {
+  const fromEnv = process.env.KITSUNEDEN_SESSION_SECRET;
+  if (!fromEnv || fromEnv.length < MIN_SESSION_SECRET_LENGTH) return null;
+  return fromEnv;
+}
+
+/** Throws if the secret isn't configured — callers reachable without one
+ * (the login route) must check isSessionSecretConfigured() first. */
 function getSessionSecret(): Buffer {
   if (cachedSecret) return cachedSecret;
 
-  const fromEnv = process.env.KITSUNEDEN_SESSION_SECRET;
-  if (fromEnv && fromEnv.length >= 32) {
-    cachedSecret = Buffer.from(fromEnv, "utf8");
-    return cachedSecret;
-  }
-
-  // No (or too-short) secret. Generate a one-process-lifetime key so the app
-  // still runs, but make it impossible to miss in the logs.
-  const generated = randomBytes(32);
-  cachedSecret = generated;
-  console.warn(
-    "\n========================================================================\n" +
-      "  KITSUNEDEN_SESSION_SECRET is unset or shorter than 32 chars.\n" +
-      "  Generated a random key for THIS process only — sessions will be\n" +
-      "  invalidated on every restart. Set KITSUNEDEN_SESSION_SECRET in\n" +
-      "  .env or your service environment before deploying.\n" +
-      "========================================================================\n"
-  );
+  const fromEnv = readSecretFromEnv();
+  if (!fromEnv) throw new Error(SESSION_SECRET_ERROR);
+  cachedSecret = Buffer.from(fromEnv, "utf8");
   return cachedSecret;
+}
+
+export function isSessionSecretConfigured(): boolean {
+  return readSecretFromEnv() !== null;
 }
 
 /** Test-only: forget the cached secret. NEVER call this from app code. */
@@ -100,7 +105,8 @@ function base64urlDecode(s: string): Buffer {
 /**
  * Create a signed session cookie value with `iat = now` (or the supplied
  * timestamp, used by tests). The returned string is safe to put straight
- * into a Set-Cookie header value.
+ * into a Set-Cookie header value. Throws if KITSUNEDEN_SESSION_SECRET is
+ * not configured.
  */
 export function signSession(nowSeconds: number = Math.floor(Date.now() / 1000)): string {
   const payload: SessionPayload = { v: 1, iat: nowSeconds };
@@ -111,11 +117,12 @@ export function signSession(nowSeconds: number = Math.floor(Date.now() / 1000)):
 
 export type VerifyResult =
   | { ok: true; iat: number }
-  | { ok: false; reason: "missing" | "malformed" | "bad-signature" | "expired" | "bad-version" };
+  | { ok: false; reason: "missing" | "malformed" | "bad-signature" | "expired" | "bad-version" | "no-secret" };
 
 /**
  * Verify a session cookie value. Rejects malformed, tampered, expired, and
- * unknown-version sessions. Constant-time signature compare.
+ * unknown-version sessions. Constant-time signature compare. Fails closed
+ * (reason "no-secret") when the session secret isn't configured.
  */
 export function verifySession(
   cookieValue: string | undefined | null,
@@ -129,6 +136,7 @@ export function verifySession(
   const payloadB64 = cookieValue.slice(0, dot);
   const sigB64 = cookieValue.slice(dot + 1);
 
+  if (!isSessionSecretConfigured()) return { ok: false, reason: "no-secret" };
   const expectedSig = createHmac("sha256", getSessionSecret()).update(payloadB64).digest();
   let actualSig: Buffer;
   try {
@@ -170,4 +178,26 @@ export function verifySession(
  */
 export function isAuthConfigured(): boolean {
   return getConfiguredPassword() !== null;
+}
+
+/**
+ * Whether to mark the session cookie Secure. Browsers drop Secure cookies
+ * set over plain http, so keying this off NODE_ENV broke login for anyone
+ * reaching a production build at http://<LAN-IP>:3001. Use the scheme the
+ * browser actually used: X-Forwarded-Proto when a reverse proxy / tunnel
+ * terminates TLS in front of us, otherwise the request URL.
+ *
+ * A spoofed X-Forwarded-Proto can only make the cookie *more* restrictive
+ * (Secure over http = the browser refuses it), so trusting it is safe here.
+ */
+export function shouldUseSecureCookie(request: Request): boolean {
+  const forwarded = request.headers.get("x-forwarded-proto");
+  if (forwarded) {
+    return forwarded.split(",")[0].trim().toLowerCase() === "https";
+  }
+  try {
+    return new URL(request.url).protocol === "https:";
+  } catch {
+    return false;
+  }
 }

@@ -75,8 +75,6 @@ export default function PlayerManager() {
 
   // Palworld admin state
   const [pwAdmins, setPwAdmins] = useState<string[]>([]);
-  const [pwAdminPassword, setPwAdminPassword] = useState("");
-  const [showAdminPassword, setShowAdminPassword] = useState(false);
 
   // 7D2D admin state
   const [adminData, setAdminData] = useState<AdminData | null>(null);
@@ -97,7 +95,6 @@ export default function PlayerManager() {
       const json = await res.json();
       setData(json);
       if (json.admins) setPwAdmins(json.admins);
-      if (json.adminPassword !== undefined) setPwAdminPassword(json.adminPassword);
       if (json.adminData) {
         setAdminData(json.adminData);
       }
@@ -601,22 +598,8 @@ export default function PlayerManager() {
             </span>
           </div>
           <div className="p-5 space-y-3">
-            {pwAdminPassword && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-den-surface/60 border border-den-border">
-                <span className="text-[11px] text-den-text-dim shrink-0">Admin Password:</span>
-                <code className="text-[12px] text-den-text font-mono">
-                  {showAdminPassword ? pwAdminPassword : "\u2022".repeat(pwAdminPassword.length)}
-                </code>
-                <button
-                  onClick={() => setShowAdminPassword((prev) => !prev)}
-                  className="ml-auto px-2 py-0.5 text-[10px] font-semibold text-den-text-muted border border-den-border rounded hover:bg-den-surface transition-colors"
-                >
-                  {showAdminPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-            )}
             <div className="text-[11px] text-den-text-dim">
-              Share the admin password with trusted players below. They use <code className="text-den-cyan">/AdminPassword</code> in-game to gain admin.
+              Share the admin password (<code className="text-den-cyan">AdminPassword</code> in the Config tab) with trusted players below. They use <code className="text-den-cyan">/AdminPassword</code> in-game to gain admin.
             </div>
             <div className="space-y-2">
               {pwAdmins.map((steamId) => {
