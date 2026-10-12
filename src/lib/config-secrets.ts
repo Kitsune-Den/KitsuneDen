@@ -31,6 +31,8 @@ const FLAT_SECRET_KEYS: Record<ServerType, readonly string[]> = {
   enshrouded: [],
   // Only a join password, which is meant to be handed to players.
   valheim: [],
+  // The RCON password is inside Rcon, which getConfig never returns.
+  vrising: [],
 };
 
 interface EnshroudedGroup {

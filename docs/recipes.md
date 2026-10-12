@@ -41,6 +41,7 @@ The Den does it differently:
 | Palworld | verified | SteamCMD 2394010 | RCON + REST | zip | 8211 udp / RCON 25575, REST 8212 |
 | Enshrouded | experimental | SteamCMD 2278520 | none | zip | 15637 udp |
 | Valheim | experimental | SteamCMD 896660 | none | zip | 2456 udp, query +1 udp |
+| V Rising | experimental | SteamCMD 1829350 | RCON | zip | 9876 udp, query +1 udp / RCON 25575 |
 
 ## What writing them turned up
 
@@ -62,4 +63,4 @@ Each of these can be its own PR:
 3. ~~**Networking card.**~~ Done: each server's Status tab lists its ports (protocol, purpose, forward or keep private, where the number came from) and warns when one collides with another server on the same machine. The logic is in `src/lib/networking.ts`.
 4. ~~**Recipe card in the picker.**~~ Done: Add Server picks the game from tiles (experimental games are marked), with a card showing the tier and its evidence, install, console, stop, backups, ports to forward, how players join and the known gaps.
 5. **Fix the gaps above.** Enshrouded's ports, 7D2D backups and 7D2D updates are done. Hytale's missing `gamePort` is a one-line `servers.json` change.
-6. **New games are a recipe plus an adapter.** Valheim is the first: its settings live in `kitsuneden-valheim.json` (Config tab) and become launch flags in the order Valheim needs, following what PackRelay measured. V Rising and Project Zomboid are the obvious next ones.
+6. **New games are a recipe plus an adapter.** Valheim is the first: its settings live in `kitsuneden-valheim.json` (Config tab) and become launch flags in the order Valheim needs, following what PackRelay measured. V Rising is the second: its real settings file is kept, the Den only writing the ports and RCON before each start, and RCON `shutdown` gives it a clean stop. Project Zomboid is the obvious next one. Valheim and V Rising share `src/lib/adapters/exe-server.ts` (finding the process by path, following the log, zip-a-copy backups).

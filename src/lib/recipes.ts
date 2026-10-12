@@ -376,6 +376,64 @@ export const RECIPES: Record<GameType, GameRecipe> = {
       "No live player list: only characters seen in the log. Valheim's query port could give one later.",
     ],
   },
+
+  // Launch, settings files, BOM handling and RCON setup as PackRelay
+  // measured them (verified there). See src/lib/vrising-settings.ts.
+  vrising: {
+    type: "vrising",
+    tier: "experimental",
+    evidence: "New in the Den and not yet run through it. Its launch, settings files and RCON setup follow PackRelay, which has run V Rising on Windows.",
+    platforms: { windows: true, linux: false },
+    install: { kind: "steamcmd", appId: 1829350, anonymous: true, denCanInstall: true },
+    launch: {
+      kind: "exe",
+      entry: "VRisingServer.exe",
+      help: "Started with -persistentDataPath save-data, so settings and saves live in the server folder. Its output is the log (logs\\VRisingServer.log); -logFile would leave the console empty.",
+    },
+    // All three are written into ServerHostSettings.json before every start.
+    ports: [
+      { field: "gamePort", purpose: "game", proto: "udp", default: 9876, public: true },
+      {
+        field: "queryPort",
+        purpose: "query",
+        proto: "udp",
+        offset: { from: "gamePort", by: 1 },
+        public: true,
+        note: "The Den writes it as one above the game port, so servers pair up (9876/9877, 9878/9879). Forward both.",
+      },
+      {
+        field: "rconPort",
+        purpose: "rcon",
+        proto: "tcp",
+        default: 25575,
+        public: false,
+        note: "Same default as Minecraft's and Palworld's RCON. Running more than one? Move it in Server setup.",
+      },
+    ],
+    control: {
+      console: "rcon",
+      stop: "RCON `shutdown`, and V Rising saves as it exits. A kill if it's still up a minute later.",
+      players: "Not listed yet: the RCON player list isn't confirmed, and the Steam query only answers when listed.",
+    },
+    saves: {
+      path: "save-data",
+      backup: "zip",
+      note: "Saves and Settings both live under save-data. Backups zip a copy of it into ../backups/vrising. There's no save command, so a running server's backup is its last autosave (every 2 minutes by default).",
+    },
+    config: [
+      { file: "save-data\\Settings\\ServerHostSettings.json", format: "json" },
+      { file: "save-data\\Settings\\ServerGameSettings.json", format: "json" },
+    ],
+    connect: "Find it in the server list (a new server is listed on Steam and EOS), or Direct Connect with the address and game port.",
+    steamClientAppId: 1604030,
+    defaults: { steamAppId: 1829350 },
+    gaps: [
+      "Not yet run through the Den. Once someone has installed it, started it, joined and stopped it, mark it verified.",
+      "The Config tab edits ServerHostSettings.json only. The game rules (ServerGameSettings.json, about 165 settings) are edited by hand in save-data\\Settings for now, and a preset on the Config tab overrides them.",
+      "No player list yet.",
+      "No mod support (BepInEx).",
+    ],
+  },
 };
 
 export function recipeFor(type: string | undefined): GameRecipe | undefined {

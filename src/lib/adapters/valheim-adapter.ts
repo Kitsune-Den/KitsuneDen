@@ -1,7 +1,6 @@
-import { exec, spawn } from "child_process";
+import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
-import os from "os";
 import type {
   ServerAdapter,
   ServerDefinition,
@@ -14,8 +13,19 @@ import type {
   PlayerEntry,
 } from "./types";
 import { recipeDefault } from "../recipes";
-import { copyTree } from "../fs-copy";
 import { appUpdateCommand, readInstalledBuild } from "../steamcmd";
+import {
+  backupName,
+  findProcessByPath,
+  followLog,
+  killProcess,
+  listZipBackups,
+  run,
+  statsFor,
+  waitForExit,
+  zipCopy,
+  type ExeProcess,
+} from "./exe-server";
 import {
   LOG_FILE,
   SAVE_DIR,
@@ -51,27 +61,10 @@ interface ValheimState {
   logs: string[];
   listeners: Set<(line: string) => void>;
   watching: boolean;
-  lastLogSize: number;
   ready: boolean;
 }
 
 const states = globalForValheim.__valheimStates;
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-}
-
-function run(cmd: string, timeout: number, maxBuffer = 1024 * 1024): Promise<string> {
-  return new Promise((resolve, reject) => {
-    exec(cmd, { timeout, maxBuffer }, (err, stdout) => (err ? reject(err) : resolve(String(stdout ?? "").trim())));
-  });
-}
-
-const escapePs = (value: string) => value.replace(/'/g, "''");
 
 /**
  * Players seen in the log: Valheim prints "Got character ZDOID from <name> :
@@ -116,7 +109,6 @@ export class ValheimAdapter implements ServerAdapter {
         logs: [],
         listeners: new Set(),
         watching: false,
-        lastLogSize: 0,
         ready: false,
       };
     }
@@ -152,33 +144,12 @@ export class ValheimAdapter implements ServerAdapter {
 
   // ---- Log ----
 
-  /**
-   * Follow logs/valheim-server.log (the -logFile the Den passes). Unity
-   * truncates it on each start; a shrink resets the read position.
-   */
+  /** Follow logs/valheim-server.log, the -logFile the Den passes. */
   private watchLog() {
     const state = this.getState();
     if (state.watching) return;
     state.watching = true;
-    const file = this.logPath;
-    try {
-      const content = fs.readFileSync(file, "utf8");
-      state.lastLogSize = Buffer.byteLength(content);
-      content.split("\n").slice(-50).filter((l) => l.trim()).forEach((l) => this.addLog(l.trimEnd()));
-    } catch {
-      // No log yet; watchFile still fires once Valheim creates it.
-    }
-    fs.watchFile(file, { interval: 1000 }, (curr) => {
-      if (curr.size < state.lastLogSize) state.lastLogSize = 0;
-      if (curr.size <= state.lastLogSize) return;
-      const from = state.lastLogSize;
-      state.lastLogSize = curr.size;
-      let chunk = "";
-      fs.createReadStream(file, { start: from, end: curr.size - 1, encoding: "utf8" })
-        .on("data", (d) => (chunk += d))
-        .on("end", () => chunk.split("\n").filter((l) => l.trim()).forEach((l) => this.addLog(l.trimEnd())))
-        .on("error", () => {});
-    });
+    followLog(this.logPath, (line) => this.addLog(line));
   }
 
   getLogs(): string[] {
@@ -195,20 +166,13 @@ export class ValheimAdapter implements ServerAdapter {
 
   // ---- Process ----
 
-  /** This server's valheim_server.exe: matched by its path, so two Valheim servers don't mix. */
-  private async findProcess(): Promise<{ pid: number; memoryBytes: number; creationDate: string } | null> {
-    const exePath = escapePs(path.resolve(this.def.dir, EXE_NAME));
-    try {
-      const out = await run(
-        `powershell -NoProfile -Command "$p = Get-CimInstance Win32_Process -Filter \\"Name='${EXE_NAME}'\\" -ErrorAction SilentlyContinue | Where-Object { $_.ExecutablePath -eq '${exePath}' } | Select-Object -First 1; if ($p) { $p.ProcessId.ToString() + '|' + $p.WorkingSetSize.ToString() + '|' + $p.CreationDate.ToString('o') }"`,
-        8000
-      );
-      const [pid, mem, created] = out.split("|");
-      if (!pid || !/^\d+$/.test(pid)) return null;
-      return { pid: Number(pid), memoryBytes: Number(mem) || 0, creationDate: created ?? "" };
-    } catch {
-      return null;
-    }
+  private get exePath(): string {
+    return path.join(this.def.dir, EXE_NAME);
+  }
+
+  /** This server's valheim_server.exe, matched by path so two Valheim servers don't mix. */
+  private findProcess(): Promise<ExeProcess | null> {
+    return findProcessByPath(this.exePath);
   }
 
   getStatus(): ServerStatus {
@@ -222,7 +186,7 @@ export class ValheimAdapter implements ServerAdapter {
     const problem = validateSettings(settings);
     if (problem) return { success: false, message: `${problem} Change it on the Config tab.` };
 
-    const exe = path.join(this.def.dir, EXE_NAME);
+    const exe = this.exePath;
     if (!fs.existsSync(exe)) {
       return { success: false, message: `${EXE_NAME} not found in ${this.def.dir}. Install it from the Update tab first.` };
     }
@@ -278,15 +242,12 @@ export class ValheimAdapter implements ServerAdapter {
     }
     state.status = "stopping";
     try {
-      await run(`taskkill /PID ${proc.pid} /F`, 10000);
+      await killProcess(proc.pid);
     } catch (e) {
       state.status = "running";
       return { success: false, message: (e as Error).message };
     }
-    for (let waited = 0; waited < STOP_TIMEOUT_MS; waited += 1000) {
-      if (!(await this.findProcess())) break;
-      await new Promise((r) => setTimeout(r, 1000));
-    }
+    await waitForExit(this.exePath, STOP_TIMEOUT_MS);
     state.status = "stopped";
     state.ready = false;
     const minutes = Math.round(this.loadSettings().settings.saveinterval / 60);
@@ -320,22 +281,7 @@ export class ValheimAdapter implements ServerAdapter {
     if (proc && state.status === "stopped") state.status = "running";
     if (!proc && (state.status === "running" || state.status === "starting")) state.status = "stopped";
 
-    return {
-      process: proc
-        ? { pid: proc.pid, memory: formatBytes(proc.memoryBytes), memoryBytes: proc.memoryBytes, upSince: proc.creationDate }
-        : null,
-      system: {
-        platform: os.platform(),
-        hostname: os.hostname(),
-        totalMemory: formatBytes(os.totalmem()),
-        freeMemory: formatBytes(os.freemem()),
-        totalMemoryBytes: os.totalmem(),
-        freeMemoryBytes: os.freemem(),
-        cpus: os.cpus().length,
-        cpuModel: os.cpus()[0]?.model || "Unknown",
-        uptime: os.uptime(),
-      },
-    };
+    return statsFor(proc);
   }
 
   // ---- Config (kitsuneden-valheim.json) ----
@@ -433,20 +379,7 @@ export class ValheimAdapter implements ServerAdapter {
   }
 
   async getBackups(): Promise<{ hourly: unknown[]; daily: unknown[] }> {
-    const backups: { hourly: unknown[]; daily: unknown[] } = { hourly: [], daily: [] };
-    for (const type of ["hourly", "daily"] as const) {
-      const dir = path.join(this.backupRoot, type);
-      if (!fs.existsSync(dir)) continue;
-      backups[type] = fs
-        .readdirSync(dir)
-        .filter((f) => f.endsWith(".zip"))
-        .map((f) => {
-          const stat = fs.statSync(path.join(dir, f));
-          return { name: f, size: formatBytes(stat.size), sizeBytes: stat.size, date: stat.mtime };
-        })
-        .sort((a, b) => b.date.getTime() - a.date.getTime());
-    }
-    return backups;
+    return listZipBackups(this.backupRoot);
   }
 
   /**
@@ -460,22 +393,18 @@ export class ValheimAdapter implements ServerAdapter {
       return { success: false, message: `No ${SAVE_DIR} folder yet in ${this.def.dir}. Start the server once to create the world.` };
     }
 
-    const backupDir = path.join(this.backupRoot, type);
-    const name = `valheim-${new Date().toISOString().replace(/[:.]/g, "-")}.zip`;
-    const backupPath = path.join(backupDir, name);
-    const staging = fs.mkdtempSync(path.join(os.tmpdir(), "den-valheim-backup-"));
+    const name = backupName("valheim");
     try {
-      copyTree(saveDir, path.join(staging, SAVE_DIR));
-      if (fs.existsSync(this.settingsPath)) fs.copyFileSync(this.settingsPath, path.join(staging, SETTINGS_FILE));
-      fs.mkdirSync(backupDir, { recursive: true });
-      await run(
-        `powershell -NoProfile -Command "Compress-Archive -Path '${escapePs(path.join(staging, "*"))}' -DestinationPath '${escapePs(backupPath)}' -Force"`,
+      await zipCopy(
+        [
+          { from: saveDir, as: SAVE_DIR },
+          { from: this.settingsPath, as: SETTINGS_FILE },
+        ],
+        path.join(this.backupRoot, type, name),
         BACKUP_TIMEOUT_MS
       );
     } catch (e) {
       return { success: false, message: `Backup failed: ${(e as Error).message}` };
-    } finally {
-      fs.rmSync(staging, { recursive: true, force: true });
     }
 
     this.addLog(`[Dashboard] Backup created: ${name}`);

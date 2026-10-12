@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useServer } from "@/contexts/ServerContext";
 import { recipeDefault } from "@/lib/recipes";
 import { MODIFIERS, PRESETS } from "@/lib/valheim-settings";
+import { DIFFICULTY_PRESETS, GAME_PRESETS } from "@/lib/vrising-settings";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { resolveDayNightConfig, reverseDayNightConfig } from "@/lib/day-night";
 import { setUnsaved } from "@/lib/unsaved";
@@ -171,6 +172,30 @@ export default function ConfigEditor() {
     crossplay: "Crossplay",
   };
 
+  const vrisingFieldHelp: Record<string, string> = {
+    Name: "Server name in the server list.",
+    Description: "Shown under the name in the server list.",
+    Password: "Join password. Leave empty for none.",
+    SaveName: "The world's save folder. A new name starts a new world; the old one stays in save-data\\Saves.",
+    MaxConnectedUsers: "Player slots.",
+    MaxConnectedAdmins: "Extra slots kept for admins.",
+    ListOnSteam: "List the server on Steam's server browser.",
+    ListOnEOS: "List the server for Epic (crossplay) players.",
+    HideIPAddress: "Hide the address in the server list.",
+    Secure: "Enable Valve Anti-Cheat.",
+    LanMode: "LAN only: no online listing or authentication.",
+    GameSettingsPreset: "A built-in rule preset. While one is set it replaces the rules in ServerGameSettings.json.",
+    GameDifficultyPreset: "A built-in difficulty preset. It overrides the difficulty and stat rules in ServerGameSettings.json.",
+    AutoSaveInterval: "Seconds between autosaves. Also what a backup of a running server can be behind by.",
+    AutoSaveCount: "How many autosaves the game keeps.",
+    CompressSaveFiles: "Compress save files.",
+    ServerFps: "Server tick rate.",
+    LowerFPSWhenEmpty: "Lower the tick rate while nobody is on.",
+    LowerFPSWhenEmptyValue: "Tick rate while empty.",
+    ResetDaysInterval: "Wipe the world every this many days (0 = never).",
+    DayOfReset: "The day a scheduled wipe happens.",
+  };
+
   const valheimFieldHelp: Record<string, string> = {
     name: "Server name in the community list.",
     world: "World to load, or create if it doesn't exist. Saved under valheim-data\\worlds_local.",
@@ -190,6 +215,7 @@ export default function ConfigEditor() {
     ...(currentServer?.type === "palworld" ? palworldFieldHelp : {}),
     ...(currentServer?.type === "enshrouded" ? enshroudedFieldHelp : {}),
     ...(currentServer?.type === "valheim" ? valheimFieldHelp : {}),
+    ...(currentServer?.type === "vrising" ? vrisingFieldHelp : {}),
     ...(currentServer?.type === "hytale"
       ? {
           DisplayTmpTagsInStrings:
@@ -645,7 +671,9 @@ export default function ConfigEditor() {
       ? enshroudedSelectOptions[key]
       : currentServer?.type === "valheim"
         ? valheimSelectOptions[key]
-        : undefined;
+        : currentServer?.type === "vrising"
+          ? vrisingSelectOptions[key]
+          : undefined;
 
     return (
       <div key={key} className="flex flex-col gap-2">
@@ -1356,6 +1384,18 @@ export default function ConfigEditor() {
         { title: "Saves", keys: ["saveinterval", "backups"] },
       ],
     },
+    // Port, QueryPort and Rcon aren't returned: the Den writes them every start.
+    vrising: {
+      core: ["Name", "Description", "Password", "SaveName", "MaxConnectedUsers", "MaxConnectedAdmins"],
+      hidden: [],
+      groups: [
+        { title: "Listing", keys: ["ListOnSteam", "ListOnEOS", "HideIPAddress", "Secure", "LanMode", "Address"] },
+        { title: "Presets", keys: ["GameSettingsPreset", "GameDifficultyPreset"] },
+        { title: "Saves", keys: ["AutoSaveInterval", "AutoSaveCount", "AutoSaveSmartKeep", "CompressSaveFiles"] },
+        { title: "Performance", keys: ["ServerFps", "LowerFPSWhenEmpty", "LowerFPSWhenEmptyValue"] },
+        { title: "Scheduled wipes", keys: ["ResetDaysInterval", "DayOfReset"] },
+      ],
+    },
   };
   const layout = groupedLayouts[currentServer?.type ?? ""];
 
@@ -1371,6 +1411,13 @@ export default function ConfigEditor() {
   const valheimSelectOptions: Record<string, { value: string; label: string }[]> = {
     preset: PRESETS.map(valheimChoice),
     ...Object.fromEntries(Object.entries(MODIFIERS).map(([key, values]) => [key, values.map(valheimChoice)])),
+  };
+
+  // "" is no preset: the rules in ServerGameSettings.json apply.
+  const vrisingChoice = (v: string) => ({ value: v, label: v || "None (use the game rules)" });
+  const vrisingSelectOptions: Record<string, { value: string; label: string }[]> = {
+    GameSettingsPreset: GAME_PRESETS.map(vrisingChoice),
+    GameDifficultyPreset: DIFFICULTY_PRESETS.map(vrisingChoice),
   };
 
   const minecraftCoreKeys = ["server-name", "level-seed", "motd"];
@@ -1453,6 +1500,8 @@ export default function ConfigEditor() {
                     ? "enshrouded_server.json"
                     : currentServer?.type === "valheim"
                     ? "kitsuneden-valheim.json"
+                    : currentServer?.type === "vrising"
+                    ? "ServerHostSettings.json"
                     : format === "properties"
                       ? "server.properties"
                       : "config.json"})

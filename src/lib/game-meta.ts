@@ -4,7 +4,7 @@
  * Den ships no game artwork). One place, so every surface agrees.
  */
 
-export type GameIcon = "pickaxe" | "skull" | "castle" | "paw" | "flame" | "axe" | "server";
+export type GameIcon = "pickaxe" | "skull" | "castle" | "paw" | "flame" | "axe" | "droplet" | "server";
 
 export interface GameMeta {
   label: string;
@@ -63,6 +63,13 @@ const GAME_META: Record<string, GameMeta> = {
     tag: "bg-teal-400/10 text-teal-500 border-teal-400/30",
     art: art("#1d5a5a", "#0a1a1c", "rgba(153,246,228,0.3)"),
     icon: "axe",
+  },
+  vrising: {
+    label: "V Rising",
+    short: "V Rising",
+    tag: "bg-fuchsia-400/10 text-fuchsia-500 border-fuchsia-400/30",
+    art: art("#5c1033", "#1a060f", "rgba(244,114,182,0.32)"),
+    icon: "droplet",
   },
 };
 

@@ -8,6 +8,7 @@ import { SevenDaysAdapter } from "./seven-days-adapter";
 import { PalworldAdapter } from "./palworld-adapter";
 import { EnshroudedAdapter } from "./enshrouded-adapter";
 import { ValheimAdapter } from "./valheim-adapter";
+import { VRisingAdapter } from "./vrising-adapter";
 
 // Persist across Next.js HMR reloads
 const globalForRegistry = globalThis as unknown as {
@@ -50,6 +51,8 @@ function createAdapter(def: ServerDefinition): ServerAdapter {
       return new EnshroudedAdapter(def);
     case "valheim":
       return new ValheimAdapter(def);
+    case "vrising":
+      return new VRisingAdapter(def);
     default:
       throw new Error(`Unknown server type: ${def.type}`);
   }

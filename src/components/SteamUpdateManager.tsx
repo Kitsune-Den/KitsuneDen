@@ -19,6 +19,7 @@ const ENDPOINTS: Record<string, string> = {
   enshrouded: "/api/enshrouded-update",
   "7d2d": "/api/7d2d-update",
   valheim: "/api/valheim-update",
+  vrising: "/api/vrising-update",
 };
 
 /**

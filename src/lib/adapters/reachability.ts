@@ -102,6 +102,9 @@ export function getProbeTarget(
       return def.gamePort ? { host: "127.0.0.1", port: def.gamePort } : null;
     case "7d2d":
       return def.telnetPort ? { host: "127.0.0.1", port: def.telnetPort } : null;
+    case "vrising":
+      // RCON is the one TCP socket, and the Den turns it on every start.
+      return def.rconPort ? { host: "127.0.0.1", port: def.rconPort } : null;
     case "palworld":
       if (def.rconPort) return { host: "127.0.0.1", port: def.rconPort };
       if (def.restApiPort) return { host: "127.0.0.1", port: def.restApiPort };
@@ -143,7 +146,7 @@ export async function resolveServerStatus(
   // secondary signal — catches the case where the process is running but the
   // probe is inconclusive (or there's no probe target at all).
   const def = adapter.def;
-  if (def.type === "hytale" || def.type === "palworld" || def.type === "enshrouded" || def.type === "valheim") {
+  if (def.type === "hytale" || def.type === "palworld" || def.type === "enshrouded" || def.type === "valheim" || def.type === "vrising") {
     const stats = await adapter.getStats();
     if (stats.process) return "running";
     return "stopped";

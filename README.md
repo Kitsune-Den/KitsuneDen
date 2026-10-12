@@ -54,6 +54,7 @@ KitsuneDen treats your servers like living things. Each one gets its own persona
 | Palworld | `palworld` | ✅ Full support |
 | Enshrouded | `enshrouded` | ✅ Full support (no RCON, so no live commands) |
 | Valheim | `valheim` | 🧪 Experimental: new, not yet run through the Den (no console, so no live commands) |
+| V Rising | `vrising` | 🧪 Experimental: new, not yet run through the Den (RCON commands; Windows only) |
 | Something else | - | 🔧 [Write an adapter](#adding-a-new-game) |
 
 ---
@@ -220,6 +221,19 @@ By default KitsuneDen reads and writes `servers.json` in the directory it's star
 
 > Everything else (server name, world, join password, public, crossplay, autosave, preset and world modifiers) lives in `kitsuneden-valheim.json` in the server folder, edited on the Config tab and turned into launch flags at each start. Worlds are kept in `valheim-data\` inside the server folder.
 > Valheim has no console, so a stop can't make it save first: the world keeps its last autosave, which the Den sets to every 10 minutes.
+
+**`vrising`**: V Rising
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `dir` | ✅ | Path to the server directory |
+| `gamePort` | Optional | UDP game port (default 9876). The Den writes the query port as the next one up; forward both. |
+| `rconPort` | Optional | RCON port (default 25575, so move it if Minecraft or Palworld is using it) |
+| `rconPassword` | Optional | RCON password. Leave it out and the Den generates one. |
+| `steamCmdPath` | Optional | Path to steamcmd.exe, to install and update the server (Steam app id 1829350) |
+
+> V Rising runs with `-persistentDataPath save-data`, so its settings and saves live in `save-data\` inside the server folder. Before every start the Den writes the ports and turns RCON on in `save-data\Settings\ServerHostSettings.json`; the first time, it creates the file from the game's template, listed on Steam and EOS. Name, save, password, listing and presets are on the Config tab; the game rules (`ServerGameSettings.json`) are edited by hand for now.
+> Stop sends RCON `shutdown`, and V Rising saves as it exits.
 
 ### Remote Minecraft servers
 

@@ -1,4 +1,4 @@
-import { Pickaxe, Skull, Castle, PawPrint, Flame, Axe, Server } from "lucide-react";
+import { Pickaxe, Skull, Castle, PawPrint, Flame, Axe, Droplet, Server } from "lucide-react";
 import { gameMeta, type GameIcon } from "@/lib/game-meta";
 
 const ICONS: Record<GameIcon, typeof Server> = {
@@ -8,6 +8,7 @@ const ICONS: Record<GameIcon, typeof Server> = {
   paw: PawPrint,
   flame: Flame,
   axe: Axe,
+  droplet: Droplet,
   server: Server,
 };
 
