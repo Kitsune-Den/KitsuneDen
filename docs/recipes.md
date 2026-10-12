@@ -59,6 +59,6 @@ Each of these can be its own PR:
 1. ~~**Add Server form reads recipes.**~~ Done: the form pre-fills from `recipeDefaults()`, lists its games from `RECIPES`, and builds port hints (protocol, default, forward or keep private, notes) from the recipe in both the Add and Edit forms.
 2. ~~**Adapters read recipes.**~~ Done: adapter fallbacks (ports, Steam app ids, start scripts, config files, the Minecraft jar, Hytale's process filter) come from `recipeDefault()`, and a test fails if an adapter hardcodes a port or app id again. Process names stay in the adapters: they're for detecting a running server, which recipes don't model.
 3. ~~**Networking card.**~~ Done: each server's Status tab lists its ports (protocol, purpose, forward or keep private, where the number came from) and warns when one collides with another server on the same machine. The logic is in `src/lib/networking.ts`.
-4. **Recipe card in the picker.** When adding a server, show the tier, install method, connect sentence and gaps, the way PackRelay's Templates grid does.
+4. ~~**Recipe card in the picker.**~~ Done: Add Server picks the game from tiles (experimental games are marked), with a card showing the tier and its evidence, install, console, stop, backups, ports to forward, how players join and the known gaps.
 5. **Fix the gaps above,** starting with the Enshrouded port check and 7D2D backups.
 6. **New games are a recipe plus an adapter.** Valheim, V Rising and Project Zomboid are the obvious next ones, and PackRelay has already measured their ports and quirks.

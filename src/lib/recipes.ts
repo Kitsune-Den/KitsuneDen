@@ -57,7 +57,7 @@ export type RecipeInstall =
 export interface GameRecipe {
   type: GameType;
   tier: RecipeTier;
-  /** What has been watched working, and where. */
+  /** What has been watched working, and where. Shown in the game picker. */
   evidence: string;
   /** Platforms the dedicated server itself ships for. The Den runs on Windows. */
   platforms: { windows: boolean; linux: boolean };
@@ -101,7 +101,7 @@ export const RECIPES: Record<GameType, GameRecipe> = {
   minecraft: {
     type: "minecraft",
     tier: "verified",
-    evidence: "Runs in the Den locally and as a remote server over RCON + SSH lifecycle.",
+    evidence: "Tested in the maintainers' own Den, locally and as a remote server over RCON and SSH.",
     platforms: { windows: true, linux: true },
     install: {
       kind: "manual",
@@ -145,7 +145,7 @@ export const RECIPES: Record<GameType, GameRecipe> = {
   "7d2d": {
     type: "7d2d",
     tier: "verified",
-    evidence: "Runs in the Den's own servers.json; the config, sandbox and admin editors are tested against 3.x.",
+    evidence: "Tested in the maintainers' own Den. The config, Sandbox and admin editors are tested against 3.x.",
     platforms: { windows: true, linux: true },
     install: { kind: "steamcmd", appId: 294420, anonymous: true, denCanInstall: false },
     launch: {
@@ -195,7 +195,7 @@ export const RECIPES: Record<GameType, GameRecipe> = {
   hytale: {
     type: "hytale",
     tier: "verified",
-    evidence: "Runs in the Den's own servers.json, with KitsuneCommand's database when the mod is installed.",
+    evidence: "Tested in the maintainers' own Den, with KitsuneCommand when the mod is installed.",
     platforms: { windows: true, linux: true },
     install: {
       kind: "launcher",
@@ -243,7 +243,7 @@ export const RECIPES: Record<GameType, GameRecipe> = {
   palworld: {
     type: "palworld",
     tier: "verified",
-    evidence: "Runs in the Den's own servers.json, with RCON, the REST API and SteamCMD updates.",
+    evidence: "Tested in the maintainers' own Den, with RCON, the REST API and SteamCMD updates.",
     platforms: { windows: true, linux: true },
     install: { kind: "steamcmd", appId: 2394010, anonymous: true, denCanInstall: true },
     launch: {
@@ -286,7 +286,7 @@ export const RECIPES: Record<GameType, GameRecipe> = {
   enshrouded: {
     type: "enshrouded",
     tier: "experimental",
-    evidence: "Runs in the Den's own servers.json. The port layout disagrees with PackRelay's measurement (see gaps).",
+    evidence: "Runs in the maintainers' own Den, but its port layout disagrees with a measurement from PackRelay (see the known gaps).",
     platforms: { windows: true, linux: false },
     install: { kind: "steamcmd", appId: 2278520, anonymous: true, denCanInstall: true },
     launch: {
