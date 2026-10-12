@@ -1333,6 +1333,13 @@ export default function ConfigEditor() {
 
   return (
     <div className="space-y-4">
+      {currentServer?.type === "minecraft" && currentServer.rconHost && (
+        <div className="px-4 py-3 rounded-lg text-[12px] bg-den-amber/10 text-den-amber border border-den-amber/30">
+          This server is remote (rconHost {currentServer.rconHost}). The server.properties shown here is read from the
+          local folder on the dashboard host, not from the live server, and saving only changes that local copy. Edit
+          server.properties on the server&apos;s own host instead.
+        </div>
+      )}
       <div className="den-card overflow-hidden">
         <div className="den-card-header">
           <h3 className="den-card-title">

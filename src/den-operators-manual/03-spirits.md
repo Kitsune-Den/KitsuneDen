@@ -110,7 +110,7 @@ Her admin file (`serveradmin.xml`) is editable from the dashboard: admins and pe
 ### Care Tips
 
 - **Set `telnetPort` and `telnetPassword`.** Without telnet she can't take commands, can't report who's online, and the status probe has nothing to knock on.
-- **Her memory has limits.** The known-players list is read from `logs\7d2d-server.log`, and the dashboard empties that file each time it launches her. A dashboard-started restart wipes the list until players log in again. A server started some other way only appears there if it writes to that same log path.
+- **She keeps her own guest book.** The dashboard empties `logs\7d2d-server.log` each time it launches her, so players found in the log are saved to `dashboard-known-players.json` in her `dir` first. The list survives restarts. A server started some other way only adds new names if it writes to that same log path.
 - **Restart after config changes.** `serverconfig.xml` is read at boot.
 
 ---

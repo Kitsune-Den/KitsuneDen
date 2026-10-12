@@ -71,8 +71,6 @@ Small, concrete things that would strengthen what exists:
 
 - **Quiet the buttons that can't help.** Remote Minecraft servers without a `lifecycle` block still show Start and Restart; they refuse politely, but the capabilities could hide them instead
 - **Put the missing fields in the form.** `rconHost`, `lifecycle`, `launchMode`, and `argFiles` still need hand-editing in `servers.json`
-- **Bring back the memory controls.** The memory panel exists in `ServerControl`, but only its compact button row is on screen today
-- **Show Minecraft backups.** The API can zip a Minecraft world, but the Backups page is hidden for her
 - **Rate-limit the login.** Fine on a tailnet; necessary before the Den ever faces the open internet
 
 ### Medium-Term

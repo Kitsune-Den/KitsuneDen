@@ -173,7 +173,7 @@ Deep night blues underneath, warm and bright accents on top. Check `globals.css`
 | Field | Default | Description |
 |---|---|---|
 | `startScript` | `start.bat` | Launch script in `dir` |
-| `backupScript` | | PowerShell backup script, **relative to `dir`** |
+| `backupScript` | | PowerShell backup script, absolute or relative to `dir` |
 | `processFilter` | `HytaleServer` | Text to find in the Java command line |
 
 ### 7 Days to Die (`7d2d`)
@@ -183,7 +183,7 @@ Deep night blues underneath, warm and bright accents on top. Check `globals.css`
 | `configFile` | `serverconfig.xml` | Server config filename |
 | `telnetPort` | 8081 | Telnet port |
 | `telnetPassword` | empty | Telnet password |
-| `modsDir` | `mods` | Mods folder name |
+| `modsDir` | `mods` | Mods folder, relative to `dir` or absolute |
 | `adminFilePath` | auto | Full path to `serveradmin.xml` |
 | `controlPanelPort` | | Shown in server info |
 | `controlPanelPassword` | | Accepted but not used |
@@ -249,7 +249,7 @@ npm run dev          development, port 3001
 npm run build        production build
 npm run start        production server, port 3001
 npm test             Vitest suites
-npx tsc --noEmit     real type check (the build skips it)
+npm run typecheck    tsc --noEmit (also run in CI)
 ```
 
 ### Manual server launch

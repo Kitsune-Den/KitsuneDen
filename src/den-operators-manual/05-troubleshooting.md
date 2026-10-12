@@ -269,7 +269,7 @@ cmd /c "npm run dev"
 |---|---|---|
 | Minecraft | RCON unavailable, so only roster files show | Fix RCON (issue 10) |
 | Minecraft (remote) | Roster lists come from the stub `dir` on the dashboard host | Expected; online players and roster actions still go over RCON |
-| 7 Days to Die | The dashboard empties `logs\7d2d-server.log` on each start, and a server launched elsewhere may log to another path | Players reappear as they log in; launch through the dashboard if you want the history kept in one place |
+| 7 Days to Die | A server launched elsewhere logs to another path, so new players never reach `dashboard-known-players.json` | Launch through the dashboard, or point her `-logfile` at `logs\7d2d-server.log` |
 | 7 Days to Die | No online tags | Set `telnetPort` / `telnetPassword` |
 | Palworld | Lists only who is online right now | Expected |
 | Enshrouded | List is built from log lines read since the dashboard started | Expected after a dashboard restart |
@@ -292,7 +292,7 @@ cmd /c "npm run dev"
 
 **Remedies:**
 1. `tasklist | findstr java`. Stop any server nobody is using
-2. Lower `maxMemoryGB` in that server's `dashboard-config.json`, then restart it
+2. Lower Max in the Memory Allocation card on the server's Status tab (or `maxMemoryGB` in `dashboard-config.json`), then restart it
 3. Trim heavy mods
 4. Restart the server. Java rarely hands freed heap back to the OS, so a fresh start resets the baseline
 
@@ -320,15 +320,14 @@ cmd /c "npm run dev"
 
 **Symptoms:**
 - `npm run build` fails
-- `npx tsc --noEmit` reports errors even though the build succeeded
 
 **Likely Causes:**
-- `next.config.ts` sets `typescript.ignoreBuildErrors: true`, so the build never fails on type errors. They hide until you run `tsc`
+- A type error (the build type-checks; `npm run typecheck` shows the same errors faster)
 - A dependency update changed type signatures
 - A stale `.next` cache
 
 **Remedies:**
-1. Run `npx tsc --noEmit` for the honest type report; fix errors from the top, since they cascade
+1. Run `npm run typecheck`; fix errors from the top, since they cascade
 2. If build errors look stale or phantom, clear the cache and rebuild from the repo root:
    ```
    rmdir /s /q .next

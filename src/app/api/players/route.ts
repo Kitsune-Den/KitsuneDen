@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withActivity, playerLabel } from "@/lib/activity-route";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
 import { MinecraftAdapter } from "@/lib/adapters/minecraft-adapter";
+import type { SevenDaysAdapter } from "@/lib/adapters/seven-days-adapter";
 import fs from "fs";
 import path from "path";
 
@@ -17,7 +18,9 @@ export async function GET(request: NextRequest) {
 
   const players = await adapter.getPlayers();
   if (adapter.def.type === "7d2d" && "getAdminData" in adapter) {
-    const a = adapter as { getAdminData: () => unknown; getAdminFilePath: () => string | null };
+    // Type-only cast (not instanceof): adapters live on globalThis across HMR
+    // reloads, so the class identity can differ from a fresh import.
+    const a = adapter as unknown as SevenDaysAdapter;
     return NextResponse.json({
       ...players,
       adminData: a.getAdminData(),
@@ -62,8 +65,7 @@ async function handlePost(request: NextRequest) {
 
   // 7D2D admin operations
   if (adapter.def.type === "7d2d" && "getAdminData" in adapter) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sdAdapter = adapter as any;
+    const sdAdapter = adapter as unknown as SevenDaysAdapter;
     const adminData = sdAdapter.getAdminData();
 
     switch (playerAction) {

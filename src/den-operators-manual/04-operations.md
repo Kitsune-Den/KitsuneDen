@@ -118,14 +118,14 @@ What each button actually does depends on the spirit (see Chapter 2, section 9).
 
 - **Minecraft (local)** and **7 Days to Die** run as child processes of the dashboard. If the dashboard stops, so do they.
 - **Hytale, Palworld, and Enshrouded** are launched in their own windows and keep running if the dashboard restarts.
-- **Minecraft (remote)** stops over RCON. Start and Restart need a `lifecycle` block; without one they refuse with a message explaining why.
+- **Minecraft (remote)** stops over RCON, falling back to `lifecycle.stopCommand` over SSH if RCON fails. Start and Restart need a `lifecycle` block; without one they refuse with a message explaining why.
 
 ### Servers you started some other way
 
 A server started by hand, by nssm, or by another launcher still shows as running, thanks to the reachability probe. But the dashboard didn't spawn it, so:
 
 - Local Minecraft: no console stream, no stdin commands, and Stop does nothing. Setting `rconHost` to `127.0.0.1` switches the entry to the remote rules (RCON commands and RCON stop), at the cost of the Start button.
-- 7 Days to Die: commands and Stop are refused while the dashboard believes she is stopped. Online players still work.
+- 7 Days to Die: console commands and Stop go over telnet as usual (Stop sends `shutdown`; whatever launched her may bring her back). Start refuses while her telnet port is open, so the dashboard won't launch a second copy.
 - Hytale, Palworld, Enshrouded: the dashboard finds them by process name and manages them normally.
 
 ### Starting manually
@@ -169,13 +169,13 @@ The **Activity** page (and each server's Activity tab) lists what happened: star
 
 - **Upload** files from the browser. A `.zip` is extracted: a zip with one top-level folder lands as that folder; a zip of loose files lands in a folder named after the zip.
 - **Remove** a mod file or folder.
-- Mods live in `<dir>\mods\`, or in `modsDir` for 7 Days to Die.
+- Mods live in `modsDir` (relative to `dir`, or absolute), default `<dir>\mods\`. Mod Packs and Minecraft backups use the same folder.
 
 ### Mod Library and Mod Packs (Minecraft)
 
 - `mods-library\` holds every mod `.jar` you might want. Upload to it from the Mod Packs page, or copy an active mod into it from the Mods page.
 - A **pack** is a named list of library mods, stored in `modpacks.json`.
-- **Activating** a pack copies its mods from the library into `mods\` and marks it active. It does **not** remove mods that are already there. Any mods missing from the library are reported.
+- **Activating** a pack copies its mods from the library into the mods folder (`modsDir`) and marks it active. It does **not** remove mods that are already there. Any mods missing from the library are reported.
 
 For a clean swap: clear `mods\`, then activate the pack.
 
@@ -188,7 +188,7 @@ For a clean swap: clear `mods\`, then activate the pack.
 
 ## 7. Memory (Minecraft)
 
-Heap size lives in `dashboard-config.json` in the server's directory:
+Set heap size in the **Memory Allocation** card on the server's **Status** tab (local Minecraft servers only; a remote server's JVM isn't started by the dashboard). It's stored in `dashboard-config.json` in the server's directory:
 
 ```json
 { "minMemoryGB": 2, "maxMemoryGB": 4 }
@@ -237,8 +237,8 @@ Where commands go:
 | Spirit | Commands travel by |
 |---|---|
 | Minecraft (local) | stdin; only while the server is running |
-| Minecraft (remote) | RCON; reply appears in the console. `stop`, `restart`, `shutdown` are refused, so use the Stop button |
-| 7 Days to Die | telnet; only while the dashboard believes she's running |
+| Minecraft (remote) | RCON; reply appears in the console. `stop`, `restart`, `shutdown` are refused, so use the Stop / Restart buttons |
+| 7 Days to Die | telnet, whether or not the dashboard launched her; errors appear in the console |
 | Palworld | RCON, fire-and-forget (no reply is shown) |
 | Hytale, Enshrouded | nowhere; they don't accept commands |
 
@@ -253,7 +253,7 @@ The buffer clears when the dashboard restarts. For older history, read the log f
 | Hytale | runs your `backupScript` (`-Daily` flag for daily) | lists `.zip` files in `<dir>\backups\hourly\` and `\daily\` |
 | Palworld | zips `Pal\Saved\SaveGames\` + settings (saves the world first if running) | `<dir>\..\backups\palworld\hourly\` or `\daily\` |
 | Enshrouded | zips `savegame\` | `<dir>\..\backups\enshrouded\hourly\` or `\daily\` |
-| Minecraft | the `/api/backups` route can zip the world, `mods\`, `server.properties`, `modpacks.json`, and `dashboard-config.json` into `<dir>\backups\<type>\`, but the Backups page is hidden for Minecraft today | |
+| Minecraft | the `/api/backups` route can zip the world, `mods\`, `server.properties`, `modpacks.json`, and `dashboard-config.json` into `<dir>\backups\<type>\` | `<dir>\backups\hourly\` or `\daily\` (local servers only; hidden for remote ones) |
 | 7 Days to Die | not supported yet | |
 
 "Hourly" and "daily" are folder names. The dashboard doesn't schedule anything; schedule your own backups (Task Scheduler works) and use the page for on-demand runs and a quick look at what exists.
@@ -262,7 +262,7 @@ There is no restore button. Restoring means stopping the server and unzipping by
 
 ### Hytale backup script
 
-`backupScript` is joined onto the server's `dir`, so give it as a path **relative to `dir`**. It's run as `powershell -ExecutionPolicy Bypass -File <script> [-Daily]` with a 60-second timeout, and it should write zips into `backups\hourly\` or `backups\daily\` under `dir` so the page can list them.
+`backupScript` can be an absolute path or a path relative to the server's `dir`. It's run as `powershell -ExecutionPolicy Bypass -File <script> [-Daily]` with a 60-second timeout, and it should write zips into `backups\hourly\` or `backups\daily\` under `dir` so the page can list them.
 
 ### General advice
 
@@ -316,7 +316,7 @@ Whether the mod picks up changes without a restart depends on the mod.
 
 - [ ] `npm install` if `package.json` changed
 - [ ] `npm test`
-- [ ] `npx tsc --noEmit` (the build skips type errors, so this is the real type check)
+- [ ] `npm run typecheck`
 - [ ] `npm run build`, then restart the dashboard
 - [ ] Switch through every server and make sure each one answers
 

@@ -83,7 +83,7 @@ If a spirit can't find her files, check her `dir` in `servers.json` first.
 
 Two build details worth knowing:
 
-- `next.config.ts` sets `typescript.ignoreBuildErrors: true`. **A green `npm run build` does not mean the types are clean.** Run `npx tsc --noEmit` when you want the honest answer.
+- Type errors fail the build. `npm run typecheck` (`tsc --noEmit`) runs the same check on its own, and CI runs it on every push.
 - `better-sqlite3` is listed in `serverExternalPackages`, so Next leaves its native binding alone.
 
 The UI follows PackRelay's panel. The home page is a grid of server cards. Each server has its own page at `/instances/<id>`, and its sections are tabs that live in the URL (`/instances/<id>/console`, `/config`, ...), so they can be bookmarked and shared. `ServerContext` reads the server id from the URL, which is how the older panel components know which server to talk to.
@@ -120,7 +120,7 @@ Each adapter declares what it can do. A server's page hides the tabs it can't us
 | `hasRcon` | yes | | | yes | |
 | `hasMods` | yes | yes | yes | | |
 | `hasModPacks` | yes | | | | |
-| `hasBackups` | | yes | | yes | yes |
+| `hasBackups` | local only | yes | | yes | yes |
 | `hasWorlds` | | yes | | | |
 | `hasWarps` | | yes | | | |
 | `hasServerProperties` | yes | | yes | | |
@@ -188,7 +188,7 @@ The host that owns the RCON port. It defaults to `127.0.0.1`. When set, the dash
 
 The remote server must have RCON enabled, listening on an interface the dashboard can reach (not only 127.0.0.1), and allowed through its firewall.
 
-The entry still needs a `dir`. On the dashboard host it can be a stub folder; roster files, `server.properties`, and `usercache.json` are read from there, so the Configuration page and the roster lists will reflect the stub, not the remote server.
+The entry still needs a `dir`. On the dashboard host it can be a stub folder; roster files, `server.properties`, and `usercache.json` are read from there, so the Configuration page and the roster lists will reflect the stub, not the remote server. Both pages say so with a warning, the Players page offers both directions for each roster action (OP / De-OP, Whitelist / Un-WL, Ban / Pardon) instead of a toggle, and the memory card and Backups page are hidden.
 
 ### `lifecycle` (SSH start and restart)
 
@@ -212,7 +212,7 @@ Add a `lifecycle` block and the dashboard can wake a remote server too:
 | `port` | Optional, defaults to 22 |
 | `identityFile` | Absolute path, on the dashboard host, to the private key |
 | `startCommand` | PowerShell to run on the remote host to bring the server up |
-| `stopCommand` | Optional. Declared in `types.ts` as a fallback for when RCON stop fails, but no code calls it yet |
+| `stopCommand` | Optional. Run over SSH as the fallback when RCON `stop` fails (RCON unreachable, JVM still up) |
 
 How it runs (`remote-exec.ts`):
 
@@ -286,9 +286,9 @@ Every config save writes a `.bak` of the previous file first.
 | Spirit | Start | Stop |
 |---|---|---|
 | Minecraft (local) | spawns `java` (or `javaPath`) as a child process in `dir` | writes `stop` to stdin; force-kills after 30s |
-| Minecraft (remote) | SSH `startCommand`, if `lifecycle` is set | RCON `stop` |
+| Minecraft (remote) | SSH `startCommand`, if `lifecycle` is set | RCON `stop`; SSH `stopCommand` if RCON fails and one is set |
 | Hytale | runs `startScript` (default `start.bat`) in a new window | **terminates** the `java.exe` whose command line contains `processFilter` (default `HytaleServer`) |
-| 7 Days to Die | spawns `7DaysToDieServer.exe` with `-configfile`, `-logfile logs\7d2d-server.log`, `-batchmode -nographics -dedicated` | telnet `shutdown`; force-kills after 30s |
+| 7 Days to Die | spawns `7DaysToDieServer.exe` with `-configfile`, `-logfile logs\7d2d-server.log`, `-batchmode -nographics -dedicated` | telnet `shutdown`; force-kills after 30s. If the dashboard didn't launch her, it only sends the telnet `shutdown` |
 | Palworld | runs `startScript` (default `start_palworld.bat`), else `PalServer-Win64-Shipping-Cmd.exe` directly | RCON `Shutdown 5`, waits up to 30s, then terminates the process |
 | Enshrouded | writes a default config if none exists, then runs `startScript` (default `start_enshrouded.bat`), else `enshrouded_server.exe` | terminates the process |
 

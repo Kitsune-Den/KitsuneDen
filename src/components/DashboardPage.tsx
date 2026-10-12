@@ -3,6 +3,7 @@
 import { useServer } from "@/contexts/ServerContext";
 import { useEffect, useState, useCallback } from "react";
 import StatCard from "@/components/StatCard";
+import MemoryAllocation from "@/components/minecraft/MemoryAllocation";
 import { Activity, Users, Globe, Cpu, Copy, Check, ArrowRight } from "lucide-react";
 import { gameMeta } from "@/lib/game-meta";
 
@@ -297,6 +298,9 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
           </div>
         </section>
       </div>
+
+      {/* Minecraft -Xms/-Xmx (renders nothing for other games / remote MC) */}
+      <MemoryAllocation />
 
       {/* Recent Log Preview */}
       <section className="den-card overflow-hidden">
