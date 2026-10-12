@@ -86,7 +86,7 @@ Open [http://localhost:3001](http://localhost:3001). You should land on the logi
 - **Changing the password** means editing `.env`, restarting the dashboard, and telling everyone. Existing sessions stay valid until they expire.
 - **Ending every session at once** (say, after a password leak): change `KITSUNEDEN_SESSION_SECRET` and restart. Every cookie signed with the old secret stops working.
 
-The session cookie is marked `Secure` in production mode, and browsers won't store a `Secure` cookie over plain HTTP from a LAN address. If you run `npm run start` and reach the Den at `http://192.168.x.y:3001`, put it behind HTTPS (a reverse proxy, tunnel, or tailnet with TLS) or use `localhost` on the host itself.
+The session cookie is only marked `Secure` when the request came in over HTTPS (directly, or through a proxy or tunnel that sets `X-Forwarded-Proto: https`). Signing in over plain `http://192.168.x.y:3001` on your LAN works; anything reachable from the internet belongs behind HTTPS anyway.
 
 ---
 

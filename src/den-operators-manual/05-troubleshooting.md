@@ -53,7 +53,7 @@ Every workshop has its creaky floorboards. Ports get tangled, processes linger, 
 - `KITSUNEDEN_PASSWORD` isn't set
 - `KITSUNEDEN_SESSION_SECRET` is missing or shorter than 32 characters
 - `.env` was edited but the dashboard wasn't restarted
-- Production mode over plain HTTP: the session cookie is `Secure`, and the browser won't store it on `http://<LAN address>`
+- A proxy in front of the Den sets `X-Forwarded-Proto: https` while the browser is actually on plain HTTP, so the cookie comes back `Secure` and the browser drops it
 
 **Remedies:**
 1. Check `.env` at the repo root (or the service's environment, if the Den runs as a service). Both variables must be present, and the secret must be 32+ characters

@@ -1,4 +1,5 @@
 import { exec } from "child_process";
+import { randomBytes } from "crypto";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -58,7 +59,18 @@ function execAsync(cmd: string, timeout = 8000): Promise<string> {
   });
 }
 
-function defaultConfig(def: ServerDefinition): Record<string, unknown> {
+/** Random in-game group password. base64url, so it's safe to type in chat. */
+export function generateGroupPassword(): string {
+  return randomBytes(12).toString("base64url");
+}
+
+/**
+ * Starter enshrouded_server.json. Admin/Friend passwords are generated per
+ * call — a hardcoded default would be the same on every Den install and
+ * guessable from this repo. Guest stays passwordless on purpose (it's the
+ * no-privileges group).
+ */
+export function defaultConfig(def: ServerDefinition): Record<string, unknown> {
   return {
     name: def.name || "Kitsune Den - Enshrouded",
     saveDirectory: "./savegame",
@@ -72,8 +84,8 @@ function defaultConfig(def: ServerDefinition): Record<string, unknown> {
     enableVoiceChat: true,
     serverPassword: "",
     userGroups: [
-      { name: "Admin", password: "kitsuneadmin", canKickBan: true, canAccessInventories: true, canEditBase: true, canExtendBase: true, reservedSlots: 0 },
-      { name: "Friend", password: "kitsunefriend", canKickBan: false, canAccessInventories: true, canEditBase: true, canExtendBase: false, reservedSlots: 0 },
+      { name: "Admin", password: generateGroupPassword(), canKickBan: true, canAccessInventories: true, canEditBase: true, canExtendBase: true, reservedSlots: 0 },
+      { name: "Friend", password: generateGroupPassword(), canKickBan: false, canAccessInventories: true, canEditBase: true, canExtendBase: false, reservedSlots: 0 },
       { name: "Guest", password: "", canKickBan: false, canAccessInventories: false, canEditBase: false, canExtendBase: false, reservedSlots: 0 },
     ],
   };
@@ -231,7 +243,7 @@ export class EnshroudedAdapter implements ServerAdapter {
       return { success: false, message: "Server is already running" };
     }
 
-    await this.ensureConfig();
+    const created = await this.ensureConfig();
 
     const batPath = path.join(this.def.dir, this.def.startScript || "start_enshrouded.bat");
     const workDir = this.def.dir.replace(/\//g, "\\");
@@ -260,6 +272,18 @@ export class EnshroudedAdapter implements ServerAdapter {
       }, 5000);
 
       this.pollUntilRunning();
+
+      if (created) {
+        // Show the generated passwords exactly once, in the start result —
+        // not in the log buffer, which every console viewer replays. They
+        // stay editable in the Config tab afterwards.
+        this.addLog("[Dashboard] Created enshrouded_server.json with random group passwords (see Config tab).");
+        const pw = created.map((g) => `${g.name}: ${g.password}`).join(", ");
+        return {
+          success: true,
+          message: `Server starting... Created a new config with random group passwords — ${pw}. Save these; you can change them in the Config tab.`,
+        };
+      }
 
       return { success: true, message: "Server starting..." };
     } catch (e) {
@@ -403,10 +427,18 @@ export class EnshroudedAdapter implements ServerAdapter {
     }
   }
 
-  async ensureConfig(): Promise<void> {
-    if (fs.existsSync(this.configPath)) return;
+  /**
+   * Write a default config if none exists. Returns the password-protected
+   * groups it generated (so the caller can show them once), or null if a
+   * config was already there.
+   */
+  async ensureConfig(): Promise<{ name: string; password: string }[] | null> {
+    if (fs.existsSync(this.configPath)) return null;
+    const config = defaultConfig(this.def);
     fs.mkdirSync(path.dirname(this.configPath), { recursive: true });
-    fs.writeFileSync(this.configPath, JSON.stringify(defaultConfig(this.def), null, 2));
+    fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2));
+    const groups = config.userGroups as { name: string; password: string }[];
+    return groups.filter((g) => g.password !== "").map(({ name, password }) => ({ name, password }));
   }
 
   // ---- Players ----

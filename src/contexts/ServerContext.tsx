@@ -18,6 +18,8 @@ interface ServerInfo {
   loader?: string;
   version?: string;
   gamePort?: number;
+  /** Secret fields that are set server-side. Values are never sent to the browser. */
+  secretsSet?: string[];
   capabilities: {
     hasRcon: boolean;
     hasMods: boolean;

@@ -222,7 +222,7 @@ How it runs (`remote-exec.ts`):
 
 **Start** dispatches the command and leaves the status alone; the reachability probe flips it to `running` once the port binds (modded NeoForge can take 30 to 180 seconds). **Restart** sends RCON `stop`, waits 15 seconds for the JVM to let go of its ports, then runs the start command. If the RCON stop fails, it tries the start anyway.
 
-**Treat `servers.json` like a sudoers file.** `startCommand` is arbitrary PowerShell that runs with the SSH user's rights on the remote machine. Anyone who can write that file, or edit servers through the dashboard, can run commands there.
+**Treat `servers.json` like a sudoers file.** `startCommand` is arbitrary PowerShell that runs with the SSH user's rights on the remote machine. Anyone who can write that file can run commands there. The dashboard refuses `lifecycle` in `POST`/`PUT /api/servers` (a `400`), and `GET /api/servers` leaves it out along with every password, reporting only which secrets are set.
 
 ---
 
@@ -237,7 +237,7 @@ How it runs (`remote-exec.ts`):
 | No valid session | redirect to `/login?next=<path>` | `401` |
 | Valid session | through | through |
 
-The session cookie is `kitsuneden_session`: a small payload (`{ v: 1, iat }`) plus an HMAC-SHA256 signature, valid for 7 days. It is `HttpOnly`, `SameSite=Lax`, and `Secure` when `NODE_ENV` is `production`. `auth.ts` signs it at login (Node crypto); `auth-edge.ts` verifies it in the proxy (Web Crypto). Keep their constants in sync.
+The session cookie is `kitsuneden_session`: a small payload (`{ v: 1, iat }`) plus an HMAC-SHA256 signature, valid for 7 days. It is `HttpOnly`, `SameSite=Lax`, and `Secure` only when the request arrived over HTTPS (directly, or via a proxy that sets `X-Forwarded-Proto: https`). `auth.ts` signs it at login (Node crypto); `auth-edge.ts` verifies it in the proxy (Web Crypto). Keep their constants in sync.
 
 The password check is constant-time. There is no rate limit on `/api/auth/login` yet, so keep the Den behind a tailnet, Cloudflare Access, or your LAN rather than on a bare public IP.
 

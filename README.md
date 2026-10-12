@@ -89,6 +89,8 @@ Then open `.env` and fill in real values:
 
 If either one is missing, the login page shows a setup banner instead of a password box and the API answers `503`. Sessions last 7 days. Rotating the secret logs everyone out, which is exactly what you want if the password leaks.
 
+The session cookie is only marked `Secure` when the request came in over HTTPS (directly, or through a proxy or tunnel that sets `X-Forwarded-Proto: https`), so signing in over plain `http://<LAN-IP>:3001` works.
+
 It's a shared password, so there's no per-user audit trail, and changing it means telling everybody. Fine for a home dashboard. If you ever need real accounts, the gate is built so they can slot in without changing the cookie shape.
 
 ### Add your servers
@@ -239,7 +241,7 @@ Starting a server that isn't running is the one thing RCON can't do. For that, a
 | `startCommand` | PowerShell run on the remote host for start and restart |
 | `stopCommand` | Accepted, but not used yet. Stop always goes through RCON. |
 
-Heads up: `startCommand` is arbitrary PowerShell, and it runs with whatever rights the SSH user has. Treat `servers.json` like a file that can run code on that machine, because it can. Keep write access to admins, give the SSH user only what it needs, and remember that anyone with the Den password can edit server settings from the UI.
+Heads up: `startCommand` is arbitrary PowerShell, and it runs with whatever rights the SSH user has. Treat `servers.json` like a file that can run code on that machine, because it can. Keep write access to admins and give the SSH user only what it needs. The dashboard won't let anyone set or change `lifecycle` from the UI or the API; it can only be set in `servers.json`, and the API never sends it (or any password) back to the browser.
 
 Without a `lifecycle` block, a remote server can still be stopped and managed. The Den just refuses to start it and tells you to use your own launcher.
 
