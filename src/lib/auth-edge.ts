@@ -81,11 +81,11 @@ export async function verifySessionEdge(
 }
 
 /**
- * Read the session secret in an edge-safe way. Same fallback policy as
- * auth.ts (warn and use a process-lifetime key) — but since the edge runtime
- * may not share process memory with the Node runtime, we don't try to
- * generate-and-share here; we just return an empty marker the proxy treats
- * as "no auth configured." That's what isAuthConfiguredEdge below is for.
+ * Read the session secret in an edge-safe way. Returns null when it's unset
+ * or too short; the proxy treats that as "setup incomplete" (503 for APIs,
+ * /login?setup=1 for pages). auth.ts applies the same rule and refuses to
+ * sign, so the two can never disagree about which key is in use.
+ * Keep the 32-char minimum in sync with MIN_SESSION_SECRET_LENGTH in auth.ts.
  */
 export function getSessionSecretEdge(): string | null {
   const s = process.env.KITSUNEDEN_SESSION_SECRET;

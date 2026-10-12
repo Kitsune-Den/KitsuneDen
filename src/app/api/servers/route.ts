@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllAdapters, addServer, removeServer, updateServer } from "@/lib/adapters/adapter-registry";
 import { resolveServerStatus } from "@/lib/adapters/reachability";
+import { redactServerDefinition, sanitizeServerWrite } from "@/lib/server-def-security";
 
 export async function GET() {
   const adapters = getAllAdapters();
 
   const servers = await Promise.all(
     adapters.map(async (a) => ({
-      ...a.def,
+      ...redactServerDefinition(a.def),
       status: await resolveServerStatus(a),
       capabilities: a.capabilities,
     }))
@@ -37,7 +38,12 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const result = await updateServer(serverId, updates);
+    const sanitized = sanitizeServerWrite(updates);
+    if (!sanitized.ok) {
+      return NextResponse.json({ success: false, message: sanitized.message }, { status: 400 });
+    }
+
+    const result = await updateServer(serverId, sanitized.value);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 404 });
@@ -72,7 +78,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await addServer(server as never);
+    const sanitized = sanitizeServerWrite(server);
+    if (!sanitized.ok) {
+      return NextResponse.json({ success: false, message: sanitized.message }, { status: 400 });
+    }
+
+    const result = await addServer(sanitized.value as never);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
