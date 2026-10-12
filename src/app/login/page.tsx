@@ -68,8 +68,9 @@ export default function LoginPage() {
           <div className="bg-den-amber/5 border border-den-amber/40 rounded-lg p-4 text-sm">
             <p className="font-semibold text-den-amber mb-2">Setup required</p>
             <p className="text-den-text-muted mb-2">
-              The server has no <code className="text-den-cyan">KITSUNEDEN_PASSWORD</code> set.
-              Add it to your environment (or <code>.env</code>) and restart:
+              The server is missing <code className="text-den-cyan">KITSUNEDEN_PASSWORD</code>{" "}
+              or <code className="text-den-cyan">KITSUNEDEN_SESSION_SECRET</code> (32+ chars).
+              Add both to your environment (or <code>.env</code>) and restart:
             </p>
             <pre className="bg-den-bg p-3 rounded-lg text-xs overflow-x-auto text-den-text font-mono">
               KITSUNEDEN_PASSWORD=&quot;some-shared-password&quot;{"\n"}

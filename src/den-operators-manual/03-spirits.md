@@ -143,7 +143,7 @@ She updates through SteamCMD (app id 2394010 unless `steamAppId` says otherwise)
 
 - **Mind the RCON port.** Her default is 25575, the same as Minecraft's. On a shared machine, give one of them a different port.
 - **Stop her before updating.** SteamCMD refuses to run while she's awake, and so does the dashboard.
-- **The admin password travels to the browser.** The Players page receives `rconPassword` so it can show it. Only share the dashboard with people you'd share that password with.
+- **The admin password stays on the server.** The Players page never receives `rconPassword`; manage it in `PalWorldSettings.ini` or the Configuration page.
 
 ---
 
@@ -173,7 +173,7 @@ If she has no `enshrouded_server.json` when you press Start, the dashboard write
 
 ### Care Tips
 
-- **Change the default group passwords.** The generated config gives the Admin and Friend groups known passwords. Set your own in the Configuration page before inviting anyone.
+- **Note the group passwords.** When the dashboard writes a fresh config, the Admin and Friend groups get random passwords, shown once in the start message. Change them in the Configuration page if you'd rather pick your own.
 - **Forward UDP, not TCP.** Both her ports are UDP.
 - **Expect a thin player list after a dashboard restart.** It only knows what it has read since it woke.
 
