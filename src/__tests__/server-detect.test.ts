@@ -76,6 +76,14 @@ describe("advisePorts", () => {
     expect(ports.gamePort).toMatchObject({ value: 2458, status: "adjusted" });
   });
 
+  it("moves V Rising's RCON off Palworld's", async () => {
+    // Both default RCON to 25575; the Networking card would flag it.
+    const owners = portOwners([def({ name: "Pals", type: "palworld", gamePort: 8211, rconPort: 25575, restApiPort: 8212 })]);
+    const ports = await advisePorts("vrising", {}, owners, allFree);
+    expect(ports.gamePort).toMatchObject({ value: 9876, status: "free" });
+    expect(ports.rconPort).toMatchObject({ value: 25576, status: "adjusted" });
+  });
+
   it("moves Enshrouded's one port to the next free one", async () => {
     // One UDP port for joining and queries (its config's queryPort).
     const owners = portOwners([def({ name: "Shroud", type: "enshrouded", gamePort: 15637 })]);
@@ -183,6 +191,21 @@ describe("detectInstall", () => {
     expect(r.detection.notes.join(" ")).toContain("No valheim_server.exe here yet");
   });
 
+  it("reads V Rising's ServerHostSettings.json, BOM and all", () => {
+    write(
+      "save-data/Settings/ServerHostSettings.json",
+      "\uFEFF" + JSON.stringify({ Name: "Castle", Port: 9878, Rcon: { Enabled: true, Port: 25580, Password: "hidden" } })
+    );
+    write("VRisingServer.exe");
+    const r = detectInstall("vrising", dir);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.detection.fields.name).toBe("Castle");
+    expect(r.detection.configPorts).toEqual({ gamePort: 9878, rconPort: 25580 });
+    expect(r.detection.secretsFound).toEqual(["rconPassword"]);
+    expect(r.detection.configFile).toBeUndefined();
+    expect(JSON.stringify(r.detection)).not.toContain("hidden");
+  });
+
   it("falls back to the folder name and says what's missing", () => {
     const r = detectInstall("7d2d", dir);
     if (!r.ok) throw new Error(r.error);
@@ -230,6 +253,7 @@ describe("PORT_SPECS", () => {
       palworld: ["gamePort 8211 udp step 1 span 1", "rconPort 25575 tcp step 1 span 1", "restApiPort 8212 tcp step 1 span 1"],
       enshrouded: ["gamePort 15637 udp step 1 span 1"],
       valheim: ["gamePort 2456 udp step 2 span 2"],
+      vrising: ["gamePort 9876 udp step 2 span 2", "rconPort 25575 tcp step 1 span 1"],
     });
   });
 });

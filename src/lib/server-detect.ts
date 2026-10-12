@@ -4,6 +4,7 @@ import dgram from "dgram";
 import path from "path";
 import type { ServerDefinition } from "./adapters/types";
 import { RECIPES, portDefault } from "./recipes";
+import { parseSettingsJson } from "./vrising-settings";
 import { parseServerConfigXml } from "./seven-days-config";
 import { parseOptionSettings } from "./adapters/palworld-adapter";
 import { validatePathFields } from "./server-def-security";
@@ -28,7 +29,7 @@ import { validatePathFields } from "./server-def-security";
  * gameConfigSecrets() fills them in server-side when the server is saved.
  */
 
-export type GameType = "minecraft" | "7d2d" | "hytale" | "palworld" | "enshrouded" | "valheim";
+export type GameType = "minecraft" | "7d2d" | "hytale" | "palworld" | "enshrouded" | "valheim" | "vrising";
 export type PortField = "gamePort" | "rconPort" | "telnetPort" | "restApiPort" | "queryPort";
 type Protocol = "tcp" | "udp" | "both";
 
@@ -43,7 +44,7 @@ interface PortSpec {
 }
 
 /** Games whose install folder can be read. */
-const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded", "valheim"];
+const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded", "valheim", "vrising"];
 
 /**
  * How far apart to look when the usual port is taken, where that isn't just
@@ -471,6 +472,40 @@ function detectValheim(dir: string, d: Detection) {
   if (!d.fields.name) d.fields.name = path.basename(dir);
 }
 
+/**
+ * V Rising keeps ServerHostSettings.json under save-data (written with a
+ * BOM). Its ports are read so an existing server keeps them, but no
+ * configFile is reported: the Den writes Server setup's ports into that file
+ * before every start, so there's nothing for the form to keep in step.
+ */
+function detectVRising(dir: string, d: Detection) {
+  if (!exists(path.join(dir, "VRisingServer.exe"))) {
+    d.notes.push("No VRisingServer.exe here yet. Once the SteamCMD path is set, the Update tab can install it.");
+  }
+  const text = readText(path.join(dir, "save-data", "Settings", "ServerHostSettings.json"));
+  if (text) {
+    try {
+      const c = parseSettingsJson(text);
+      const port = num(c.Port);
+      if (port) d.configPorts.gamePort = port;
+      const rcon = c.Rcon && typeof c.Rcon === "object" ? (c.Rcon as Record<string, unknown>) : null;
+      const rconPort = num(rcon?.Port);
+      if (rconPort) d.configPorts.rconPort = rconPort;
+      if (typeof rcon?.Password === "string" && rcon.Password) d.secretsFound.push("rconPassword");
+      if (typeof c.Name === "string" && c.Name.trim() && c.Name !== "V Rising Server") {
+        d.fields.name = c.Name;
+        d.nameFromConfig = true;
+      }
+      d.notes.push("Ports read from ServerHostSettings.json. The Den writes Server setup's ports there before every start.");
+    } catch {
+      d.notes.push("ServerHostSettings.json isn't valid JSON, so it was skipped.");
+    }
+  }
+  const steam = findSteamCmd(dir);
+  if (steam) d.fields.steamCmdPath = steam;
+  if (!d.fields.name) d.fields.name = path.basename(dir);
+}
+
 export type DetectResult = { ok: true; detection: Detection } | { ok: false; error: string };
 
 /** Read what's already in an install folder. Never returns secret values. */
@@ -491,6 +526,7 @@ export function detectInstall(type: GameType, dir: string): DetectResult {
   else if (type === "palworld") detectPalworld(dir, d);
   else if (type === "enshrouded") detectEnshrouded(dir, d);
   else if (type === "valheim") detectValheim(dir, d);
+  else if (type === "vrising") detectVRising(dir, d);
   else detectHytale(dir, d);
   return { ok: true, detection: d };
 }

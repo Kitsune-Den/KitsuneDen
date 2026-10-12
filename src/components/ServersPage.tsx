@@ -647,7 +647,7 @@ export default function ServersPage() {
                 <div className="text-[11px] text-den-text-dim mt-1">{advice.reason}. This one is free.</div>
               ) : configWas ? (
                 <div className="text-[11px] text-den-text-dim mt-1">
-                  {autofill.configFile?.split("/").pop()} says {configWas}.
+                  {autofill.configFile?.split("/").pop() ?? "Its settings file"} says {configWas}.
                 </div>
               ) : autoLabel ? (
                 <div className="text-[11px] text-den-text-dim mt-1">Auto-filled {autoLabel}.</div>
