@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { resolveDayNightConfig, reverseDayNightConfig } from "@/lib/day-night";
 import { setUnsaved } from "@/lib/unsaved";
 import { sendLifecycle } from "@/components/instances/InstanceControls";
+import SandboxEditor from "@/components/seven-days/SandboxEditor";
 import {
   isSandboxEra,
   SANDBOX_CODE_KEY,
@@ -166,8 +167,6 @@ export default function ConfigEditor() {
             "Controls whether temporary/template tags inside strings are shown. Leave off unless you rely on tag output.",
         }
       : {}),
-    SandboxCode:
-      "7D2D 3.x carries the whole world/gameplay ruleset (difficulty, day length, blood moons, zombie speed, loot, XP and more) in this one code. Build it in-game under New Game > Sandbox Options, use Copy Code, and paste it here. The stock value is the Adventurer preset.",
     Region: "Region shown in the server browser.",
     Language:
       "Primary language for players, by its English name (German, not Deutsch). Shown in the server browser.",
@@ -768,10 +767,6 @@ export default function ConfigEditor() {
 
   const sevenDaysCoreKeys = ["ServerName", "ServerPassword", "ServerDescription", "ServerLoginConfirmationText"];
   const sevenDaysGroups = [
-    {
-      title: "Sandbox",
-      keys: [SANDBOX_CODE_KEY],
-    },
     {
       title: "World",
       keys: [
@@ -1454,6 +1449,7 @@ export default function ConfigEditor() {
                   ...sevenDaysCoreKeys,
                   ...sevenDaysGroups.flatMap((group) => group.keys),
                   "DayNightLength", "DayLightLength",
+                  SANDBOX_CODE_KEY,
                 ]);
                 // On 3.x the Sandbox overwrites these at load; editing them does nothing.
                 const isShown = (key: string) => !(sandboxEra && SANDBOX_GOVERNED_KEYS.has(key));
@@ -1507,6 +1503,25 @@ export default function ConfigEditor() {
                         )}
                       </div>
                     </div>
+
+                    {Object.prototype.hasOwnProperty.call(formValues, SANDBOX_CODE_KEY) && (
+                      <div className="bg-gradient-to-r from-den-surface/60 to-transparent border border-den-border rounded-xl p-5 space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-1 h-5 rounded-full bg-den-accent-fill" />
+                          <h4 className="text-sm font-bold tracking-wide uppercase text-den-text">Sandbox</h4>
+                          {changedKeys.has(SANDBOX_CODE_KEY) && (
+                            <span className="w-[7px] h-[7px] rounded-full bg-den-accent-fill" title="Unsaved change" aria-label="unsaved" />
+                          )}
+                        </div>
+                        <SandboxEditor
+                          key={serverId}
+                          serverId={serverId}
+                          code={String(formValues[SANDBOX_CODE_KEY] ?? "")}
+                          savedCode={String(originalObj[SANDBOX_CODE_KEY] ?? "")}
+                          onChange={(next) => setFormValues((prev) => ({ ...prev, [SANDBOX_CODE_KEY]: next }))}
+                        />
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                       {groups.map((group) => (

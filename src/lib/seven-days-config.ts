@@ -15,7 +15,10 @@
 /** The property 7D2D 3.x uses to carry the whole world/gameplay ruleset. */
 export const SANDBOX_CODE_KEY = "SandboxCode";
 
-/** The code the stock 3.3 serverconfig.xml ships with: the Adventurer preset. */
+/** The code the stock 3.3 serverconfig.xml ships with. Its comment calls it
+ *  Adventurer, but against 3.3's presets it's Adventurer plus Block and Terrain
+ *  Damage at 150%, so the Sandbox editor shows it as Custom. Used as-is because
+ *  it's what a fresh 3.3 install runs. */
 export const STOCK_SANDBOX_CODE = "AAAJABJACJADJARFBNC";
 
 /**
