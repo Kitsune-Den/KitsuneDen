@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllAdapters, addServer, removeServer, updateServer } from "@/lib/adapters/adapter-registry";
+import { getAllAdapters, getAdapter, addServer, removeServer, updateServer } from "@/lib/adapters/adapter-registry";
 import { resolveServerStatus } from "@/lib/adapters/reachability";
 import { recordActivity, observeStatus } from "@/lib/activity";
 import { redactServerDefinition, sanitizeServerWrite } from "@/lib/server-def-security";
+import { CONFIG_PORT_KEYS, gameConfigSecrets, isGameType, type PortField } from "@/lib/server-detect";
 
 export async function GET() {
   const adapters = getAllAdapters();
@@ -69,7 +70,7 @@ export async function PUT(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { server } = body as { server?: Record<string, unknown> };
+    const { server, syncPortsToGame } = body as { server?: Record<string, unknown>; syncPortsToGame?: boolean };
 
     if (!server) {
       return NextResponse.json(
@@ -91,12 +92,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: sanitized.message }, { status: 400 });
     }
 
+    // Passwords left blank in the form come from the game's own config
+    // (the browser only ever learned that they exist, not their values).
+    for (const [key, value] of Object.entries(gameConfigSecrets(type, dir))) {
+      if (!sanitized.value[key]) sanitized.value[key] = value;
+    }
+
     const result = await addServer(sanitized.value as never);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
     }
     recordActivity({ level: "info", kind: "setup", message: `Added ${name} to the Den`, serverId: id, serverName: name });
+
+    if (syncPortsToGame) {
+      const synced = await writePortsToGameConfig(id, type, sanitized.value);
+      if (synced) {
+        recordActivity({ level: "info", kind: "config", message: `Set ${synced} in ${name}'s config`, serverId: id, serverName: name });
+        return NextResponse.json({ ...result, message: `${result.message}. Updated ${synced} in its config.` });
+      }
+    }
 
     return NextResponse.json(result);
   } catch (err) {
@@ -141,5 +156,35 @@ export async function DELETE(request: NextRequest) {
       { success: false, message: `Failed to delete server: ${err}` },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Make the game's own config agree with the ports the Den was given, so a
+ * port moved to avoid a clash is the port the game actually binds. Only
+ * touches keys whose value differs, through the adapter's normal config
+ * read/save (which keeps a .bak). Returns a summary, or null if nothing
+ * changed (or the game has no config file yet).
+ */
+async function writePortsToGameConfig(id: string, type: string, def: Record<string, unknown>): Promise<string | null> {
+  if (!isGameType(type)) return null;
+  const keys = CONFIG_PORT_KEYS[type];
+  const adapter = getAdapter(id);
+  if (!keys || !adapter) return null;
+  try {
+    const current = await adapter.getConfig();
+    if (!current || Object.keys(current).length === 0) return null;
+    const changes: Record<string, string> = {};
+    for (const [field, key] of Object.entries(keys) as [PortField, string][]) {
+      const port = def[field];
+      if (typeof port !== "number" || !(key in current)) continue;
+      if (String(current[key]) !== String(port)) changes[key] = String(port);
+    }
+    if (Object.keys(changes).length === 0) return null;
+    const saved = await adapter.saveConfig({ ...current, ...changes });
+    if (!saved.success) return null;
+    return Object.entries(changes).map(([k, v]) => `${k}=${v}`).join(", ");
+  } catch {
+    return null;
   }
 }

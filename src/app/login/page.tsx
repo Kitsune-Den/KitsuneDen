@@ -19,9 +19,9 @@ function useLocationSearch(): string {
  * /login — the gate. Shared password, posted to /api/auth/login.
  *
  * On success: bounce to ?next= or "/". On wrong-password: inline error.
- * On unconfigured server (KITSUNEDEN_PASSWORD not set): explanatory message
- * pointing the operator at the README. The ?setup=1 marker is set by the
- * middleware when it hits an unconfigured server.
+ * A Den with no password never lands here: the proxy sends it to /setup.
+ * ?setup=1 is the rare case where a password exists but the session secret
+ * couldn't be read or saved (an unwritable data folder).
  */
 export default function LoginPage() {
   const [password, setPassword] = useState("");
@@ -75,19 +75,15 @@ export default function LoginPage() {
 
         {setupMode ? (
           <div className="bg-den-amber/5 border border-den-amber/40 rounded-lg p-4 text-sm">
-            <p className="font-semibold text-den-amber mb-2">Setup required</p>
+            <p className="font-semibold text-den-amber mb-2">Can&apos;t save the session secret</p>
             <p className="text-den-text-muted mb-2">
-              The server is missing <code className="text-den-cyan">KITSUNEDEN_PASSWORD</code>{" "}
-              or <code className="text-den-cyan">KITSUNEDEN_SESSION_SECRET</code> (32+ chars).
-              Add both to your environment (or <code>.env</code>) and restart:
+              The Den has a password but couldn&apos;t read or write its session secret. Check that
+              the <code className="font-mono">data</code> folder is writable, or set one in{" "}
+              <code className="font-mono">.env</code> and restart:
             </p>
             <pre className="bg-den-bg p-3 rounded-lg text-xs overflow-x-auto text-den-text font-mono">
-              KITSUNEDEN_PASSWORD=&quot;some-shared-password&quot;{"\n"}
               KITSUNEDEN_SESSION_SECRET=&quot;32+ random chars&quot;
             </pre>
-            <p className="text-den-text-dim text-xs mt-3">
-              See README → Getting started → Auth for the full setup.
-            </p>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
