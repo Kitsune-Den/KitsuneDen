@@ -32,7 +32,7 @@ Each adapter knows how its game likes to be spoken to: a child process's stdin f
 
 - **Server grid**: every server in `servers.json` as a card with live status, memory, players and uptime, refreshed every few seconds
 - **A page per server**: `/instances/<id>`, with tabs for status, console, config, players and whatever else that game supports
-- **Add, edit, and remove servers from the UI**: with a native folder picker for the install directory
+- **Add, edit, and remove servers from the UI**: with a native folder picker for the install directory, and autofill that reads the server's own config and finds free ports
 - **Live console**: streamed server output, plus command input for games that accept commands
 - **Lifecycle controls**: start, stop, and restart from each card and from the server's page (stop and restart ask first)
 - **Players**: rosters, online status, and the admin actions each game supports
@@ -66,11 +66,11 @@ A Minecraft server can also live on another machine in the house. Give her an `r
 
 The Den has a front door now. Every page and every API call passes through `src/proxy.ts`, which checks for a signed session cookie.
 
-- One shared password, set in `KITSUNEDEN_PASSWORD`
-- Sessions signed with `KITSUNEDEN_SESSION_SECRET` (32 characters or more) and valid for 7 days
-- If either is missing, the login page shows a setup banner and API calls answer `503`
+- One shared password, chosen on first run in the browser (or set in `KITSUNEDEN_PASSWORD`)
+- Sessions signed with a session secret (generated for you, or `KITSUNEDEN_SESSION_SECRET`) and valid for 7 days
+- Until a password exists, every page goes to the first-run setup screen, which asks for a one-time code from the server log
 
-Both live in `.env` at the repo root (copy `.env.example` to start). Chapter 4 has the setup ritual.
+The password hash and secret live in `data/den-auth.json`; `.env` values win when present. Chapter 4 has the setup ritual.
 
 ---
 

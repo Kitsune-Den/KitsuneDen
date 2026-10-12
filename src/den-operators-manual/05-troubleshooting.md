@@ -45,20 +45,22 @@ Every workshop has its creaky floorboards. Ports get tangled, processes linger, 
 ## 2. Stuck at the Gate (Login Problems)
 
 **Symptoms:**
-- The login page shows a **setup** banner instead of a password box
-- API calls return `503` with "Auth not configured" or "KITSUNEDEN_SESSION_SECRET missing or too short"
+- Every page goes to **Welcome to the Den** and you don't have the setup code
+- The login page shows a "Can't save the session secret" box
 - You sign in, the page reloads, and you're back at the login screen
 
 **Likely Causes:**
-- `KITSUNEDEN_PASSWORD` isn't set
-- `KITSUNEDEN_SESSION_SECRET` is missing or shorter than 32 characters
+- First run: the Den has no password yet. The setup code is in the window or log running the Den, and in `data\setup-code.txt`
+- Ten wrong setup codes replaced the code; the new one is in the log and the file
+- The `data` folder (or `KITSUNEDEN_DATA_DIR`) isn't writable, so the password or secret can't be saved
 - `.env` was edited but the dashboard wasn't restarted
 - A proxy in front of the Den sets `X-Forwarded-Proto: https` while the browser is actually on plain HTTP, so the cookie comes back `Secure` and the browser drops it
 
 **Remedies:**
-1. Check `.env` at the repo root (or the service's environment, if the Den runs as a service). Both variables must be present, and the secret must be 32+ characters
-2. Restart the dashboard after any change to them
-3. If you're in production mode and the sign-in loops, reach the Den over HTTPS, or from `localhost` on the host itself. `npm run dev` doesn't set the `Secure` flag, which makes it a quick way to confirm this is the cause
+1. For the setup code, open `data\setup-code.txt` or scroll the Den's log for the **KitsuneDen first-run setup** banner
+2. Make sure the account running the Den can write to `data\`. If `.env` sets `KITSUNEDEN_SESSION_SECRET`, it must be 32+ characters
+3. Restart the dashboard after any change to `.env`
+4. If you're in production mode and the sign-in loops, reach the Den over HTTPS, or from `localhost` on the host itself. `npm run dev` doesn't set the `Secure` flag, which makes it a quick way to confirm this is the cause
 
 > **Den Note:** *The gate isn't being difficult. It just won't open for a key it can't remember.*
 
