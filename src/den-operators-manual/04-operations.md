@@ -89,7 +89,13 @@ The session cookie is only marked `Secure` when the request came in over HTTPS (
 
 The **Servers** page manages `servers.json` for you.
 
-- **Add Server**: pick a game type, name it, browse to its install directory, and fill in its ports and passwords. The id must be unique.
+- **Add Server**: pick a game type and browse to its install directory. The form fills itself in (fields marked **auto** until you change them):
+  - **Ports** start at the game's usual ones and are checked against every other Den server (including 7 Days to Die's extra +1/+2 ports) and against anything already listening on this machine. A taken port moves to the next free one, spaced the way that game's servers usually are (7D2D by 10, Enshrouded in game/query pairs).
+  - **From the install folder**: the name and ports from `serverconfig.xml`, `server.properties`, `PalWorldSettings.ini` or `enshrouded_server.json`; the Minecraft jar, loader and version (NeoForge and Forge argument files included); start scripts; the `Mods` folder; SteamCMD if it's in a usual place.
+  - **Ports from the game's config are kept**, because that's what the game binds. If one clashes, the form says with what and offers **Use** with the best free port. Tick *Also change the port in …* and the Den writes it back into the game's config (keeping a `.bak`).
+  - **Passwords** found in the game's config are never sent to the browser. The field says *Found in … Leave blank to use it*, and the Den copies it into `servers.json` when you save.
+
+  The id is made from the name and must be unique.
 - **Edit**: change any field except `id` and `type`. The adapter is rebuilt immediately.
 - **Remove**: stops the server if the dashboard thinks it's running, then removes it from `servers.json`. There is an option to **delete the server's files from disk** as well. That deletion is permanent; read the dialog twice.
 

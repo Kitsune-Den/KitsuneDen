@@ -32,7 +32,7 @@ Each adapter knows how its game likes to be spoken to: a child process's stdin f
 
 - **Server grid**: every server in `servers.json` as a card with live status, memory, players and uptime, refreshed every few seconds
 - **A page per server**: `/instances/<id>`, with tabs for status, console, config, players and whatever else that game supports
-- **Add, edit, and remove servers from the UI**: with a native folder picker for the install directory
+- **Add, edit, and remove servers from the UI**: with a native folder picker for the install directory, and autofill that reads the server's own config and finds free ports
 - **Live console**: streamed server output, plus command input for games that accept commands
 - **Lifecycle controls**: start, stop, and restart from each card and from the server's page (stop and restart ask first)
 - **Players**: rosters, online status, and the admin actions each game supports
