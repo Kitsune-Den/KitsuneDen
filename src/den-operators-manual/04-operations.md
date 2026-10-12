@@ -27,17 +27,11 @@ From the repo root:
 
 ```
 npm install
-copy .env.example .env
-copy servers.example.json servers.json
 ```
 
-Then:
+That's all the preparation. There's no `.env` to fill in and no `servers.json` to write: start the Den, open it in a browser, and first-run setup asks for the setup code (printed in the Den's log and saved to `data\setup-code.txt`) and a password. Add servers from the UI afterwards (section 3).
 
-1. Edit `.env`. Set `KITSUNEDEN_PASSWORD` to the shared password and `KITSUNEDEN_SESSION_SECRET` to 32 or more random characters:
-   ```
-   node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
-   ```
-2. Edit `servers.json` to describe your servers, or trim it down to `{ "servers": [], "dashboard": { "port": 3001 } }` and add servers from the UI later (section 3).
+If you'd rather describe servers by hand, `copy servers.example.json servers.json` and edit it. If you'd rather keep the password in a file, `copy .env.example .env` and uncomment `KITSUNEDEN_PASSWORD`.
 
 ### The quick way (development)
 
@@ -81,10 +75,11 @@ Open [http://localhost:3001](http://localhost:3001). You should land on the logi
 
 ## 2. Passing the Gate (Login)
 
-- Everyone uses the same password: `KITSUNEDEN_PASSWORD`.
+- Everyone uses the same password: the one chosen at first-run setup (or `KITSUNEDEN_PASSWORD`, if `.env` sets it).
 - A session lasts **7 days**. **Log out** with the button next to *Den operator* at the bottom of the sidebar.
-- **Changing the password** means editing `.env`, restarting the dashboard, and telling everyone. Existing sessions stay valid until they expire.
-- **Ending every session at once** (say, after a password leak): change `KITSUNEDEN_SESSION_SECRET` and restart. Every cookie signed with the old secret stops working.
+- **Changing the password**: **Settings › Den password**. Leave *Sign everyone else out* ticked to end every other session at once (say, after a leak); you stay signed in. Then tell everyone the new one.
+- If the password comes from `.env`, Settings says so: change it there and restart. To end every session in that setup, change `KITSUNEDEN_SESSION_SECRET` and restart.
+- **Forgot the password?** Stop the Den, delete `data\den-auth.json`, and start it again. First-run setup comes back with a fresh setup code. Everyone is signed out.
 
 The session cookie is only marked `Secure` when the request came in over HTTPS (directly, or through a proxy or tunnel that sets `X-Forwarded-Proto: https`). Signing in over plain `http://192.168.x.y:3001` on your LAN works; anything reachable from the internet belongs behind HTTPS anyway.
 
