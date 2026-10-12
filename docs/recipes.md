@@ -46,8 +46,8 @@ The Den does it differently:
 Putting each game in one place showed some problems:
 
 1. ~~**Enshrouded's ports may be wrong.**~~ Fixed. Current Enshrouded listens on one UDP port, its config's `queryPort` (Keen's own example config has no `gamePort`, and PackRelay measured it on a live server). The Den used to write `queryPort` 15638 while showing players 15637. Server setup's Game Port is now written into `queryPort` before every start, and the start message says when that moves the port. Enshrouded stays `experimental` until the fix has been run through the Den on a live server.
-2. **7D2D has no backups.** The world sits in `%APPDATA%\7DaysToDie\Saves`, outside the server folder. PackRelay launches with `-UserDataFolder=<instance>/UserData` so the world can be backed up with the server. Switching an existing server over would move its world, so it needs a migration, not a quiet flag change.
-3. **7D2D's query port (game + 2, UDP) isn't modelled.** Anyone forwarding only 26900 won't show up in the server browser.
+2. ~~**7D2D has no backups.**~~ Fixed without moving any world. The Den finds the save where the game keeps it (`UserDataFolder\Saves` if set, else `%APPDATA%\7DaysToDie\Saves`, then the world folder holding this server's `GameName`, which also covers random-gen worlds). It sends `saveworld` to a running server, copies the world with plain reads so files the game holds open still copy, and zips the copy with `serveradmin.xml` and the config. Random-gen map files (`GeneratedWorlds`) are left out; that's a named gap in the recipe.
+3. ~~**7D2D's query port (game + 2, UDP) isn't modelled.**~~ The recipe models it and the Networking card shows it.
 4. **7D2D has no SteamCMD update**, even though the app installs anonymously and Palworld and Enshrouded already have one.
 5. **Palworld and Minecraft both default RCON to 25575.** The example config gets around it with 25577, but nothing warns you if they clash.
 6. **Hytale's live entry has no `gamePort`**, so the Den doesn't know the server is on UDP 5520.
@@ -60,5 +60,5 @@ Each of these can be its own PR:
 2. ~~**Adapters read recipes.**~~ Done: adapter fallbacks (ports, Steam app ids, start scripts, config files, the Minecraft jar, Hytale's process filter) come from `recipeDefault()`, and a test fails if an adapter hardcodes a port or app id again. Process names stay in the adapters: they're for detecting a running server, which recipes don't model.
 3. ~~**Networking card.**~~ Done: each server's Status tab lists its ports (protocol, purpose, forward or keep private, where the number came from) and warns when one collides with another server on the same machine. The logic is in `src/lib/networking.ts`.
 4. ~~**Recipe card in the picker.**~~ Done: Add Server picks the game from tiles (experimental games are marked), with a card showing the tier and its evidence, install, console, stop, backups, ports to forward, how players join and the known gaps.
-5. **Fix the gaps above.** Enshrouded's ports are done; 7D2D backups are next.
+5. **Fix the gaps above.** Enshrouded's ports and 7D2D backups are done; 7D2D's SteamCMD update is next.
 6. **New games are a recipe plus an adapter.** Valheim, V Rising and Project Zomboid are the obvious next ones, and PackRelay has already measured their ports and quirks.

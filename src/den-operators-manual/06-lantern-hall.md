@@ -79,7 +79,7 @@ Architectural improvements:
 
 - **Remote hosts for more spirits.** Only Minecraft has `rconHost`; the others assume they share a machine with the dashboard
 - **Graceful stops everywhere.** Hytale and Enshrouded are stopped by terminating their process
-- **Backups for 7 Days to Die**, and scheduling built into the dashboard rather than left to Task Scheduler
+- **Backup scheduling** built into the dashboard rather than left to Task Scheduler
 - **Richer mod tooling**: pack swaps that clear old mods, compatibility checks, clearer diagnostics
 
 ### Long-Term: The True Lantern Hall

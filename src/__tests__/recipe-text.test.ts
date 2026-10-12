@@ -34,6 +34,10 @@ describe("recipe text", () => {
   it("describes each backup method", () => {
     expect(backupText(RECIPES.palworld)).toBe("The Den zips Pal\\Saved\\SaveGames.");
     expect(backupText(RECIPES.hytale)).toBe("Runs the backup script you set below.");
-    expect(backupText(RECIPES["7d2d"])).toBe("None yet. The world lives in %APPDATA%\\7DaysToDie\\Saves.");
+    expect(backupText(RECIPES["7d2d"])).toBe("The Den zips Saves\\<world>\\<GameName>.");
+    // No game is without backups now; "none" still reads properly if one is.
+    expect(backupText({ ...RECIPES["7d2d"], saves: { path: "Saves", backup: "none" } })).toBe(
+      "None yet. The world lives in Saves."
+    );
   });
 });

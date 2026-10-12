@@ -102,7 +102,8 @@ Her admin file (`serveradmin.xml`) is editable from the dashboard: admins and pe
 | Commands | telnet on 127.0.0.1:`telnetPort` (default 8081) |
 | Status probe | TCP connect to the telnet port |
 | Config | `serverconfig.xml` (or `configFile`) |
-| Admin file | `adminFilePath`, else `AdminFileName` from the config, looked for in `dir`, `dir\saves`, and `%APPDATA%\7DaysToDie\Saves` |
+| Admin file | `adminFilePath`, else `AdminFileName` from the config, looked for in `dir`, `dir\saves`, and the game's Saves folder (`UserDataFolder\Saves` if set, else `%APPDATA%\7DaysToDie\Saves`) |
+| Backups | `saveworld` over telnet if running, then a zip of the world folder, `serveradmin.xml` and the config, in `<dir>\..\backups\7d2d\hourly\` or `daily\` |
 | Mods | `modsDir` (default `mods`); uploaded `.zip` files are extracted |
 | Memory | managed by the game, not the dashboard |
 | Journal | `logs\7d2d-server.log` |

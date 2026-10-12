@@ -10,16 +10,25 @@ function getServerId(request: NextRequest): string {
   return request.nextUrl.searchParams.get("server") || getDefaultServerId();
 }
 
+/** Adapters that list and run their own backups. Minecraft's are handled below. */
+interface BackupAdapter {
+  getBackups(): Promise<unknown>;
+  runBackup(type: "hourly" | "daily"): Promise<unknown>;
+}
+
+function backupAdapter(adapter: unknown): BackupAdapter | null {
+  const a = adapter as Partial<BackupAdapter>;
+  return typeof a.getBackups === "function" && typeof a.runBackup === "function" ? (a as BackupAdapter) : null;
+}
+
 export async function GET(request: NextRequest) {
   const adapter = getAdapter(getServerId(request));
   if (!adapter) {
     return NextResponse.json({ error: "Unknown server" }, { status: 404 });
   }
 
-  if (adapter.def.type === "hytale" || adapter.def.type === "palworld" || adapter.def.type === "enshrouded") {
-    const backups = await (adapter as unknown as { getBackups: () => Promise<unknown> }).getBackups();
-    return NextResponse.json(backups);
-  }
+  const own = backupAdapter(adapter);
+  if (own) return NextResponse.json(await own.getBackups());
 
   if (adapter.def.type !== "minecraft") {
     return NextResponse.json({ error: "Backups not available for this server" }, { status: 404 });
@@ -61,10 +70,8 @@ async function handlePost(request: NextRequest) {
   const body = await request.json();
   const type = body.type === "daily" ? "daily" : "hourly";
 
-  if (adapter.def.type === "hytale" || adapter.def.type === "palworld" || adapter.def.type === "enshrouded") {
-    const result = await (adapter as unknown as { runBackup: (type: string) => Promise<unknown> }).runBackup(type);
-    return NextResponse.json(result);
-  }
+  const own = backupAdapter(adapter);
+  if (own) return NextResponse.json(await own.runBackup(type));
 
   if (adapter.def.type !== "minecraft") {
     return NextResponse.json({ error: "Backups not available for this server" }, { status: 404 });

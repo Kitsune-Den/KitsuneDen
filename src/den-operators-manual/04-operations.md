@@ -254,7 +254,7 @@ The buffer clears when the dashboard restarts. For older history, read the log f
 | Palworld | zips `Pal\Saved\SaveGames\` + settings (saves the world first if running) | `<dir>\..\backups\palworld\hourly\` or `\daily\` |
 | Enshrouded | zips `savegame\` | `<dir>\..\backups\enshrouded\hourly\` or `\daily\` |
 | Minecraft | the `/api/backups` route can zip the world, `mods\`, `server.properties`, `modpacks.json`, and `dashboard-config.json` into `<dir>\backups\<type>\` | `<dir>\backups\hourly\` or `\daily\` (local servers only; hidden for remote ones) |
-| 7 Days to Die | not supported yet | |
+| 7 Days to Die | sends `saveworld` over telnet if running, then zips a copy of the world (`Saves\<world>\<GameName>\`) with `serveradmin.xml` and the server config. Saves is `UserDataFolder\Saves` if set, else `%APPDATA%\7DaysToDie\Saves`; the world isn't moved | `<dir>\..\backups\7d2d\hourly\` or `\daily\` |
 
 "Hourly" and "daily" are folder names. The dashboard doesn't schedule anything; schedule your own backups (Task Scheduler works) and use the page for on-demand runs and a quick look at what exists.
 

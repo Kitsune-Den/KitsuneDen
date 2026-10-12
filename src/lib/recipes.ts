@@ -174,9 +174,9 @@ export const RECIPES: Record<GameType, GameRecipe> = {
       players: "Telnet `listplayers`, plus serveradmin.xml for admins, whitelist and bans.",
     },
     saves: {
-      path: "%APPDATA%\\7DaysToDie\\Saves",
-      backup: "none",
-      note: "Unless UserDataFolder is set in serverconfig.xml. PackRelay launches with -UserDataFolder=<instance>/UserData so the world lives with the server and backs up as one folder.",
+      path: "Saves\\<world>\\<GameName>",
+      backup: "zip",
+      note: "Saves is UserDataFolder\\Saves when serverconfig.xml sets UserDataFolder, else %APPDATA%\\7DaysToDie\\Saves. The world stays where it is: a backup runs `saveworld` over telnet, then zips a copy with serveradmin.xml and the server config into ../backups/7d2d.",
     },
     config: [
       { file: "serverconfig.xml", format: "xml" },
@@ -186,9 +186,8 @@ export const RECIPES: Record<GameType, GameRecipe> = {
     steamClientAppId: 251570,
     defaults: { configFile: "serverconfig.xml", modsDir: "Mods" },
     gaps: [
-      "No backups: the world lives in %APPDATA% by default, outside the server folder.",
+      "Backups leave out random-gen map files (GeneratedWorlds, often hundreds of MB). The game rebuilds them from the seed, but only reliably on the same game version.",
       "No SteamCMD update, though the app is anonymous and the other Steam games already have it.",
-      "The query port (game+2) isn't modelled, so firewall hints would be a port short.",
     ],
   },
 
