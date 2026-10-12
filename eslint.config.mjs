@@ -23,7 +23,9 @@ const eslintConfig = defineConfig([
       ],
     },
   },
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+  // .claude/ holds Claude Code session worktrees: full checkouts with their
+  // own .next output, which would otherwise be linted as part of this repo.
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", ".claude/**"]),
 ]);
 
 export default eslintConfig;
