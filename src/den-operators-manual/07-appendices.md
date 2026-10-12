@@ -62,6 +62,8 @@ This chapter is for skimming. Keep it open in a tab and reach for whatever you n
 | Palworld RCON | 25575 | TCP | `rconPort`; also the status probe |
 | Palworld REST API | 8212 | TCP | `restApiPort`; probe fallback |
 | Enshrouded game | 15637 | UDP | `gamePort`; one port for joining and the server browser, written into the config's `queryPort` |
+| Valheim game | 2456 | UDP | `gamePort` |
+| Valheim query | 2457 | UDP | always `gamePort` + 1, for the community list |
 | SSH (remote lifecycle) | 22 | TCP | `lifecycle.port` |
 
 ---
@@ -118,6 +120,7 @@ Every route except `/api/auth/*` needs a valid session. Server-aware routes take
 | `/api/palworld-update` | GET, POST | Version info / SteamCMD update |
 | `/api/enshrouded-update` | GET, POST | Version info / SteamCMD update |
 | `/api/7d2d-update` | GET, POST | Version, branch and app id / SteamCMD update on the installed branch |
+| `/api/valheim-update` | GET, POST | Branch and app id / SteamCMD install or update on the installed branch |
 | `/api/airdrops/settings` | GET, PUT | KitsuneCommand airdrop settings |
 | `/api/airdrops/loot-tables` | GET, POST, PUT, DELETE | Loot tables and entries |
 | `/api/airdrops/history` | GET | Recent drops (`?limit=`, default 50) |
@@ -211,6 +214,16 @@ Deep night blues underneath, warm and bright accents on top. Check `globals.css`
 | `gamePort` | 15637 | The one UDP port, written into `enshrouded_server.json` as `queryPort` before every start |
 | `steamCmdPath` | | `steamcmd.exe` for updates |
 | `steamAppId` | 2278520 | Steam app id |
+
+### Valheim (`valheim`)
+
+| Field | Default | Description |
+|---|---|---|
+| `gamePort` | 2456 | UDP game port; the query port is the next one up |
+| `steamCmdPath` | | `steamcmd.exe` for installs and updates |
+| `steamAppId` | 896660 | Steam app id |
+
+Game settings live in `kitsuneden-valheim.json` in the server folder (Config tab), not in `servers.json`.
 
 ### Top level
 

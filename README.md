@@ -53,6 +53,7 @@ KitsuneDen treats your servers like living things. Each one gets its own persona
 | Hytale | `hytale` | ✅ Full support |
 | Palworld | `palworld` | ✅ Full support |
 | Enshrouded | `enshrouded` | ✅ Full support (no RCON, so no live commands) |
+| Valheim | `valheim` | 🧪 Experimental: new, not yet run through the Den (no console, so no live commands) |
 | Something else | - | 🔧 [Write an adapter](#adding-a-new-game) |
 
 ---
@@ -208,6 +209,17 @@ By default KitsuneDen reads and writes `servers.json` in the directory it's star
 
 > Enshrouded ships no RCON or REST API, so live commands aren't available.
 > Player presence is a best guess, scraped from connect/disconnect lines in the log.
+
+**`valheim`**: Valheim
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `dir` | ✅ | Path to the server directory |
+| `gamePort` | Optional | UDP game port (default 2456). The query port is always the next one up; forward both. |
+| `steamCmdPath` | Optional | Path to steamcmd.exe, to install and update the server (Steam app id 896660) |
+
+> Everything else (server name, world, join password, public, crossplay, autosave, preset and world modifiers) lives in `kitsuneden-valheim.json` in the server folder, edited on the Config tab and turned into launch flags at each start. Worlds are kept in `valheim-data\` inside the server folder.
+> Valheim has no console, so a stop can't make it save first: the world keeps its last autosave, which the Den sets to every 10 minutes.
 
 ### Remote Minecraft servers
 

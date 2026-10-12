@@ -40,6 +40,7 @@ The Den does it differently:
 | Hytale | verified | Hytale launcher | none | script | 5520 udp |
 | Palworld | verified | SteamCMD 2394010 | RCON + REST | zip | 8211 udp / RCON 25575, REST 8212 |
 | Enshrouded | experimental | SteamCMD 2278520 | none | zip | 15637 udp |
+| Valheim | experimental | SteamCMD 896660 | none | zip | 2456 udp, query +1 udp |
 
 ## What writing them turned up
 
@@ -61,4 +62,4 @@ Each of these can be its own PR:
 3. ~~**Networking card.**~~ Done: each server's Status tab lists its ports (protocol, purpose, forward or keep private, where the number came from) and warns when one collides with another server on the same machine. The logic is in `src/lib/networking.ts`.
 4. ~~**Recipe card in the picker.**~~ Done: Add Server picks the game from tiles (experimental games are marked), with a card showing the tier and its evidence, install, console, stop, backups, ports to forward, how players join and the known gaps.
 5. **Fix the gaps above.** Enshrouded's ports, 7D2D backups and 7D2D updates are done. Hytale's missing `gamePort` is a one-line `servers.json` change.
-6. **New games are a recipe plus an adapter.** Valheim, V Rising and Project Zomboid are the obvious next ones, and PackRelay has already measured their ports and quirks.
+6. **New games are a recipe plus an adapter.** Valheim is the first: its settings live in `kitsuneden-valheim.json` (Config tab) and become launch flags in the order Valheim needs, following what PackRelay measured. V Rising and Project Zomboid are the obvious next ones.

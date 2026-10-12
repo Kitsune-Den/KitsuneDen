@@ -29,6 +29,8 @@ const FLAT_SECRET_KEYS: Record<ServerType, readonly string[]> = {
   palworld: ["AdminPassword"],
   hytale: [],
   enshrouded: [],
+  // Only a join password, which is meant to be handed to players.
+  valheim: [],
 };
 
 interface EnshroudedGroup {

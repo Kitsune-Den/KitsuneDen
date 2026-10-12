@@ -32,7 +32,14 @@ describe("serverPorts", () => {
   });
 
   it("has nothing for a game without a recipe", () => {
-    expect(serverPorts({ id: "v", name: "Valheim", type: "valheim" })).toEqual([]);
+    expect(serverPorts({ id: "v", name: "V Rising", type: "vrising" })).toEqual([]);
+  });
+
+  it("derives Valheim's query port as the game port + 1", () => {
+    expect(brief(serverPorts({ id: "v", name: "Valheim", type: "valheim", gamePort: 2466 }))).toEqual([
+      "game udp 2466 set",
+      "query udp 2467 offset",
+    ]);
   });
 });
 

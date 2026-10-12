@@ -63,6 +63,10 @@ const TYPE_FIELDS: Record<string, FieldDef[]> = {
     { key: "startScript", label: "Start Script", type: "text", hint: "Optional bat file in the install directory. Falls back to launching enshrouded_server.exe directly." },
     { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates" },
   ],
+  // Name, world, password and the rest live in kitsuneden-valheim.json (Config tab).
+  valheim: [
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe, to install and update the server" },
+  ],
 };
 
 const PROTO_LABEL: Record<RecipePort["proto"], string> = { tcp: "TCP", udp: "UDP", "tcp+udp": "TCP and UDP" };

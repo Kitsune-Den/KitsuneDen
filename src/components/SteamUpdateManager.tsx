@@ -18,6 +18,7 @@ const ENDPOINTS: Record<string, string> = {
   palworld: "/api/palworld-update",
   enshrouded: "/api/enshrouded-update",
   "7d2d": "/api/7d2d-update",
+  valheim: "/api/valheim-update",
 };
 
 /**

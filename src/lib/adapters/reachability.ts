@@ -107,6 +107,8 @@ export function getProbeTarget(
       if (def.restApiPort) return { host: "127.0.0.1", port: def.restApiPort };
       return null;
     case "enshrouded":
+    case "valheim":
+      // UDP only: nothing for a TCP probe to knock on.
       return null;
     default:
       return null;
@@ -141,7 +143,7 @@ export async function resolveServerStatus(
   // secondary signal — catches the case where the process is running but the
   // probe is inconclusive (or there's no probe target at all).
   const def = adapter.def;
-  if (def.type === "hytale" || def.type === "palworld" || def.type === "enshrouded") {
+  if (def.type === "hytale" || def.type === "palworld" || def.type === "enshrouded" || def.type === "valheim") {
     const stats = await adapter.getStats();
     if (stats.process) return "running";
     return "stopped";

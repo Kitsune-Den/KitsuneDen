@@ -85,20 +85,5 @@ export function findWorldSave(saves: string, config: Record<string, string>): Wo
   return candidates.sort((a, b) => lastWritten(b.dir) - lastWritten(a.dir))[0];
 }
 
-/**
- * Copy a folder tree by reading and writing each file.
- *
- * Deliberately plain reads: Compress-Archive and Copy-Item open files through
- * .NET's File.OpenRead, which shares read only, so they can fail on a file
- * the running game has open for writing. Node's reads share read, write and
- * delete. The Den zips this copy, never the live folder.
- */
-export function copyTree(src: string, dest: string): void {
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const from = path.join(src, entry.name);
-    const to = path.join(dest, entry.name);
-    if (entry.isDirectory()) copyTree(from, to);
-    else if (entry.isFile()) fs.writeFileSync(to, fs.readFileSync(from));
-  }
-}
+// Re-exported: 7D2D backups and their tests import it from here.
+export { copyTree } from "./fs-copy";

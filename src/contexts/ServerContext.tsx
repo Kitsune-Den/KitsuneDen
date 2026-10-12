@@ -13,7 +13,7 @@ import { usePathname, useRouter } from "next/navigation";
 interface ServerInfo {
   id: string;
   name: string;
-  type: "minecraft" | "hytale" | "7d2d" | "palworld" | "enshrouded";
+  type: "minecraft" | "hytale" | "7d2d" | "palworld" | "enshrouded" | "valheim";
   status: string;
   loader?: string;
   version?: string;

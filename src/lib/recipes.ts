@@ -327,6 +327,55 @@ export const RECIPES: Record<GameType, GameRecipe> = {
       "No remote console, so no live commands, and player presence is scraped from the log.",
     ],
   },
+
+  // Launch flags, ports, password rules and save layout as PackRelay
+  // measured them on real servers (verified there on Windows and Linux).
+  // See src/lib/valheim-settings.ts for the details behind each flag.
+  valheim: {
+    type: "valheim",
+    tier: "experimental",
+    evidence: "New in the Den and not yet run through it. Its launch flags, ports and password rules follow PackRelay, which has run Valheim on Windows and Linux.",
+    platforms: { windows: true, linux: true },
+    install: { kind: "steamcmd", appId: 896660, anonymous: true, denCanInstall: true },
+    launch: {
+      kind: "exe",
+      entry: "valheim_server.exe",
+      help: "Started directly with -nographics -batchmode and the settings from kitsuneden-valheim.json (name, port, world, password, public, crossplay, autosave, preset and modifiers), -preset ahead of the modifiers it would otherwise reset.",
+    },
+    // Query is always game + 1: measured with gamePort 2466, A2S answered on
+    // 2467 and nothing on 2466 or 2457.
+    ports: [
+      { field: "gamePort", purpose: "game", proto: "udp", default: 2456, public: true },
+      {
+        field: "queryPort",
+        purpose: "query",
+        proto: "udp",
+        offset: { from: "gamePort", by: 1 },
+        public: true,
+        note: "Always one above the game port. Forward both, or the server won't show in the community list.",
+      },
+    ],
+    control: {
+      console: "none",
+      stop: "Process kill. Valheim has no console and Windows gives it no Ctrl+C, so the world keeps its last autosave.",
+      players: "Characters seen spawning in the log; there's no live online list.",
+    },
+    saves: {
+      path: "valheim-data",
+      backup: "zip",
+      note: "-savedir keeps worlds in the server folder (valheim-data\\worlds_local), not the shared AppData\\LocalLow\\IronGate profile. Backups zip a copy of it with kitsuneden-valheim.json into ../backups/valheim.",
+    },
+    config: [{ file: "kitsuneden-valheim.json", format: "json" }],
+    connect: "Join Game → Join IP with the address and port, or find it in the community list when it's public. Crossplay servers are joined with the code in the log.",
+    steamClientAppId: 892970,
+    defaults: { steamAppId: 896660 },
+    gaps: [
+      "Not yet run through the Den. Once someone has installed it, started it, joined and stopped it, mark it verified.",
+      "Stop is a kill, so anything since the last autosave is lost. The Den sets autosave to every 10 minutes (the game's default is 30); lower it on the Config tab to lose less.",
+      "Backups of a running server hold its last autosave, since there's no way to make it save first.",
+      "No live player list: only characters seen in the log. Valheim's query port could give one later.",
+    ],
+  },
 };
 
 export function recipeFor(type: string | undefined): GameRecipe | undefined {
