@@ -275,13 +275,13 @@ export class EnshroudedAdapter implements ServerAdapter {
 
       if (created) {
         // Show the generated passwords exactly once, in the start result —
-        // not in the log buffer, which every console viewer replays. They
-        // stay editable in the Config tab afterwards.
-        this.addLog("[Dashboard] Created enshrouded_server.json with random group passwords (see Config tab).");
+        // not in the log buffer, which every console viewer replays. The
+        // Config tab can change them but hides the Admin one (config-secrets).
+        this.addLog("[Dashboard] Created enshrouded_server.json with random group passwords (shown once in the start result).");
         const pw = created.map((g) => `${g.name}: ${g.password}`).join(", ");
         return {
           success: true,
-          message: `Server starting... Created a new config with random group passwords — ${pw}. Save these; you can change them in the Config tab.`,
+          message: `Server starting... Created a new config with random group passwords — ${pw}. Save these now: the Admin password won't be shown again (you can set a new one in the Config tab).`,
         };
       }
 

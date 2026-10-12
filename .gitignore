@@ -41,3 +41,6 @@ servers.json
 .idea/
 
 nul
+
+# runtime data (activity log)
+/data/

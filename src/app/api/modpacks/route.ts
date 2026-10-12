@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withActivity } from "@/lib/activity-route";
 import fs from "fs/promises";
 import path from "path";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
+import { getModsDir } from "@/lib/server-paths";
 
 function getServerId(request: NextRequest): string {
   return request.nextUrl.searchParams.get("server") || getDefaultServerId();
@@ -90,7 +92,7 @@ export async function GET(request: NextRequest) {
   });
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   const adapter = getAdapter(getServerId(request));
   if (!adapter || !adapter.capabilities.hasModPacks) {
     return NextResponse.json({ error: "Mod packs not available for this server" }, { status: 404 });
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Pack not found" }, { status: 404 });
     }
 
-    const modsDir = path.join(adapter.def.dir, "mods");
+    const modsDir = getModsDir(adapter.def);
     const libraryDir = getLibraryDir(adapter.def.dir);
     await fs.mkdir(modsDir, { recursive: true });
 
@@ -156,7 +158,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ success: true, pack: packs.find((p) => p.id === id) });
 }
 
-export async function DELETE(request: NextRequest) {
+async function handleDelete(request: NextRequest) {
   const adapter = getAdapter(getServerId(request));
   if (!adapter || !adapter.capabilities.hasModPacks) {
     return NextResponse.json({ error: "Mod packs not available for this server" }, { status: 404 });
@@ -181,3 +183,7 @@ export async function DELETE(request: NextRequest) {
 
   return NextResponse.json({ success: true });
 }
+
+export const POST = withActivity("mods", (body) => (body.action === "activate" ? `Activated mod pack ${String(body.id ?? "")}` : `Saved mod pack ${String(body.name ?? "")}`).trim(), handlePost);
+
+export const DELETE = withActivity("mods", (body) => `Deleted mod pack ${String(body.id ?? "")}`.trim(), handleDelete);

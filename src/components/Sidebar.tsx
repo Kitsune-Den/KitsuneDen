@@ -1,182 +1,171 @@
 "use client";
 
-import { useServer } from "@/contexts/ServerContext";
-import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Terminal,
-  Server,
+  LayoutGrid,
+  Activity,
+  SlidersHorizontal,
+  BookOpen,
   Settings,
-  Users,
-  Globe,
-  HardDrive,
-  Package,
-  Boxes,
-  Crosshair,
-  Download,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Keyboard,
 } from "lucide-react";
+import { confirmDiscard } from "@/lib/unsaved";
+import { useStoredItem } from "@/lib/useStored";
+import { OPEN_SHORTCUTS_EVENT } from "@/components/shell/ShortcutsOverlay";
 
-interface NavItem {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  section: "overview" | "management";
-  requireCapability?: string;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} />, section: "overview" },
-  { id: "console", label: "Console", icon: <Terminal size={18} />, section: "overview" },
-  { id: "servers", label: "Servers", icon: <Server size={18} />, section: "overview" },
-  { id: "config", label: "Configuration", icon: <Settings size={18} />, section: "management" },
-  { id: "players", label: "Players", icon: <Users size={18} />, section: "management" },
-  { id: "worlds", label: "Worlds", icon: <Globe size={18} />, section: "management", requireCapability: "hasWorlds" },
-  { id: "backups", label: "Backups", icon: <HardDrive size={18} />, section: "management", requireCapability: "hasBackups" },
-  { id: "mods", label: "Mods", icon: <Package size={18} />, section: "management", requireCapability: "hasMods" },
-  { id: "modpacks", label: "Mod Packs", icon: <Boxes size={18} />, section: "management", requireCapability: "hasModPacks" },
-  { id: "airdrops", label: "Airdrops", icon: <Crosshair size={18} />, section: "management", requireCapability: "hasKitsuneCommand" },
-  { id: "update", label: "Update", icon: <Download size={18} />, section: "management", requireCapability: "hasSteamUpdate||hasLauncherUpdate" },
+const SECTIONS: { title: string; items: { href: string; label: string; icon: React.ReactNode; match: (p: string) => boolean }[] }[] = [
+  {
+    title: "Manage",
+    items: [
+      { href: "/", label: "Servers", icon: <LayoutGrid size={18} />, match: (p) => p === "/" || p.startsWith("/instances") },
+      { href: "/activity", label: "Activity", icon: <Activity size={18} />, match: (p) => p.startsWith("/activity") },
+    ],
+  },
+  {
+    title: "System",
+    items: [
+      { href: "/manage", label: "Server setup", icon: <SlidersHorizontal size={18} />, match: (p) => p.startsWith("/manage") },
+      { href: "/library", label: "Library", icon: <BookOpen size={18} />, match: (p) => p.startsWith("/library") },
+      { href: "/settings", label: "Settings", icon: <Settings size={18} />, match: (p) => p.startsWith("/settings") },
+    ],
+  },
 ];
 
-interface SidebarProps {
-  activePage: string;
-  onNavigate: (page: string) => void;
-  onSelectDocs?: (docKey: string) => void;
+const COLLAPSE_KEY = "kitsuneden-sidebar";
+
+export function useSidebarCollapsed(): [boolean, (v: boolean) => void] {
+  const [stored, setStored] = useStoredItem(COLLAPSE_KEY);
+  return [stored === "1", (v) => setStored(v ? "1" : "0")];
 }
 
-export default function Sidebar({ activePage, onNavigate, onSelectDocs }: SidebarProps) {
-  const { currentServer } = useServer();
-  const caps = currentServer?.capabilities;
-  const [docsOpen, setDocsOpen] = useState(false);
-
-  const isVisible = (item: NavItem) => {
-    if (!item.requireCapability) return true;
-    if (!caps) return false;
-    const keys = item.requireCapability.split("||");
-    return keys.some((key) => caps[key.trim() as keyof typeof caps] === true);
-  };
-
-  const overviewItems = NAV_ITEMS.filter((i) => i.section === "overview" && isVisible(i));
-  const managementItems = NAV_ITEMS.filter((i) => i.section === "management" && isVisible(i));
+export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  const pathname = usePathname() || "/";
 
   return (
-    <nav className="fixed left-0 top-0 bottom-0 w-[240px] bg-den-base border-r border-den-border flex flex-col z-50 max-[900px]:w-[60px]">
-      {/* Header */}
-      <div className="px-4 py-5 flex items-center gap-3 border-b border-den-border">
-        <div className="text-[28px] leading-none drop-shadow-[0_0_8px_rgba(255,167,38,0.4)]">
+    <nav
+      aria-label="Main"
+      className="sticky top-0 h-screen flex flex-col bg-den-base border-r border-den-border overflow-hidden"
+    >
+      {/* Brand */}
+      <div className={`relative flex items-center gap-3 pt-5 pb-4 ${collapsed ? "flex-col px-2" : "px-4"}`}>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-3 top-2 w-24 h-20 rounded-full blur-2xl opacity-60"
+          style={{ background: "linear-gradient(100deg, var(--accent), var(--violet))" }}
+        />
+        <div
+          className={`relative shrink-0 rounded-2xl flex items-center justify-center bg-den-surface border border-den-border-light leading-none ${
+            collapsed ? "w-10 h-10 text-[22px]" : "w-12 h-12 text-[28px]"
+          }`}
+        >
           🦊
         </div>
-        <div className="max-[900px]:hidden">
-          <span className="block text-[16px] font-extrabold bg-gradient-to-r from-den-amber to-[#ff7043] bg-clip-text text-transparent tracking-tight">
-            Kitsune Den
-          </span>
-          <span className="block text-[11px] text-den-text-dim font-medium tracking-wide">
-            Server Dashboard
-          </span>
-        </div>
+        {!collapsed && (
+          <div className="relative min-w-0 flex-1">
+            <div className="text-[18px] font-semibold leading-tight">
+              Kitsune<span className="text-den-accent">Den</span>
+            </div>
+            <div className="text-[12px] text-den-text-dim">Game server panel</div>
+          </div>
+        )}
+        <button
+          onClick={onToggle}
+          className="icon-btn relative shrink-0"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+        </button>
       </div>
 
-      {/* Overview Section */}
-      <div className="px-3 pt-4 pb-2">
-        <div className="text-[10px] font-bold text-den-text-dim tracking-widest px-2 pb-2 max-[900px]:hidden">
-          OVERVIEW
-        </div>
-        {overviewItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => onNavigate(item.id)}
-            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all mb-0.5 max-[900px]:justify-center max-[900px]:px-0 ${
-              activePage === item.id
-                ? "bg-den-cyan-glow text-den-cyan shadow-[inset_3px_0_0_var(--color-den-cyan)]"
-                : "text-den-text-muted hover:bg-den-surface hover:text-den-text"
-            }`}
-          >
-            {item.icon}
-            <span className="max-[900px]:hidden">{item.label}</span>
-          </button>
+      <div className="flex-1 overflow-y-auto px-3">
+        {SECTIONS.map((section) => (
+          <div key={section.title} className="pt-4">
+            {!collapsed && <div className="den-eyebrow px-2.5 pb-1.5">{section.title}</div>}
+            {section.items.map((item) => {
+              const active = item.match(pathname);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={(e) => {
+                    if (!confirmDiscard()) e.preventDefault();
+                  }}
+                  title={collapsed ? item.label : undefined}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center gap-2.5 rounded-[10px] text-[14px] font-medium mb-0.5 transition-colors ${
+                    collapsed ? "justify-center h-10" : "px-[11px] py-[9px]"
+                  } ${
+                    active
+                      ? "bg-den-accent-soft text-den-accent"
+                      : "text-den-text-muted hover:bg-den-surface hover:text-den-text"
+                  }`}
+                >
+                  <span aria-hidden>{item.icon}</span>
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+              );
+            })}
+          </div>
         ))}
       </div>
 
-      {/* Management Section */}
-      {managementItems.length > 0 && (
-        <div className="px-3 pt-2 pb-2">
-          <div className="text-[10px] font-bold text-den-text-dim tracking-widest px-2 pb-2 max-[900px]:hidden">
-            MANAGEMENT
-          </div>
-          {managementItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all mb-0.5 max-[900px]:justify-center max-[900px]:px-0 ${
-                activePage === item.id
-                  ? "bg-den-cyan-glow text-den-cyan shadow-[inset_3px_0_0_var(--color-den-cyan)]"
-                  : "text-den-text-muted hover:bg-den-surface hover:text-den-text"
-              }`}
-            >
-              {item.icon}
-              <span className="max-[900px]:hidden">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Footer */}
-      <div className="mt-auto px-4 py-4 border-t border-den-border max-[900px]:hidden">
-        <div className="text-[11px] text-den-text-dim font-mono">
-          {currentServer ? `${currentServer.name} ${currentServer.version || ""}` : "No server"}
-        </div>
-        <div className="mt-1 text-[10px] text-den-text-dim opacity-50">
-          <span>v{process.env.APP_VERSION || "0.0.0"}</span>
-          <span className="mx-1">|</span>
-          <a
-            href="https://github.com/Kitsune-Den/KitsuneDen"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-den-text transition-colors underline decoration-dotted"
+      <div className={`border-t border-den-border py-3 ${collapsed ? "px-2" : "px-3"}`}>
+        <div className={`flex items-center gap-2.5 ${collapsed ? "flex-col" : ""}`}>
+          <div
+            className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-[13px] font-bold text-white"
+            style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-deep))" }}
+            aria-hidden
           >
-            GitHub
-          </a>
-        </div>
-        <div className="mt-1 text-[9px] text-den-text-dim opacity-40">
-          Personal use only. No warranty. Not affiliated with TFP or Valve.
-        </div>
-        <div className="mt-3">
-          <button
-            onClick={() => setDocsOpen((prev) => !prev)}
-            className="text-[11px] font-semibold text-den-text-muted border border-den-border rounded-md px-2 py-1 hover:bg-den-surface transition-colors"
-          >
-            [DOCS]
-          </button>
-          {docsOpen && (
-            <div className="mt-2 text-[11px] text-den-text-dim space-y-1">
-              <button
-                onClick={() => {
-                  onSelectDocs?.("readme");
-                  onNavigate("docs");
-                }}
-                className="block text-left hover:text-den-text"
-              >
-                README
-              </button>
-              <button
-                onClick={() => {
-                  onSelectDocs?.("manual/01-spirit-hall");
-                  onNavigate("docs");
-                }}
-                className="block text-left hover:text-den-text"
-              >
-                Operator Manual
-              </button>
-              <button
-                onClick={() => {
-                  onSelectDocs?.("manual/07-appendices");
-                  onNavigate("docs");
-                }}
-                className="block text-left hover:text-den-text"
-              >
-                Quickstart & Ports
-              </button>
+            K
+          </div>
+          {!collapsed && (
+            <div className="min-w-0 flex-1 leading-tight">
+              <div className="text-[13px] font-medium truncate">Den operator</div>
+              <div className="text-[11.5px] text-den-text-dim">Shared password</div>
             </div>
+          )}
+          <button
+            onClick={async () => {
+              if (!confirmDiscard()) return;
+              await fetch("/api/auth/logout", { method: "POST" });
+              window.location.href = "/login";
+            }}
+            className="icon-btn shrink-0"
+            title="Sign out"
+            aria-label="Sign out"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
+        <div className={`mt-2.5 flex items-center text-[11.5px] text-den-text-dim ${collapsed ? "flex-col gap-2" : "justify-between px-1"}`}>
+          <button
+            onClick={() => window.dispatchEvent(new Event(OPEN_SHORTCUTS_EVENT))}
+            className="flex items-center gap-1.5 hover:text-den-text transition-colors"
+            title="Keyboard shortcuts (?)"
+          >
+            <Keyboard size={14} aria-hidden />
+            {!collapsed && (
+              <>
+                Shortcuts <kbd className="kbd !h-[18px] !min-w-[18px] !text-[10.5px]">?</kbd>
+              </>
+            )}
+          </button>
+          {!collapsed && (
+            <a
+              href="https://github.com/Kitsune-Den/KitsuneDen"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono hover:text-den-text transition-colors"
+              title="KitsuneDen on GitHub"
+            >
+              v{process.env.APP_VERSION || "0.0.0"}
+            </a>
           )}
         </div>
       </div>

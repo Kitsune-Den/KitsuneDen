@@ -13,281 +13,312 @@
 
 # Chapter 4: Rituals & Routines
 
-*The practical steps for keeping the Den alive and well. Startup, shutdown, switching, managing — all of it.*
+*The practical steps for keeping the Den alive and well. Setup, startup, switching, managing: all of it.*
 
-A well-kept workshop runs on habit. This chapter holds every routine an Operator needs — the daily rituals that keep dashboards bright, servers steady, and spirits calm. Nothing here is complicated, but precision matters. Follow the paths as written and the Den will hum along quietly.
+A well-kept workshop runs on habit. Nothing here is complicated, but precision matters. Follow the paths as written and the Den will hum along quietly.
 
 ---
 
 ## 1. Starting the Dashboard
 
-There are two ways to bring the dashboard to life. Pick the one that fits the moment.
+### First-time setup
 
-### The Quick Way
+From the repo root:
 
-Run the unified dashboard:
+```
+npm install
+copy .env.example .env
+copy servers.example.json servers.json
+```
+
+Then:
+
+1. Edit `.env`. Set `KITSUNEDEN_PASSWORD` to the shared password and `KITSUNEDEN_SESSION_SECRET` to 32 or more random characters:
+   ```
+   node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+   ```
+2. Edit `servers.json` to describe your servers, or trim it down to `{ "servers": [], "dashboard": { "port": 3001 } }` and add servers from the UI later (section 3).
+
+### The quick way (development)
 
 ```
 npm run dev
 ```
 
-This starts the dashboard on **port 3000**. Keep the window open to watch output. If it closes unexpectedly, check the terminal output for errors before restarting.
+The dashboard comes up on **port 3001**. Keep the window open to watch its output.
 
-### Via Task Scheduler (Recommended for Auto-Start)
+### The steady way (production)
 
-Task Scheduler is the preferred method for making dashboards start on boot. It avoids the Bitdefender issues that plague `shell:startup` batch files.
+```
+npm run build
+npm run start
+```
+
+Also port 3001. Rebuild after every update to the code.
+
+### Via Task Scheduler (auto-start on boot)
+
+Task Scheduler is the preferred way to start the Den on boot. It avoids the antivirus trouble that plagues `shell:startup` batch files.
 
 | Setting | Value |
 |---|---|
-| Trigger | At startup |
+| Trigger | At startup, delayed 30 seconds |
 | Privileges | Run with highest privileges |
-| Delay | 30 seconds |
 | On failure | Restart the task |
-| User account | `DARA-PC\darab` |
-| Action | Run `npm run dev` |
+| User account | the account that owns the KitsuneDen folder and game servers |
+| Action | `cmd.exe` with arguments `/c npm run start` |
+| Start in | the KitsuneDen repo root |
 
-The 30-second delay gives Windows time to finish initializing networking and services before the dashboards try to bind their ports.
-
-### Individually
-
-When you need to start the dashboard manually, or when troubleshooting:
-
-```
-cd F:\MinecraftServer\dashboard && npm run dev
-```
+The delay gives Windows time to bring up networking before the dashboard binds its port. Build once (`npm run build`) before handing the task over.
 
 ### Verifying
 
-Once started, confirm it's alive:
+Open [http://localhost:3001](http://localhost:3001). You should land on the login page, then the Den once you sign in. If the page refuses the connection or shows a setup banner, see Chapter 5.
 
-- Open [http://localhost:3000](http://localhost:3000)
-
-You should see the Den-themed interface load within a few seconds. If the page stays blank or refuses the connection, see Chapter 5 (Troubleshooting).
-
-> **PowerShell Note:** If PowerShell blocks `npm run dev` with an `UnauthorizedAccess` error, you have two options:
-> - Use `cmd /c "npm run dev"` to bypass PowerShell's execution policy entirely
-> - Set the execution policy permanently: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+> **PowerShell note:** if PowerShell blocks `npm` with an `UnauthorizedAccess` error, either run `cmd /c "npm run dev"` or allow local scripts with `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
 ---
 
-## 2. Starting Game Servers
+## 2. Passing the Gate (Login)
 
-### Via the Dashboard (Recommended)
+- Everyone uses the same password: `KITSUNEDEN_PASSWORD`.
+- A session lasts **7 days**. **Log out** with the button next to *Den operator* at the bottom of the sidebar.
+- **Changing the password** means editing `.env`, restarting the dashboard, and telling everyone. Existing sessions stay valid until they expire.
+- **Ending every session at once** (say, after a password leak): change `KITSUNEDEN_SESSION_SECRET` and restart. Every cookie signed with the old secret stops working.
 
-Click the **Start** button in the **ServerControl** panel. The dashboard spawns the Java process as a managed child process and streams its output directly to the console component.
+The session cookie is only marked `Secure` when the request came in over HTTPS (directly, or through a proxy or tunnel that sets `X-Forwarded-Proto: https`). Signing in over plain `http://192.168.x.y:3001` on your LAN works; anything reachable from the internet belongs behind HTTPS anyway.
 
-This is the recommended approach because the dashboard can:
-- Stop the server cleanly
-- Send commands to the server via stdin
-- Stream live output to your browser
-- Track the process PID and memory usage
+---
 
-### Manually
+## 3. Adding, Editing, and Removing Servers
 
-When you need to run a server outside the dashboard's control:
+The **Servers** page manages `servers.json` for you.
 
-**Fabric:**
+- **Add Server**: pick a game type, name it, browse to its install directory, and fill in its ports and passwords. The id must be unique.
+- **Edit**: change any field except `id` and `type`. The adapter is rebuilt immediately.
+- **Remove**: stops the server if the dashboard thinks it's running, then removes it from `servers.json`. There is an option to **delete the server's files from disk** as well. That deletion is permanent; read the dialog twice.
+
+The **Browse** button opens a Windows folder picker **on the machine running the dashboard**, not in your browser. If the Den runs as a background service or you're connecting from another computer, type the path instead.
+
+Some fields aren't in the form yet. Edit `servers.json` by hand for:
+
+- Minecraft: `jar`, `launchMode`, `argFiles`, `rconHost`, `lifecycle`
+- 7 Days to Die: `controlPanelPort`, `adminFilePath`
+- Palworld / Enshrouded: `startScript` (Palworld), `steamAppId`
+
+**Restart the dashboard after editing `servers.json` by hand.** It caches the file at first read.
+
+---
+
+## 4. Starting and Stopping Game Servers
+
+Each server card on the home page has start/stop and restart buttons, and every server's own page has **Start**, **Stop**, and **Restart** in its header. Stop and restart ask for confirmation, since they disconnect players. On a server's page the keys `s`, `x` and `r` do the same (with the same confirmation).
+
+What each button actually does depends on the spirit (see Chapter 2, section 9). In short:
+
+- **Minecraft (local)** and **7 Days to Die** run as child processes of the dashboard. If the dashboard stops, so do they.
+- **Hytale, Palworld, and Enshrouded** are launched in their own windows and keep running if the dashboard restarts.
+- **Minecraft (remote)** stops over RCON, falling back to `lifecycle.stopCommand` over SSH if RCON fails. Start and Restart need a `lifecycle` block; without one they refuse with a message explaining why.
+
+### Servers you started some other way
+
+A server started by hand, by nssm, or by another launcher still shows as running, thanks to the reachability probe. But the dashboard didn't spawn it, so:
+
+- Local Minecraft: no console stream, no stdin commands, and Stop does nothing. Setting `rconHost` to `127.0.0.1` switches the entry to the remote rules (RCON commands and RCON stop), at the cost of the Start button.
+- 7 Days to Die: console commands and Stop go over telnet as usual (Stop sends `shutdown`; whatever launched her may bring her back). Start refuses while her telnet port is open, so the dashboard won't launch a second copy.
+- Hytale, Palworld, Enshrouded: the dashboard finds them by process name and manages them normally.
+
+### Starting manually
+
+When you need a server outside the dashboard's control, run its own launcher from its own directory, for example:
+
 ```
-cd F:\MinecraftServer\server && start.bat
+cd C:\GameServers\fabric-server
+start.bat
 ```
 
-**NeoForge:**
+Launch scripts use relative paths, so always `cd` into the server's folder first.
+
+---
+
+## 5. Getting Around
+
+**Servers** (the home page) shows every server in `servers.json` as a card: status, memory, players online, uptime, and quick controls. Toggle between grid and list at the top right. Cards refresh every few seconds while the tab is visible.
+
+Click a card to open that server. Its page has tabs: **Status, Console, Config, Players**, then whichever of **Worlds, Backups, Mods, Mod packs, Airdrops, Update** the game supports, and **Activity**. Each tab has its own URL, so you can bookmark `/instances/<id>/console`. `[` and `]` step between tabs; `h` goes back to all servers; `?` lists every shortcut.
+
+**Opening a server never stops anything.** Servers on different ports can all run at once; you're only choosing which one to look at.
+
+### Saving config
+
+Config edits are staged. Each changed field gets a small orange dot, the header counts the unsaved changes, and a bar at the bottom offers **Save changes** or **Discard**. After a save it tells you whether the server needs a restart and offers **Restart now** if it's running. Leaving the tab, the page, or the browser with unsaved edits asks first.
+
+### Activity
+
+The **Activity** page (and each server's Activity tab) lists what happened: starts, stops, restarts, config saves, roster changes, backups, mod changes, sign-ins. A server that goes down without the dashboard asking is logged as a crash. The log lives in `data\activity.jsonl` and keeps the most recent ~1500 events.
+
+### Settings
+
+**Settings** picks dark, light or system theme and turns on the colour-blind status palette. Both are saved in the browser, so each person (and each device) chooses their own.
+
+---
+
+## 6. Managing Mods
+
+### Mods page (Minecraft, Hytale, 7 Days to Die)
+
+- **Upload** files from the browser. A `.zip` is extracted: a zip with one top-level folder lands as that folder; a zip of loose files lands in a folder named after the zip.
+- **Remove** a mod file or folder.
+- Mods live in `modsDir` (relative to `dir`, or absolute), default `<dir>\mods\`. Mod Packs and Minecraft backups use the same folder.
+
+### Mod Library and Mod Packs (Minecraft)
+
+- `mods-library\` holds every mod `.jar` you might want. Upload to it from the Mod Packs page, or copy an active mod into it from the Mods page.
+- A **pack** is a named list of library mods, stored in `modpacks.json`.
+- **Activating** a pack copies its mods from the library into the mods folder (`modsDir`) and marks it active. It does **not** remove mods that are already there. Any mods missing from the library are reported.
+
+For a clean swap: clear `mods\`, then activate the pack.
+
+### Critical rules
+
+- **Fabric mods only on Fabric servers, NeoForge mods only on NeoForge servers.** Mixing them crashes the server or silently skips the mods.
+- **Restart after any mod change.** Mods load at boot.
+
+---
+
+## 7. Memory (Minecraft)
+
+Set heap size in the **Memory Allocation** card on the server's **Status** tab (local Minecraft servers only; a remote server's JVM isn't started by the dashboard). It's stored in `dashboard-config.json` in the server's directory:
+
+```json
+{ "minMemoryGB": 2, "maxMemoryGB": 4 }
 ```
-cd F:\MinecraftServer\server-neoforge && run.bat
-```
 
-**Hytale:**
-```
-cd F:\KitsuneDen && start_kitsune_den.bat
-```
-Hytale binds to `0.0.0.0:5520` — open to all network interfaces by default.
+The `/api/memory` endpoint reads and writes this file. How it's applied:
 
-> **Important distinction:** Game servers started via the dashboard are **managed child processes** — the dashboard can stop them, send commands, and stream their output. Servers started manually are **independent processes** — the dashboard won't know about them and can't control them.
+- **`jar` mode:** passed as `-Xms` / `-Xmx` on the command line at start.
+- **`argfile` mode:** written into `user_jvm_args.txt` at start (which replaces that file's contents).
 
----
+**Restart the server** after changing memory. The JVM only reads it at startup.
 
-## 3. Switching Between Servers (Minecraft Dashboard)
-
-The **server switcher** lives at the top-right of the dashboard header. It's the primary way to move between server instances.
-
-**How it works:**
-
-- Two tab buttons: **Fabric** and **NeoForge**
-- Each tab has a **live status dot**:
-  - Green = running
-  - Red = stopped
-  - Yellow = starting or stopping
-- Clicking a tab **changes the active server for ALL components** — console, stats, config, mods, players, everything
-
-**What happens on switch:**
-
-The transition resets component state to reflect the newly selected server:
-- Console logs clear and reconnect to the new server's stream
-- Stats reset and begin polling the new server's metrics
-- Config reloads from the new server's `server.properties`
-- Mod lists refresh from the new server's `mods\` directory
-- Player lists reload
-
-**Both servers can run simultaneously** on different ports (Fabric on 25565, NeoForge on 25566). The switcher only changes which one the dashboard is *displaying* — it doesn't stop either server.
+The other games manage their own memory; the dashboard only reports how much their process is using.
 
 ---
 
-## 4. Managing Mods
+## 8. Player Management
 
-### Active Mods
+The **Players** page changes shape for each game.
 
-The `mods\` folder in each server directory holds the currently active mods. You can manage them two ways:
-
-- **Via the Mod Manager component** in the dashboard — upload `.jar` files through the browser
-- **Manually** — drop `.jar` files directly into the `mods\` folder on disk
-
-### Mod Library
-
-The `mods-library\` folder in each server directory stores **all available mods** — a reservoir of `.jar` files that aren't necessarily active. Mod Packs pull from this library when activated.
-
-### Mod Packs
-
-Mod Packs let you create **named collections of mods** and swap between them:
-
-1. Create a pack and assign mods from the library
-2. Activating a pack **merges into the `mods\` folder** and copies the pack's mods from `mods-library\`
-3. Switch between packs freely — nothing in the library is ever deleted
-
-This is useful for maintaining different mod configurations (a creative building set, a survival adventure set, a lightweight testing set) without losing anything.
-
-### Critical Rules
-
-- **Fabric mods only work on the Fabric server.** NeoForge mods only work on the NeoForge server. Never mix them — the server will crash or the mods will silently fail to load.
-- **Restart required.** After any mod change — adding, removing, or switching packs — you must restart the game server for changes to take effect.
-
----
-
-## 5. Memory Management
-
-### Setting Memory
-
-In the **ServerControl** panel, use the **Min Memory** and **Max Memory** dropdowns to allocate JVM heap memory. The range is **1 GB to 32 GB**.
-
-Changes are saved to `dashboard-config.json` in the active server's directory.
-
-### How Memory is Applied
-
-The mechanism differs between server types:
-
-- **Fabric:** Memory flags are passed directly on the command line as `-Xms` (minimum) and `-Xmx` (maximum) when the dashboard spawns the Java process
-- **NeoForge:** Memory values are written to `user_jvm_args.txt` in the server directory. The dashboard manages this file automatically — you don't need to edit it by hand.
-
-### After Changing Memory
-
-Restart the game server. Memory allocation is set at JVM startup and cannot be changed while the server is running.
-
----
-
-## 6. Player Management
-
-The **PlayerManager** component requires a running server to function. It communicates with the game server via stdin commands (not RCON).
-
-### Actions
-
-Enter a player name and use the action buttons:
-
-| Action | What it does |
-|---|---|
-| **Whitelist** | Adds the player to the server whitelist |
-| **Op** | Grants operator (admin) privileges |
-| **Ban** | Bans the player from the server |
-| **Kick** | Removes the player from the current session |
-
-### Player Lists
-
-The component displays the current whitelisted players, operators, and banned players. Lists can be modified directly from the dashboard.
-
----
-
-## 7. Using the Console
-
-The **Console** component is the dashboard's live window into the game server's soul.
-
-### Features
-
-- **Live output** via SSE (Server-Sent Events) streaming
-- **2000-line buffer** — older lines are trimmed as new ones arrive
-- **Auto-scrolling** — follows new output automatically. Scroll up to pause; scroll back to the bottom to resume.
-- **Command input** — type commands in the input field and press Enter or click Send
-- **Command history** — use arrow up/down to navigate through previously entered commands
-
-### Color Coding
-
-| Color | Meaning |
-|---|---|
-| Amber | Dashboard system messages |
-| Gold | Your typed commands (echoed back) |
-| Red | Errors and stderr output |
-| Orange | Warnings |
-
-The console is read-only for output — you can't select and delete lines. If the buffer feels noisy, restarting the server gives you a clean slate.
-
----
-
-## 8. Backups
-
-### Hytale (Automated)
-
-Hytale backups are handled by PowerShell scripts in `F:\KitsuneDen\`:
-
-**`backup_kitsune_den.ps1`** backs up:
-- `universe/` (worlds, players, warps)
-- `config.json`
-- `permissions.json`
-- `whitelist.json`
-- `bans.json`
-
-**Retention policy:**
-
-| Schedule | Location | Retention |
+| Spirit | What you can do | How it's done |
 |---|---|---|
-| Hourly | `F:\KitsuneDen\backups\hourly\` | 1 day |
-| Daily | `F:\KitsuneDen\backups\daily\` | 7 days |
+| Minecraft (local) | whitelist, op, ban, and undo each; see who's online | edits `whitelist.json`, `ops.json`, `banned-players.json` directly; online list from RCON `list` |
+| Minecraft (remote) | the same | RCON commands (`whitelist add/remove`, `op`, `deop`, `ban`, `pardon`) |
+| 7 Days to Die | see everyone who has ever joined, with online/offline tags; manage admins, whitelist, blacklist, command permissions | log parsing, telnet `listplayers`, `serveradmin.xml` |
+| Hytale | toggle OP for players in `permissions.json` | edits `permissions.json` |
+| Palworld | see who's online; kick, ban, promote/demote, save world, broadcast | RCON (REST fallback); promote/demote edits `palworld-admins.json` |
+| Enshrouded | see who has connected | log scrape only |
 
-**Setting up the schedule:** Run `setup_backup_schedule.ps1` to create the necessary Task Scheduler tasks.
+**Minecraft (local) note:** Minecraft reads its roster files at startup. Edits made while the server is running may not take effect until a restart (or an in-game `whitelist reload`), and the server can overwrite them if someone changes the roster in-game. For immediate effect on a running server, send the command from the console instead (`op Steve`, `whitelist add Steve`).
 
-### Minecraft (Dashboard)
+Minecraft players who are online but in no roster file still appear, tagged **Online**, so guests on an open server don't vanish.
 
-Minecraft backups can be triggered from the dashboard and are stored in each server's `backups\` folder. The backup includes:
+---
 
-- World folder
-- `mods\`
-- `server.properties`
-- `modpacks.json`
-- `dashboard-config.json`
+## 9. Using the Console
 
-### General Advice
+The **Console** page is the dashboard's live window into a server.
+
+- **Live output** streamed over Server-Sent Events, starting with the current buffer
+- **2000-line buffer** per server; older lines fall away
+- **Command input** with history (up/down arrows)
+
+Where commands go:
+
+| Spirit | Commands travel by |
+|---|---|
+| Minecraft (local) | stdin; only while the server is running |
+| Minecraft (remote) | RCON; reply appears in the console. `stop`, `restart`, `shutdown` are refused, so use the Stop / Restart buttons |
+| 7 Days to Die | telnet, whether or not the dashboard launched her; errors appear in the console |
+| Palworld | RCON, fire-and-forget (no reply is shown) |
+| Hytale, Enshrouded | nowhere; they don't accept commands |
+
+The buffer clears when the dashboard restarts. For older history, read the log files on disk.
+
+---
+
+## 10. Backups
+
+| Spirit | How | Where |
+|---|---|---|
+| Hytale | runs your `backupScript` (`-Daily` flag for daily) | lists `.zip` files in `<dir>\backups\hourly\` and `\daily\` |
+| Palworld | zips `Pal\Saved\SaveGames\` + settings (saves the world first if running) | `<dir>\..\backups\palworld\hourly\` or `\daily\` |
+| Enshrouded | zips `savegame\` | `<dir>\..\backups\enshrouded\hourly\` or `\daily\` |
+| Minecraft | the `/api/backups` route can zip the world, `mods\`, `server.properties`, `modpacks.json`, and `dashboard-config.json` into `<dir>\backups\<type>\` | `<dir>\backups\hourly\` or `\daily\` (local servers only; hidden for remote ones) |
+| 7 Days to Die | not supported yet | |
+
+"Hourly" and "daily" are folder names. The dashboard doesn't schedule anything; schedule your own backups (Task Scheduler works) and use the page for on-demand runs and a quick look at what exists.
+
+There is no restore button. Restoring means stopping the server and unzipping by hand.
+
+### Hytale backup script
+
+`backupScript` can be an absolute path or a path relative to the server's `dir`. It's run as `powershell -ExecutionPolicy Bypass -File <script> [-Daily]` with a 60-second timeout, and it should write zips into `backups\hourly\` or `backups\daily\` under `dir` so the page can list them.
+
+### General advice
 
 Back up before:
-- Major mod changes or pack switches
-- Minecraft or mod loader version updates
-- Any structural changes to server configuration
+- major mod changes or pack switches
+- game or mod-loader version updates
+- any structural change to server configuration
 
 ---
 
-## 9. Daily Operator Checklist
+## 11. Updates
+
+| Spirit | Source | Notes |
+|---|---|---|
+| Palworld | SteamCMD, app 2394010 | needs `steamCmdPath`; server must be stopped; 5-minute timeout |
+| Enshrouded | SteamCMD, app 2278520 | same requirements |
+| Hytale | the Hytale Launcher's downloaded files | open the launcher first so it fetches the update; server must be stopped |
+
+SteamCMD runs `+force_install_dir <dir> +login anonymous +app_update <id> validate +quit`.
+
+---
+
+## 12. Airdrops (Hytale + KitsuneCommand)
+
+If the KitsuneCommand mod is installed (the dashboard looks for `mods\KitsuneCommand_KitsuneCommand\kitsunecommand.db`), an **Airdrops** page appears. It reads and writes the mod's SQLite database directly:
+
+- **Settings**: interval, chest type, item counts, drop radius, announce message, decay timers
+- **Loot tables**: tables and their weighted item entries
+- **History**: recent drops
+
+Whether the mod picks up changes without a restart depends on the mod.
+
+---
+
+## 13. Daily Operator Checklist
 
 ### Morning
 
-- [ ] Open the dashboard and confirm it loaded ([localhost:3000](http://localhost:3000))
-- [ ] Glance at the console for any error messages or warnings from overnight
+- [ ] Open the Den ([localhost:3001](http://localhost:3001)) and confirm it loads
+- [ ] Glance at the server grid. Is everyone who should be awake, awake?
+- [ ] Skim **Activity** for anything marked as stopped unexpectedly.
+- [ ] Skim the console of anything that restarted overnight
 
 ### Occasional
 
-- [ ] Check memory usage in ServerStats — make sure Java isn't creeping toward the ceiling
-- [ ] Review backup status for Hytale — confirm hourly and daily backups are running
-- [ ] Check for lingering Java processes from previous sessions (`tasklist | findstr java`)
+- [ ] Check memory on the Dashboard page; make sure no Java process is creeping toward its ceiling
+- [ ] Check the Backups page; confirm new zips are appearing
+- [ ] Look for lingering processes from old sessions (`tasklist | findstr java`)
 
-### After Updates
+### After updating the Den's code
 
-- [ ] Verify dashboards still start cleanly
-- [ ] Run `npx next build` in `F:\MinecraftServer\dashboard\` to check for TypeScript errors
-- [ ] Test the server switcher — make sure both Fabric and NeoForge respond
+- [ ] `npm install` if `package.json` changed
+- [ ] `npm test`
+- [ ] `npm run typecheck`
+- [ ] `npm run build`, then restart the dashboard
+- [ ] Switch through every server and make sure each one answers
 
 ---
 

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withActivity } from "@/lib/activity-route";
 import fs from "fs/promises";
 import path from "path";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
+import { getModsDir } from "@/lib/server-paths";
 
 function getServerId(request: NextRequest): string {
   return request.nextUrl.searchParams.get("server") || getDefaultServerId();
-}
-
-function getModsDir(adapter: { def: { dir: string; modsDir?: string } }): string {
-  return path.join(adapter.def.dir, adapter.def.modsDir || "mods");
 }
 
 async function getDirSize(dirPath: string): Promise<number> {
@@ -51,7 +49,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Mods not available for this server" }, { status: 404 });
   }
 
-  const modsDir = getModsDir(adapter);
+  const modsDir = getModsDir(adapter.def);
   try {
     const entries = await fs.readdir(modsDir, { withFileTypes: true });
     const files = await Promise.all(
@@ -83,7 +81,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   const adapter = getAdapter(getServerId(request));
   if (!adapter || !adapter.capabilities.hasMods) {
     return NextResponse.json({ error: "Mods not available for this server" }, { status: 404 });
@@ -95,7 +93,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, message: "No files uploaded" }, { status: 400 });
   }
 
-  const modsDir = getModsDir(adapter);
+  const modsDir = getModsDir(adapter.def);
   await fs.mkdir(modsDir, { recursive: true });
 
   const saved: string[] = [];
@@ -129,7 +127,7 @@ export async function POST(request: NextRequest) {
           zip.extractAllTo(extractDir, true);
           saved.push(folderName);
         }
-      } catch (e) {
+      } catch {
         // If zip extraction fails, save as raw file
         await fs.writeFile(path.join(modsDir, safeName), buffer);
         saved.push(safeName);
@@ -143,7 +141,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ success: true, files: saved });
 }
 
-export async function DELETE(request: NextRequest) {
+async function handleDelete(request: NextRequest) {
   const adapter = getAdapter(getServerId(request));
   if (!adapter || !adapter.capabilities.hasMods) {
     return NextResponse.json({ error: "Mods not available for this server" }, { status: 404 });
@@ -161,7 +159,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: false, message: "Missing file name" }, { status: 400 });
   }
 
-  const modsDir = getModsDir(adapter);
+  const modsDir = getModsDir(adapter.def);
   const safeName = path.basename(name);
   const target = path.join(modsDir, safeName);
 
@@ -178,3 +176,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: false, message: msg }, { status: 500 });
   }
 }
+
+export const POST = withActivity("mods", () => "Uploaded mods", handlePost);
+
+export const DELETE = withActivity("mods", (body) => `Deleted mod ${typeof body.name === "string" && body.name ? body.name : ""}`.trim(), handleDelete);

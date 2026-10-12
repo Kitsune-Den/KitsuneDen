@@ -1,8 +1,9 @@
-import { ChildProcess, exec, spawn } from "child_process";
+import { ChildProcess, spawn, exec } from "child_process";
 import net from "net";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { probeReachability } from "./reachability";
 import type {
   ServerAdapter,
   ServerDefinition,
@@ -43,6 +44,83 @@ function formatBytes(bytes: number): string {
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
+// ---- Known-player cache ----
+
+/**
+ * The dashboard launches 7D2D with `-logfile logs/7d2d-server.log` and
+ * truncates that file on every launch, so the log alone only knows about
+ * players from the current session. Players seen in the log are merged into
+ * this JSON file (in the server dir) so the Players page remembers everyone
+ * who has ever joined.
+ */
+export const KNOWN_PLAYERS_FILE = "dashboard-known-players.json";
+
+export interface KnownPlayer {
+  name: string;
+  steamId: string;
+  eosId: string;
+}
+
+/** Pull every successful auth line out of a 7D2D server log. Later lines win. */
+export function parseKnownPlayersFromLog(log: string): KnownPlayer[] {
+  const byEos = new Map<string, KnownPlayer>();
+  const authRe = /\[Auth\] PlayerName authorization successful:.*?PltfmId='(Steam_\d+)',\s*CrossId='(EOS_[^']+)'.*?PlayerName='([^']+)'/g;
+  let m;
+  while ((m = authRe.exec(log)) !== null) {
+    byEos.set(m[2], { steamId: m[1], eosId: m[2], name: m[3] });
+  }
+  return Array.from(byEos.values());
+}
+
+function readKnownPlayersFile(filePath: string): Map<string, KnownPlayer> {
+  const map = new Map<string, KnownPlayer>();
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    if (Array.isArray(parsed)) {
+      for (const p of parsed) {
+        if (p && typeof p.eosId === "string" && typeof p.name === "string") {
+          map.set(p.eosId, { name: p.name, steamId: String(p.steamId || ""), eosId: p.eosId });
+        }
+      }
+    }
+  } catch {
+    // missing or corrupt — start fresh
+  }
+  return map;
+}
+
+/**
+ * Merge players found in `logFile` into the cache at `cacheFile`, rewrite the
+ * cache if anything changed, and return the merged roster. A missing log is
+ * fine (the cache alone is returned); a write failure is swallowed so a
+ * read-only server dir doesn't break the Players page.
+ */
+export function syncKnownPlayers(logFile: string, cacheFile: string): Map<string, KnownPlayer> {
+  const known = readKnownPlayersFile(cacheFile);
+  let log = "";
+  try {
+    log = fs.readFileSync(logFile, "utf8");
+  } catch {
+    // log may not exist
+  }
+  let changed = false;
+  for (const p of parseKnownPlayersFromLog(log)) {
+    const prev = known.get(p.eosId);
+    if (!prev || prev.name !== p.name || prev.steamId !== p.steamId) {
+      known.set(p.eosId, p);
+      changed = true;
+    }
+  }
+  if (changed) {
+    try {
+      fs.writeFileSync(cacheFile, JSON.stringify(Array.from(known.values()), null, 2), "utf8");
+    } catch {
+      // ignore — the in-memory merge is still returned
+    }
+  }
+  return known;
 }
 
 // ---- serveradmin.xml support ----
@@ -335,6 +413,27 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
     return this.def.telnetPassword || "";
   }
 
+  private get logFilePath(): string {
+    return path.join(this.def.dir, "logs", "7d2d-server.log");
+  }
+
+  /** Merge the current log into the persistent known-player cache. */
+  private syncKnownPlayers(): Map<string, KnownPlayer> {
+    return syncKnownPlayers(this.logFilePath, path.join(this.def.dir, KNOWN_PLAYERS_FILE));
+  }
+
+  /**
+   * True when the dashboard has no process of its own but the telnet port is
+   * accepting connections — i.e. the server was launched by nssm, a
+   * scheduled task, or by hand.
+   */
+  private async isRunningExternally(): Promise<boolean> {
+    const state = this.getState();
+    if (state.process || state.status !== "stopped") return false;
+    const reach = await probeReachability("127.0.0.1", this.telnetPort, { ttlMs: 0 });
+    return reach === "running";
+  }
+
   constructor(def: ServerDefinition) {
     this.def = def;
   }
@@ -368,9 +467,12 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
   private logOffset = 0;
 
   private startLogWatcher() {
-    const logFile = path.join(this.def.dir, "logs", "7d2d-server.log");
+    const logFile = this.logFilePath;
     const state = this.getState();
     this.logOffset = 0;
+
+    // Save the previous session's players before the truncate below wipes them.
+    this.syncKnownPlayers();
 
     // Truncate the log file if it exists so we start fresh
     try {
@@ -423,6 +525,12 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
     const state = this.getState();
     if (state.status === "running" || state.status === "starting") {
       return { success: false, message: "Server is already running" };
+    }
+    if (await this.isRunningExternally()) {
+      return {
+        success: false,
+        message: `Server is already running outside the dashboard (telnet port ${this.telnetPort} is open). Stop it first, or manage it from whatever launched it.`,
+      };
     }
 
     state.status = "starting";
@@ -500,8 +608,21 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
 
   async stop(): Promise<ActionResult> {
     const state = this.getState();
-    if (state.status === "stopped") {
-      return { success: false, message: "Server is not running" };
+    if (state.status === "stopped" && !state.process) {
+      // No process of ours, but the server may still be up — launched by
+      // nssm, a scheduled task, or by hand. The status endpoint reports it
+      // "running" via the telnet probe, so honor Stop the same way: send
+      // `shutdown` over telnet. telnetCommand rejects on ECONNREFUSED, which
+      // is the "really not running" case.
+      try {
+        await telnetCommand("127.0.0.1", this.telnetPort, this.telnetPassword, "shutdown");
+      } catch {
+        return { success: false, message: "Server is not running" };
+      }
+      const msg =
+        "Sent shutdown via telnet. This server wasn't launched by the dashboard, so it will exit on its own (and may be relaunched by whatever manages it).";
+      this.addLog(`[Dashboard] ${msg}`);
+      return { success: true, message: msg };
     }
 
     state.status = "stopping";
@@ -550,11 +671,10 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
   }
 
   sendCommand(cmd: string): ActionResult {
-    const state = this.getState();
-    if (state.status !== "running") {
-      return { success: false, message: "Server is not running" };
-    }
-
+    // Deliberately NOT gated on the internal state machine: a server started
+    // outside the dashboard (nssm, scheduled task) reads as "stopped" here
+    // while telnet is perfectly reachable. If the server really is down the
+    // telnet connect fails and the error lands in the console log below.
     this.addLog(`> ${cmd}`);
 
     // Fire and forget telnet command
@@ -657,22 +777,9 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
   }
 
   async getPlayers(): Promise<PlayerData> {
-    // Build known players from log (persistent across sessions)
-    const knownPlayers = new Map<string, { name: string; steamId: string; eosId: string }>();
-    const logFile = path.join(this.def.dir, "logs", "7d2d-server.log");
-    try {
-      const log = fs.readFileSync(logFile, "utf8");
-      const authRe = /\[Auth\] PlayerName authorization successful:.*?PltfmId='(Steam_\d+)',\s*CrossId='(EOS_[^']+)'.*?PlayerName='([^']+)'/g;
-      let m;
-      while ((m = authRe.exec(log)) !== null) {
-        const steamId = m[1];
-        const eosId = m[2];
-        const name = m[3];
-        knownPlayers.set(eosId, { name, steamId, eosId });
-      }
-    } catch {
-      // log may not exist
-    }
+    // Known players = persistent cache merged with the current session's log.
+    // The log alone is truncated on every dashboard launch.
+    const knownPlayers = this.syncKnownPlayers();
 
     // Check which players are currently online via telnet. We DON'T gate on
     // getState().status — that's the internal-spawn state machine, which
@@ -793,9 +900,8 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
     // Parse version and registered players from log file
     let serverVersion = "";
     const uniquePlayers = new Set<string>();
-    const logFile = path.join(this.def.dir, "logs", "7d2d-server.log");
     try {
-      const log = fs.readFileSync(logFile, "utf8");
+      const log = fs.readFileSync(this.logFilePath, "utf8");
       const versionMatch = log.match(/INF Version:\s*(V\s*[\d.]+\s*\([^)]+\))/);
       if (versionMatch) serverVersion = versionMatch[1];
       const loginRe = /INF PlayerLogin:\s*(.+?)\/V/g;
@@ -820,7 +926,7 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
       gameDifficulty: config.GameDifficulty || "Unknown",
       gameMode: config.GameMode === "GameModeSurvival" ? "Survival" : config.GameMode || "Unknown",
       maxPlayers: parseInt(config.ServerMaxPlayerCount || "8"),
-      registeredPlayers: uniquePlayers.size || undefined,
+      registeredPlayers: Math.max(this.syncKnownPlayers().size, uniquePlayers.size) || undefined,
       dayNightLength: parseInt(config.DayNightLength || "60"),
       gamePort: config.ServerPort || this.def.gamePort,
       telnetPort: this.telnetPort,

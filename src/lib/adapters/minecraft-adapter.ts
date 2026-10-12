@@ -61,7 +61,9 @@ export class MinecraftAdapter implements ServerAdapter {
     hasRcon: true,
     hasMods: true,
     hasModPacks: true,
-    hasBackups: false,
+    // Overwritten in the constructor: /api/backups zips the world out of
+    // `dir`, which only makes sense when `dir` is the real server folder.
+    hasBackups: true,
     hasWorlds: false,
     hasWarps: false,
     hasServerProperties: true,
@@ -74,6 +76,9 @@ export class MinecraftAdapter implements ServerAdapter {
 
   constructor(def: ServerDefinition) {
     this.def = def;
+    // Remote MC (rconHost set): `dir` on the dashboard host is a stub, so a
+    // backup would archive an empty folder. Hide the Backups page instead.
+    this.capabilities = { ...this.capabilities, hasBackups: !def.rconHost };
   }
 
   private getState(): ServerState {
@@ -265,9 +270,30 @@ export class MinecraftAdapter implements ServerAdapter {
         this.addLog(`[Dashboard] ${msg}`);
         return { success: true, message: msg };
       } catch (e) {
-        const msg = `RCON stop failed: ${(e as Error).message}`;
+        const rconMsg = `RCON stop failed: ${(e as Error).message}`;
+        this.addLog(`[Dashboard] ${rconMsg}`);
+        const lc = this.def.lifecycle;
+        if (lc?.kind !== "ssh" || !lc.stopCommand) {
+          return { success: false, message: rconMsg };
+        }
+        // Last resort: the configured lifecycle.stopCommand over SSH. Covers
+        // a hung server whose RCON listener is dead but whose JVM is still
+        // holding the ports.
+        this.addLog(`[Dashboard] Falling back to lifecycle stopCommand via SSH on ${lc.host}...`);
+        const result = await execRemotePowerShell(
+          { host: lc.host, port: lc.port, user: lc.user, identityFile: lc.identityFile },
+          lc.stopCommand
+        );
+        if (result.stdout.trim()) this.addLog(`[ssh stdout] ${result.stdout.trim()}`);
+        if (result.stderr.trim()) this.addLog(`[ssh stderr] ${result.stderr.trim()}`);
+        if (!result.ok) {
+          const msg = `${rconMsg}; SSH stop command also failed (exit ${result.exitCode}). See log for details.`;
+          this.addLog(`[Dashboard] ${msg}`);
+          return { success: false, message: msg };
+        }
+        const msg = `${rconMsg}; stop command dispatched via SSH instead.`;
         this.addLog(`[Dashboard] ${msg}`);
-        return { success: false, message: msg };
+        return { success: true, message: msg };
       }
     }
 
@@ -346,7 +372,9 @@ export class MinecraftAdapter implements ServerAdapter {
       // Tolerate leading slash and trailing args ("stop", "/stop", "stop 10").
       const firstWord = cmd.trim().toLowerCase().replace(/^\//, "").split(/\s+/)[0];
       if (firstWord === "stop" || firstWord === "restart" || firstWord === "shutdown") {
-        const msg = `'${firstWord}' is a lifecycle command — the dashboard refuses it for remote MC servers (rconHost=${this.def.rconHost}) because there's no way to bring the server back up from here. Use the launcher on the host (MCSS panel, run.bat, nssm) to restart.`;
+        const msg = this.def.lifecycle
+          ? `'${firstWord}' is a lifecycle command — the console refuses it for remote MC servers (rconHost=${this.def.rconHost}). Use the dashboard's Stop / Restart buttons instead; they go through the configured lifecycle block so the server can be brought back up.`
+          : `'${firstWord}' is a lifecycle command — the dashboard refuses it for remote MC servers (rconHost=${this.def.rconHost}) because there's no way to bring the server back up from here. Use the launcher on the host (MCSS panel, run.bat, nssm) to restart, or configure a lifecycle block in servers.json.`;
         this.addLog(`[Dashboard] ${msg}`);
         return { success: false, message: msg };
       }

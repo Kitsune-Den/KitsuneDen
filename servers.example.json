@@ -49,7 +49,7 @@
       "type": "palworld",
       "dir": "C:\\GameServers\\PalworldServer",
       "gamePort": 8211,
-      "rconPort": 25575,
+      "rconPort": 25577,
       "rconPassword": "your-rcon-password",
       "restApiPort": 8212,
       "restApiPassword": "your-admin-password",
@@ -67,8 +67,5 @@
       "gamePort": 15637,
       "queryPort": 15638
     }
-  ],
-  "dashboard": {
-    "port": 3000
-  }
+  ]
 }

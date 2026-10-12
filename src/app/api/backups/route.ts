@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withActivity } from "@/lib/activity-route";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
+import { getModsDir } from "@/lib/server-paths";
 import fs from "fs";
 import path from "path";
 import { exec } from "child_process";
@@ -50,7 +52,7 @@ export async function GET(request: NextRequest) {
   });
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   const adapter = getAdapter(getServerId(request));
   if (!adapter) {
     return NextResponse.json({ error: "Unknown server" }, { status: 404 });
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
   }
 
   const worldDir = path.join(adapter.def.dir, levelName);
-  const modsDir = path.join(adapter.def.dir, "mods");
+  const modsDir = getModsDir(adapter.def);
   const backupsDir = path.join(adapter.def.dir, "backups", type);
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupName = `minecraft-${adapter.def.id}-${timestamp}.zip`;
@@ -122,3 +124,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withActivity("backup", (body) => `Ran a ${body.type === "daily" ? "daily" : "hourly"} backup`, handlePost);

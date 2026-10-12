@@ -77,7 +77,7 @@ export default function AirdropManager() {
             onClick={() => setTab(t)}
             className={`flex-1 px-4 py-2 rounded-md text-sm font-semibold transition-all ${
               tab === t
-                ? "bg-den-cyan-glow text-den-cyan shadow-[inset_0_0_12px_rgba(79,195,247,0.1)]"
+                ? "bg-den-cyan-glow text-den-cyan"
                 : "text-den-text-muted hover:text-den-text hover:bg-den-elevated"
             }`}
           >
@@ -96,6 +96,12 @@ export default function AirdropManager() {
 
 // ======== LOOT TABLES TAB ========
 
+async function fetchLootTables(serverId: string): Promise<LootTable[]> {
+  const res = await fetch(`/api/airdrops/loot-tables?server=${serverId}`);
+  const data = await res.json();
+  return data.tables || [];
+}
+
 function LootTablesTab({ serverId }: { serverId: string }) {
   const [tables, setTables] = useState<LootTable[]>([]);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -104,26 +110,19 @@ function LootTablesTab({ serverId }: { serverId: string }) {
   const [newDesc, setNewDesc] = useState("");
   const [message, setMessage] = useState("");
 
-  const fetchTables = useCallback(async (): Promise<LootTable[]> => {
-    const res = await fetch(`/api/airdrops/loot-tables?server=${serverId}`);
-    const data = await res.json();
-    return data.tables || [];
-  }, [serverId]);
-
   const loadTables = useCallback(async () => {
     try {
-      setTables(await fetchTables());
+      setTables(await fetchLootTables(serverId));
     } catch {
       /* ignore */
     }
-  }, [fetchTables]);
+  }, [serverId]);
 
   useEffect(() => {
-    // Drop a response that lands after a server switch or unmount.
     let cancelled = false;
-    fetchTables()
-      .then((next) => {
-        if (!cancelled) setTables(next);
+    fetchLootTables(serverId)
+      .then((t) => {
+        if (!cancelled) setTables(t);
       })
       .catch(() => {
         /* ignore */
@@ -131,12 +130,13 @@ function LootTablesTab({ serverId }: { serverId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [fetchTables]);
+  }, [serverId]);
 
   const toggleExpand = (id: number) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -197,7 +197,7 @@ function LootTablesTab({ serverId }: { serverId: string }) {
       {!showCreate ? (
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg text-sm font-semibold hover:brightness-110 hover:shadow-[0_0_16px_rgba(79,195,247,0.3)] transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-den-accent-deep text-white border border-den-accent-fill rounded-lg text-sm font-semibold hover:brightness-110 transition-all"
         >
           <Plus size={16} />
           New Loot Table
@@ -205,7 +205,7 @@ function LootTablesTab({ serverId }: { serverId: string }) {
       ) : (
         <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-cyan/30 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-den-cyan">New Loot Table</h3>
+            <h3 className="den-card-title text-den-cyan">New Loot Table</h3>
             <button onClick={() => setShowCreate(false)} className="text-den-text-dim hover:text-den-text">
               <X size={16} />
             </button>
@@ -227,7 +227,7 @@ function LootTablesTab({ serverId }: { serverId: string }) {
           <button
             onClick={createTable}
             disabled={!newName.trim()}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg text-sm font-semibold hover:brightness-110 disabled:opacity-50 transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-den-accent-deep text-white border border-den-accent-fill rounded-lg text-sm font-semibold hover:brightness-110 disabled:opacity-50 transition-all"
           >
             <Plus size={14} />
             Create
@@ -236,7 +236,7 @@ function LootTablesTab({ serverId }: { serverId: string }) {
       )}
 
       {message && (
-        <div className="px-4 py-3 rounded-lg text-sm font-medium bg-[rgba(239,83,80,0.1)] text-den-red border border-den-red/30">
+        <div className="px-4 py-3 rounded-lg text-sm font-medium bg-den-red/10 text-den-red border border-den-red/30">
           {message}
         </div>
       )}
@@ -248,20 +248,20 @@ function LootTablesTab({ serverId }: { serverId: string }) {
         </div>
       ) : (
         tables.map((table) => (
-          <div key={table.id} className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
+          <div key={table.id} className="den-card overflow-hidden">
             {/* Table header */}
-            <div className="px-5 py-4 border-b border-den-border flex items-center gap-3">
+            <div className="den-card-header !justify-start gap-3">
               <button onClick={() => toggleExpand(table.id)} className="text-den-text-muted hover:text-den-text">
                 {expanded.has(table.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
               </button>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold truncate">{table.name}</h3>
+                  <h3 className="den-card-title truncate">{table.name}</h3>
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       table.isEnabled
-                        ? "bg-[rgba(102,187,106,0.15)] text-den-green"
-                        : "bg-[rgba(239,83,80,0.15)] text-den-red"
+                        ? "bg-den-green/15 text-den-green"
+                        : "bg-den-red/15 text-den-red"
                     }`}
                   >
                     {table.isEnabled ? "ENABLED" : "DISABLED"}
@@ -611,7 +611,7 @@ function SettingsTab({ serverId }: { serverId: string }) {
         <button
           onClick={saveAll}
           disabled={dirty.size === 0 || saving}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-den-cyan to-[#29b6f6] text-den-bg rounded-lg text-sm font-semibold hover:brightness-110 hover:shadow-[0_0_16px_rgba(79,195,247,0.3)] disabled:opacity-50 transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-den-accent-deep text-white border border-den-accent-fill rounded-lg text-sm font-semibold hover:brightness-110 disabled:opacity-50 transition-all"
         >
           <Save size={16} />
           Save Changes
@@ -693,9 +693,8 @@ function HistoryTab({ serverId }: { serverId: string }) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   useEffect(() => {
-    // Drop a response that lands after a server switch or unmount.
     let cancelled = false;
-    const loadHistory = async () => {
+    (async () => {
       try {
         const res = await fetch(`/api/airdrops/history?server=${serverId}`);
         const data = await res.json();
@@ -703,17 +702,16 @@ function HistoryTab({ serverId }: { serverId: string }) {
       } catch {
         /* ignore */
       }
-    };
-    loadHistory();
+    })();
     return () => {
       cancelled = true;
     };
   }, [serverId]);
 
   return (
-    <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-        <h3 className="text-sm font-bold">Drop History</h3>
+    <div className="den-card overflow-hidden">
+      <div className="den-card-header">
+        <h3 className="den-card-title">Drop History</h3>
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-den-elevated text-den-text-muted border border-den-border">
           {history.length}
         </span>

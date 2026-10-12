@@ -3,7 +3,9 @@
 import { useServer } from "@/contexts/ServerContext";
 import { useEffect, useState } from "react";
 import StatCard from "@/components/StatCard";
-import { Activity, Users, Globe, Cpu, Copy, Check } from "lucide-react";
+import MemoryAllocation from "@/components/minecraft/MemoryAllocation";
+import { Activity, Users, Globe, Cpu, Copy, Check, ArrowRight } from "lucide-react";
+import { gameMeta } from "@/lib/game-meta";
 
 interface StatsData {
   process: {
@@ -47,7 +49,35 @@ function formatUptime(seconds: number): string {
   return `${m}m`;
 }
 
-export default function DashboardPage() {
+function Meter({ label, detail, pct, barClass }: { label: string; detail: string; pct: number; barClass: string }) {
+  return (
+    <div>
+      <div className="flex justify-between items-baseline mb-2">
+        <span className="text-[13px] text-den-text-muted">{label}</span>
+        <span className="text-[12px] text-den-text font-mono tabular-nums">{detail}</span>
+      </div>
+      <div
+        className="h-1.5 bg-den-bg/80 rounded-full overflow-hidden"
+        role="meter"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(pct)}
+      >
+        <div
+          className={`h-full rounded-full transition-[width] duration-700 ${barClass}`}
+          style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface DashboardPageProps {
+  onNavigate?: (page: string) => void;
+}
+
+export default function DashboardPage({ onNavigate }: DashboardPageProps) {
   const { serverId, currentServer } = useServer();
   const [stats, setStats] = useState<StatsData | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
@@ -59,6 +89,7 @@ export default function DashboardPage() {
     if (!serverId) return;
     // Drop responses that land after a server switch or unmount.
     let cancelled = false;
+
     const fetchData = async () => {
       try {
         const [statsRes, logsRes] = await Promise.all([
@@ -66,15 +97,15 @@ export default function DashboardPage() {
           fetch(`/api/console?server=${serverId}`),
         ]);
         const statsData = await statsRes.json();
-        if (cancelled) return;
-        setStats(statsData);
         const logsData = await logsRes.json();
         if (cancelled) return;
+        setStats(statsData);
         setLogs((logsData.logs || []).slice(-15));
       } catch {
         // ignore
       }
     };
+
     fetchData();
     const interval = setInterval(fetchData, 10000);
     return () => {
@@ -125,191 +156,186 @@ export default function DashboardPage() {
       ? ((stats.process.memoryBytes / stats.system.totalMemoryBytes) * 100).toFixed(1)
       : "0";
 
+  const game = gameMeta(currentServer?.type);
+  const typeLabel =
+    currentServer?.type === "minecraft" && currentServer.loader
+      ? `${game.label} · ${currentServer.loader}`
+      : currentServer
+        ? game.label
+        : "--";
+  const status = currentServer?.status;
+  const memPctNum = Number(memPct);
+  const memBar = memPctNum > 90 ? "bg-den-red" : memPctNum > 75 ? "bg-den-amber" : "bg-den-cyan";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Stat Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
-          icon={<Activity size={24} />}
-          value={isOnline ? "Online" : "Offline"}
-          label="Server Status"
-          iconColor={isOnline ? "text-den-green" : "text-den-red"}
-          iconBg={isOnline ? "bg-[rgba(102,187,106,0.12)]" : "bg-[rgba(239,83,80,0.12)]"}
-          borderColor={isOnline ? "#2e7d32" : "#c62828"}
-          accentBar
+          icon={<Activity size={20} />}
+          value={isOnline ? "Online" : status === "starting" ? "Starting" : status === "stopping" ? "Stopping" : "Offline"}
+          label="Server status"
+          tone={isOnline ? "green" : status === "starting" || status === "stopping" ? "accent" : "dim"}
+          highlight
         />
         <StatCard
-          icon={<Users size={24} />}
+          icon={<Users size={20} />}
           value={stats?.registeredPlayers?.toString() || "--"}
           suffix={stats?.maxPlayers ? `/ ${stats.maxPlayers}` : undefined}
-          label="Registered Players"
-          iconColor="text-den-cyan"
-          iconBg="bg-[rgba(79,195,247,0.12)]"
+          label="Registered players"
+          tone="cyan"
         />
         <StatCard
-          icon={<Globe size={24} />}
+          icon={<Globe size={20} />}
           value={
             currentServer?.type === "7d2d"
               ? stats?.defaultWorld || "--"
               : stats?.worlds?.length?.toString() || "--"
           }
           label={currentServer?.type === "7d2d" ? "World" : "Worlds"}
-          iconColor="text-den-purple"
-          iconBg="bg-[rgba(171,71,188,0.12)]"
+          tone="purple"
         />
         <StatCard
-          icon={<Cpu size={24} />}
+          icon={<Cpu size={20} />}
           value={stats?.process?.memory || "--"}
-          label="Memory Usage"
-          iconColor="text-den-amber"
-          iconBg="bg-[rgba(255,167,38,0.12)]"
+          label="Server memory"
+          tone="amber"
         />
       </div>
 
       {/* Two-column grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Server Info Card */}
-        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-            <h3 className="text-sm font-bold">Server Information</h3>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-den-green-glow text-den-green border border-[rgba(102,187,106,0.25)]">
-              {stats?.gameMode || currentServer?.type || "--"}
+        <section className="den-card overflow-hidden">
+          <div className="den-card-header">
+            <h3 className="den-card-title">Server information</h3>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${game.tag}`}>
+              {stats?.gameMode || game.label}
             </span>
           </div>
-          <div className="p-5">
-            <div className="flex flex-col">
+          <div className="px-5 py-2">
+            {[
+              ["Server name", stats?.serverName || currentServer?.name || "--"],
+              ["MOTD", stats?.motd || "--"],
+              ["Version", stats?.serverVersion || currentServer?.version || "--"],
+              ["Default world", stats?.defaultWorld || "--"],
+              ["Game", typeLabel],
+            ].map(([label, value]) => (
+              <div key={label} className="den-row">
+                <span className="text-[13px] text-den-text-muted shrink-0">{label}</span>
+                <span
+                  className={`text-[13px] font-medium text-right truncate ${
+                    label === "MOTD" && value !== "--" ? "text-den-lantern" : ""
+                  }`}
+                  title={value}
+                >
+                  {value}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="px-5 pb-5 pt-2">
+            <div className="den-eyebrow mb-2">Connect</div>
+            <div className="flex flex-wrap gap-2">
               {[
-                ["Server Name", stats?.serverName || currentServer?.name || "--"],
-                ["MOTD", stats?.motd || "--"],
-                ["Version", stats?.serverVersion || currentServer?.version || "--"],
-                ["Default World", stats?.defaultWorld || "--"],
-                ["Type", currentServer?.type === "minecraft"
-                  ? `${currentServer.loader} ${currentServer.version}`
-                  : currentServer?.type === "7d2d"
-                    ? "7 Days to Die"
-                    : currentServer?.type === "hytale"
-                      ? "Hytale"
-                      : "--"],
+                ["LAN", lanConnection],
+                ["Public", publicConnection],
               ].map(([label, value]) => (
-                <div key={label} className="flex justify-between items-center py-2.5 border-b border-[rgba(42,51,85,0.5)] last:border-0">
-                  <span className="text-[13px] text-den-text-muted">{label}</span>
-                  <span className={`text-[13px] font-semibold ${label === "MOTD" ? "text-den-amber italic" : ""}`}>
-                    {value}
-                  </span>
-                </div>
+                <button
+                  key={label}
+                  onClick={() => copyConnection(value, label)}
+                  className="group flex items-center gap-2 pl-3 pr-2.5 py-1.5 bg-den-bg/60 rounded-lg border border-den-border hover:border-den-cyan/40 disabled:hover:border-den-border transition-colors text-[12px] font-mono"
+                  disabled={value === "--"}
+                  title={value === "--" ? undefined : `Copy ${label} address`}
+                >
+                  <span className="text-den-text-dim">{label}</span>
+                  <span className={value === "--" ? "text-den-text-dim" : "text-den-text"}>{value}</span>
+                  {copied === label ? (
+                    <Check size={13} className="text-den-green" />
+                  ) : (
+                    <Copy size={13} className="text-den-text-dim group-hover:text-den-cyan transition-colors" />
+                  )}
+                </button>
               ))}
             </div>
-            <div className="mt-4 pt-3 border-t border-[rgba(42,51,85,0.5)]">
-              <span className="text-[13px] text-den-text-muted">Connection Info</span>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {[
-                  ["LAN", lanConnection],
-                  ["Public", publicConnection],
-                ].map(([label, value]) => (
-                  <button
-                    key={label}
-                    onClick={() => copyConnection(value, label)}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-den-surface rounded-lg border border-den-border hover:border-den-border-light transition-colors text-[12px] font-mono font-semibold"
-                    disabled={value === "--"}
-                  >
-                    <span className="text-den-text-muted">{label}:</span>
-                    <span className={value === "--" ? "text-den-text-dim" : "text-den-text"}>
-                      {value}
-                    </span>
-                    {copied === label ? (
-                      <Check size={14} className="text-den-green" />
-                    ) : (
-                      <Copy size={14} className="text-den-text-dim" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
-        </div>
+        </section>
 
         {/* System Resources Card */}
-        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-            <h3 className="text-sm font-bold">System Resources</h3>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[rgba(79,195,247,0.1)] text-den-cyan border border-[rgba(79,195,247,0.2)]">
+        <section className="den-card overflow-hidden">
+          <div className="den-card-header">
+            <h3 className="den-card-title">System resources</h3>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold font-mono bg-den-surface text-den-text-muted border border-den-border">
               {stats?.system.hostname || "--"}
             </span>
           </div>
-          <div className="p-5 space-y-4">
-            {/* Memory Bar */}
-            <div>
-              <div className="flex justify-between mb-2 text-xs">
-                <span className="text-den-text-muted font-medium">Memory</span>
-                <span className="text-den-text font-semibold font-mono text-[11px]">
-                  {stats ? `${((memUsed / 1073741824)).toFixed(1)} GB / ${stats.system.totalMemory}` : "-- / --"}
-                </span>
-              </div>
-              <div className="h-2 bg-den-bg rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-den-cyan to-[#29b6f6] transition-all duration-600"
-                  style={{ width: `${memPct}%` }}
-                />
-              </div>
-            </div>
+          <div className="p-5 space-y-5">
+            <Meter
+              label="Host memory"
+              detail={stats ? `${(memUsed / 1073741824).toFixed(1)} GB / ${stats.system.totalMemory}` : "-- / --"}
+              pct={memPctNum}
+              barClass={memBar}
+            />
+            <Meter
+              label="Server process"
+              detail={stats?.process ? `${stats.process.memory} · ${procMemPct}%` : "Not running"}
+              pct={Number(procMemPct)}
+              barClass="bg-den-purple"
+            />
 
-            {/* Process Memory Bar */}
             <div>
-              <div className="flex justify-between mb-2 text-xs">
-                <span className="text-den-text-muted font-medium">Server Process</span>
-                <span className="text-den-text font-semibold font-mono text-[11px]">
-                  {stats?.process ? `${stats.process.memory} (${procMemPct}%)` : "Not running"}
-                </span>
-              </div>
-              <div className="h-2 bg-den-bg rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-den-purple to-[#8e24aa] transition-all duration-600"
-                  style={{ width: `${procMemPct}%` }}
-                />
-              </div>
-            </div>
-
-            {/* System Info Grid */}
-            <div className="pt-2">
               {[
-                ["CPU", stats?.system.cpuModel?.replace(/\s+/g, " ").substring(0, 40) || "--"],
+                ["CPU", stats?.system.cpuModel?.replace(/\s+/g, " ").trim().substring(0, 48) || "--"],
                 ["Cores", stats?.system.cpus?.toString() || "--"],
-                ["Uptime", stats ? formatUptime(stats.system.uptime) : "--"],
+                ["Host uptime", stats ? formatUptime(stats.system.uptime) : "--"],
                 ["PID", stats?.process?.pid?.toString() || "--"],
               ].map(([label, value]) => (
-                <div key={label} className="flex justify-between items-center py-2 border-b border-[rgba(42,51,85,0.5)] last:border-0">
-                  <span className="text-[13px] text-den-text-muted">{label}</span>
-                  <span className={`text-[13px] font-semibold ${label === "PID" ? "font-mono text-xs" : ""}`}>
+                <div key={label} className="den-row">
+                  <span className="text-[13px] text-den-text-muted shrink-0">{label}</span>
+                  <span
+                    className={`text-[13px] font-medium text-right truncate ${
+                      label === "PID" || label === "Cores" ? "font-mono tabular-nums" : ""
+                    }`}
+                    title={value}
+                  >
                     {value}
                   </span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
+      {/* Minecraft -Xms/-Xmx (renders nothing for other games / remote MC) */}
+      <MemoryAllocation />
+
       {/* Recent Log Preview */}
-      <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-          <h3 className="text-sm font-bold">Recent Log Activity</h3>
-          <span className="text-xs text-den-cyan font-medium cursor-pointer hover:underline">
-            View Full Console
-          </span>
+      <section className="den-card overflow-hidden">
+        <div className="den-card-header">
+          <h3 className="den-card-title">Recent log activity</h3>
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate("console")}
+              className="flex items-center gap-1 text-[12px] text-den-cyan font-medium hover:text-den-text transition-colors"
+            >
+              Open console <ArrowRight size={13} />
+            </button>
+          )}
         </div>
-        <div className="p-5 max-h-[200px] overflow-y-auto font-mono text-[11px] leading-7 text-den-text-muted">
+        <div className="px-5 py-4 max-h-[240px] overflow-y-auto font-mono text-[11.5px] leading-6 text-den-text-muted bg-den-bg/40">
           {logs.length === 0 ? (
             <div className="text-center py-10 text-den-text-dim text-[13px] font-sans">
-              Loading logs...
+              {isOnline ? "Waiting for log lines…" : "No recent log lines."}
             </div>
           ) : (
             logs.map((line, i) => (
               <div
                 key={i}
                 className={`whitespace-pre-wrap break-all ${
-                  line.includes("SEVERE") || line.includes("ERROR")
-                    ? "text-den-red font-semibold"
-                    : line.includes("WARN")
+                  line.includes("SEVERE") || line.includes("ERROR") || line.includes(" ERR ")
+                    ? "text-den-red"
+                    : line.includes("WARN") || line.includes(" WRN ")
                     ? "text-den-amber"
                     : ""
                 }`}
@@ -319,7 +345,7 @@ export default function DashboardPage() {
             ))
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

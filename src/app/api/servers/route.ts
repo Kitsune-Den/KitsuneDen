@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllAdapters, addServer, removeServer, updateServer } from "@/lib/adapters/adapter-registry";
 import { resolveServerStatus } from "@/lib/adapters/reachability";
+import { recordActivity, observeStatus } from "@/lib/activity";
 import { redactServerDefinition, sanitizeServerWrite } from "@/lib/server-def-security";
 
 export async function GET() {
   const adapters = getAllAdapters();
 
   const servers = await Promise.all(
-    adapters.map(async (a) => ({
-      ...redactServerDefinition(a.def),
-      status: await resolveServerStatus(a),
-      capabilities: a.capabilities,
-    }))
+    adapters.map(async (a) => {
+      const status = await resolveServerStatus(a);
+      observeStatus(a.def.id, a.def.name, status);
+      return {
+        ...redactServerDefinition(a.def),
+        status,
+        capabilities: a.capabilities,
+      };
+    })
   );
 
   return NextResponse.json({ servers });
@@ -38,7 +43,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const sanitized = sanitizeServerWrite(updates);
+    // Pass the stored definition so unchanged legacy values aren't re-validated.
+    const current = getAllAdapters().find((a) => a.def.id === serverId)?.def;
+    const sanitized = sanitizeServerWrite(updates, current);
     if (!sanitized.ok) {
       return NextResponse.json({ success: false, message: sanitized.message }, { status: 400 });
     }
@@ -48,6 +55,7 @@ export async function PUT(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json(result, { status: 404 });
     }
+    recordActivity({ level: "info", kind: "setup", message: `Updated server settings for ${serverId}`, serverId });
 
     return NextResponse.json(result);
   } catch (err) {
@@ -88,6 +96,7 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
     }
+    recordActivity({ level: "info", kind: "setup", message: `Added ${name} to the Den`, serverId: id, serverName: name });
 
     return NextResponse.json(result);
   } catch (err) {
@@ -116,8 +125,15 @@ export async function DELETE(request: NextRequest) {
     const result = await removeServer(serverId, deleteFiles ?? false);
 
     if (!result.success) {
-      return NextResponse.json(result, { status: 404 });
+      const status = result.reason === "unsafe-delete" ? 400 : 404;
+      return NextResponse.json({ success: false, message: result.message }, { status });
     }
+    recordActivity({
+      level: "warn",
+      kind: "setup",
+      message: deleteFiles ? `Deleted ${serverId} and its files` : `Removed ${serverId} from the Den (files kept)`,
+      serverId,
+    });
 
     return NextResponse.json(result);
   } catch (err) {
