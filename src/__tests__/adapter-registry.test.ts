@@ -1,11 +1,8 @@
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { addServer, updateServer, removeServer, getAdapter, getAllAdapters } from "../lib/adapters/adapter-registry";
-
-// Use a temp config file for tests
-const TEST_CONFIG_PATH = path.join(process.cwd(), "servers.test.json");
-const ORIGINAL_CONFIG_PATH = path.join(process.cwd(), "servers.json");
 
 const baseConfig = {
   servers: [
@@ -26,20 +23,19 @@ const baseConfig = {
   dashboard: { port: 3000 },
 };
 
-// We need to mock the config path since adapter-registry hardcodes process.cwd()
-// Instead, we'll test the functions by writing a real temp config
+// Point the registry at a throwaway config under the OS temp dir so tests
+// never touch the operator's real servers.json in process.cwd().
 describe("adapter-registry server management", () => {
-  let originalContent: string;
+  let tmpDir: string;
+  let configPath: string;
+  let prevEnv: string | undefined;
 
   beforeEach(() => {
-    // Save original servers.json
-    try {
-      originalContent = fs.readFileSync(ORIGINAL_CONFIG_PATH, "utf-8");
-    } catch {
-      originalContent = "";
-    }
-    // Write test config
-    fs.writeFileSync(ORIGINAL_CONFIG_PATH, JSON.stringify(baseConfig, null, 2));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "kitsuneden-registry-"));
+    configPath = path.join(tmpDir, "servers.json");
+    prevEnv = process.env.KITSUNEDEN_SERVERS_CONFIG;
+    process.env.KITSUNEDEN_SERVERS_CONFIG = configPath;
+    fs.writeFileSync(configPath, JSON.stringify(baseConfig, null, 2));
     // Clear cached config and adapters
     const g = globalThis as unknown as { __denConfig?: unknown; __denAdapters?: unknown };
     g.__denConfig = undefined;
@@ -47,10 +43,9 @@ describe("adapter-registry server management", () => {
   });
 
   afterEach(() => {
-    // Restore original servers.json
-    if (originalContent) {
-      fs.writeFileSync(ORIGINAL_CONFIG_PATH, originalContent);
-    }
+    if (prevEnv === undefined) delete process.env.KITSUNEDEN_SERVERS_CONFIG;
+    else process.env.KITSUNEDEN_SERVERS_CONFIG = prevEnv;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
     const g = globalThis as unknown as { __denConfig?: unknown; __denAdapters?: unknown };
     g.__denConfig = undefined;
     g.__denAdapters = undefined;
@@ -70,7 +65,7 @@ describe("adapter-registry server management", () => {
       expect(result.message).toContain("Test 7D2D");
 
       // Verify it's in the config file
-      const config = JSON.parse(fs.readFileSync(ORIGINAL_CONFIG_PATH, "utf-8"));
+      const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
       expect(config.servers).toHaveLength(2);
       expect(config.servers[1].id).toBe("test-7d2d");
     });
@@ -119,14 +114,14 @@ describe("adapter-registry server management", () => {
       const result = await updateServer("test-mc", { name: "Renamed MC" });
 
       expect(result.success).toBe(true);
-      const config = JSON.parse(fs.readFileSync(ORIGINAL_CONFIG_PATH, "utf-8"));
+      const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
       expect(config.servers[0].name).toBe("Renamed MC");
     });
 
     it("does not allow changing id or type", async () => {
       await updateServer("test-mc", { id: "hacked", type: "7d2d" } as any);
 
-      const config = JSON.parse(fs.readFileSync(ORIGINAL_CONFIG_PATH, "utf-8"));
+      const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
       expect(config.servers[0].id).toBe("test-mc");
       expect(config.servers[0].type).toBe("minecraft");
     });
@@ -149,7 +144,7 @@ describe("adapter-registry server management", () => {
       const result = await removeServer("test-mc", false);
 
       expect(result.success).toBe(true);
-      const config = JSON.parse(fs.readFileSync(ORIGINAL_CONFIG_PATH, "utf-8"));
+      const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
       expect(config.servers).toHaveLength(0);
     });
 

@@ -13,11 +13,22 @@ const globalForRegistry = globalThis as unknown as {
   __denConfig?: ServersConfig;
 };
 
+/**
+ * Path to the servers config. Override with KITSUNEDEN_SERVERS_CONFIG
+ * (tests use this to avoid touching the operator's real servers.json).
+ * Resolved on every call so the override can change at runtime.
+ */
+export function getConfigPath(): string {
+  return (
+    process.env.KITSUNEDEN_SERVERS_CONFIG ||
+    path.join(process.cwd(), "servers.json")
+  );
+}
+
 function loadConfig(): ServersConfig {
   if (globalForRegistry.__denConfig) return globalForRegistry.__denConfig;
 
-  const configPath = path.join(process.cwd(), "servers.json");
-  const raw = fs.readFileSync(configPath, "utf-8");
+  const raw = fs.readFileSync(getConfigPath(), "utf-8");
   const config: ServersConfig = JSON.parse(raw);
   globalForRegistry.__denConfig = config;
   return config;
@@ -83,8 +94,7 @@ export async function addServer(
   }
 
   config.servers.push(def);
-  const configPath = path.join(process.cwd(), "servers.json");
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  fs.writeFileSync(getConfigPath(), JSON.stringify(config, null, 2));
 
   const map = getAdapterMap();
   map.set(def.id, createAdapter(def));
@@ -106,8 +116,7 @@ export async function updateServer(
   const { id: _id, type: _type, ...safeUpdates } = updates;
   config.servers[idx] = { ...config.servers[idx], ...safeUpdates };
 
-  const configPath = path.join(process.cwd(), "servers.json");
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  fs.writeFileSync(getConfigPath(), JSON.stringify(config, null, 2));
 
   // Rebuild the adapter with updated definition
   const map = getAdapterMap();
@@ -137,8 +146,7 @@ export async function removeServer(
 
   // Remove from config
   config.servers = config.servers.filter((s) => s.id !== serverId);
-  const configPath = path.join(process.cwd(), "servers.json");
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  fs.writeFileSync(getConfigPath(), JSON.stringify(config, null, 2));
 
   // Delete server files from disk if requested
   if (deleteFiles && def.dir) {
