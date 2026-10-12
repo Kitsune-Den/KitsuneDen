@@ -64,7 +64,7 @@ describe("adapter-registry server management", () => {
         type: "7d2d",
         dir: "C:\\fake\\7d2d-server",
         gamePort: 26900,
-      } as any);
+      });
 
       expect(result.success).toBe(true);
       expect(result.message).toContain("Test 7D2D");
@@ -81,7 +81,7 @@ describe("adapter-registry server management", () => {
         name: "Duplicate",
         type: "minecraft",
         dir: "C:\\fake\\other",
-      } as any);
+      });
 
       expect(result.success).toBe(false);
       expect(result.message).toContain("already exists");
@@ -93,7 +93,7 @@ describe("adapter-registry server management", () => {
         name: "",
         type: "minecraft",
         dir: "C:\\fake\\other",
-      } as any);
+      });
 
       expect(result.success).toBe(false);
       expect(result.message).toContain("Missing required fields");
@@ -106,7 +106,7 @@ describe("adapter-registry server management", () => {
         type: "minecraft",
         dir: "C:\\fake\\new",
         gamePort: 25567,
-      } as any);
+      });
 
       const adapter = getAdapter("test-new");
       expect(adapter).toBeDefined();
@@ -124,7 +124,7 @@ describe("adapter-registry server management", () => {
     });
 
     it("does not allow changing id or type", async () => {
-      await updateServer("test-mc", { id: "hacked", type: "7d2d" } as any);
+      await updateServer("test-mc", { id: "hacked", type: "7d2d" });
 
       const config = JSON.parse(fs.readFileSync(ORIGINAL_CONFIG_PATH, "utf-8"));
       expect(config.servers[0].id).toBe("test-mc");

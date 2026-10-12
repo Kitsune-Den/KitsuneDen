@@ -1,4 +1,4 @@
-import { ChildProcess, spawn } from "child_process";
+import { ChildProcess, exec, spawn } from "child_process";
 import net from "net";
 import fs from "fs";
 import path from "path";
@@ -593,7 +593,6 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
       // Get memory usage via PowerShell
       try {
         const result = await new Promise<string>((resolve, reject) => {
-          const { exec } = require("child_process");
           exec(
             `powershell -NoProfile -Command "(Get-Process -Id ${child.pid}).WorkingSet64"`,
             { timeout: 5000 },
