@@ -2,6 +2,7 @@ import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { resolveServerPath } from "../server-paths";
 import type {
   ServerAdapter,
   ServerDefinition,
@@ -404,7 +405,7 @@ export class HytaleAdapter implements ServerAdapter {
     }
 
     const flag = type === "daily" ? "-Daily" : "";
-    const scriptPath = path.join(this.def.dir, this.def.backupScript);
+    const scriptPath = resolveServerPath(this.def.dir, this.def.backupScript);
 
     try {
       const output = await execAsync(

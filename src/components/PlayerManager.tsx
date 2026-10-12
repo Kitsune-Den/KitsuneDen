@@ -137,6 +137,10 @@ export default function PlayerManager() {
   const isMinecraft = currentServer?.type === "minecraft";
   const is7d2d = currentServer?.type === "7d2d";
   const isPalworld = currentServer?.type === "palworld";
+  // Remote MC (rconHost set): roster files on the dashboard host are a stub,
+  // so whitelist/ban/OP state shown here can't be trusted. Mutations go over
+  // RCON (see /api/players), which takes effect immediately.
+  const isRemoteMc = isMinecraft && !!currentServer?.rconHost;
 
   const post7d2dAction = async (action: string, payload: Record<string, unknown>) => {
     setBusyAction(action);
@@ -203,7 +207,9 @@ export default function PlayerManager() {
           return;
         }
       }
-      setMessage("Player updated. Restart server for changes to take effect.");
+      setMessage(
+        isRemoteMc ? "Player updated via RCON." : "Player updated. Restart server for changes to take effect."
+      );
       setNameInput("");
       setUuidInput("");
       loadPlayers();
@@ -220,7 +226,7 @@ export default function PlayerManager() {
     try {
       const result = await postAction(action, payload);
       if (result.success) {
-        setMessage(success);
+        setMessage(isRemoteMc && result.message ? `RCON: ${result.message}` : success);
         loadPlayers();
       } else {
         setMessage(result.message || result.error || "Action failed.");
@@ -234,6 +240,14 @@ export default function PlayerManager() {
 
   return (
     <div className="space-y-4">
+      {isRemoteMc && (
+        <div className="px-4 py-3 rounded-lg text-[12px] bg-den-amber/10 text-den-amber border border-den-amber/30">
+          This server is remote (rconHost {currentServer?.rconHost}). The roster files the dashboard can read are a
+          local stub, so OP / whitelist / ban status below may not match the live server. The buttons send the
+          matching RCON command (op, deop, whitelist add/remove, ban, pardon) and take effect immediately.
+        </div>
+      )}
+
       {isMinecraft && (
         <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-den-border">
@@ -440,7 +454,32 @@ export default function PlayerManager() {
                         </button>
                       </div>
                     )}
-                    {isMinecraft && (
+                    {isRemoteMc && (
+                      // State unknown for remote servers, so offer both directions
+                      // instead of a toggle whose label could be wrong.
+                      <div className="grid grid-cols-2 gap-1 ml-3 shrink-0 text-[11px]">
+                        {(
+                          [
+                            ["op-add", "OP"],
+                            ["op-remove", "De-OP"],
+                            ["whitelist-add", "Whitelist"],
+                            ["whitelist-remove", "Un-WL"],
+                            ["ban-add", "Ban"],
+                            ["ban-remove", "Pardon"],
+                          ] as const
+                        ).map(([action, label]) => (
+                          <button
+                            key={action}
+                            onClick={() => handleToggle(action, { uuid: player.uuid, name: player.name }, "Sent via RCON.")}
+                            disabled={busyAction === action}
+                            className="px-2 py-1 rounded-md border border-den-border text-den-text-muted hover:bg-den-surface transition-colors"
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {isMinecraft && !isRemoteMc && (
                       <div className="flex flex-col gap-1.5 ml-3 shrink-0 text-[11px]">
                         <button
                           onClick={() =>
@@ -742,8 +781,8 @@ export default function PlayerManager() {
                 <div className="min-w-0">
                   <div className="text-[13px] font-semibold truncate">{entry.name || "Unknown"}</div>
                   <div className="text-[11px] text-den-text-dim font-mono">{entry.uuid || "--"}</div>
-                  {entry.expiresOn && (
-                    <div className="text-[10px] text-den-text-dim">Seen: {String(entry.expiresOn)}</div>
+                  {typeof entry.expiresOn === "string" && (
+                    <div className="text-[10px] text-den-text-dim">Seen: {entry.expiresOn}</div>
                   )}
                 </div>
                 <div className="flex flex-col gap-1 text-[11px]">

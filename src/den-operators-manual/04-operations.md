@@ -166,7 +166,7 @@ This is useful for maintaining different mod configurations (a creative building
 
 ### Setting Memory
 
-In the **ServerControl** panel, use the **Min Memory** and **Max Memory** dropdowns to allocate JVM heap memory. The range is **1 GB to 32 GB**.
+On the **Dashboard** page, use the **Min** and **Max** dropdowns in the **Memory Allocation** card to allocate JVM heap memory. The range is **1 GB to 32 GB**.
 
 Changes are saved to `dashboard-config.json` in the active server's directory.
 

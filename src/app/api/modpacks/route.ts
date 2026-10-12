@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
+import { getModsDir } from "@/lib/server-paths";
 
 function getServerId(request: NextRequest): string {
   return request.nextUrl.searchParams.get("server") || getDefaultServerId();
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Pack not found" }, { status: 404 });
     }
 
-    const modsDir = path.join(adapter.def.dir, "mods");
+    const modsDir = getModsDir(adapter.def);
     const libraryDir = getLibraryDir(adapter.def.dir);
     await fs.mkdir(modsDir, { recursive: true });
 

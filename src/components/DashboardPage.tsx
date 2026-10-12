@@ -3,6 +3,7 @@
 import { useServer } from "@/contexts/ServerContext";
 import { useEffect, useState, useCallback } from "react";
 import StatCard from "@/components/StatCard";
+import MemoryAllocation from "@/components/minecraft/MemoryAllocation";
 import { Activity, Users, Globe, Cpu, Copy, Check } from "lucide-react";
 
 interface StatsData {
@@ -281,6 +282,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Minecraft -Xms/-Xmx (renders nothing for other games / remote MC) */}
+      <MemoryAllocation />
 
       {/* Recent Log Preview */}
       <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">

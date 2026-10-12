@@ -17,6 +17,8 @@ interface ServerInfo {
   loader?: string;
   version?: string;
   gamePort?: number;
+  /** Set for Minecraft servers that live on another host. */
+  rconHost?: string;
   capabilities: {
     hasRcon: boolean;
     hasMods: boolean;

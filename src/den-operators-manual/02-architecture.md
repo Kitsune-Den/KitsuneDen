@@ -44,12 +44,11 @@ F:\
         components\
           DashboardContent.tsx    Main layout with header + server info
           ServerSwitcher.tsx      Fabric/NeoForge tab buttons with status dots
-          ServerControl.tsx       Start/Stop/Restart + Memory allocation dropdowns
+          ServerControl.tsx       Floating Start/Stop/Restart bar on the dashboard
           Console.tsx             SSE log stream, command input, history (up/down)
           ServerStats.tsx         Memory bars, canvas sparkline, CPU/uptime grid
-          ConnectionInfo.tsx      LAN + Public IP with click-to-copy
           ConfigEditor.tsx        Grouped property editor with dropdowns for gamemode/difficulty
-          ModManager.tsx          Upload/list/remove mods from active mods/ folder
+          minecraft\MemoryAllocation.tsx  Min/Max JVM memory dropdowns (Dashboard page, local MC only)
           ModPacks.tsx            Create/activate/manage mod packs + library uploads
           PlayerManager.tsx       Whitelist/Op/Ban/Kick controls + player lists
         contexts\

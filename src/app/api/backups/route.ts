@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
+import { getModsDir } from "@/lib/server-paths";
 import fs from "fs";
 import path from "path";
 import { exec } from "child_process";
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
   }
 
   const worldDir = path.join(adapter.def.dir, levelName);
-  const modsDir = path.join(adapter.def.dir, "mods");
+  const modsDir = getModsDir(adapter.def);
   const backupsDir = path.join(adapter.def.dir, "backups", type);
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupName = `minecraft-${adapter.def.id}-${timestamp}.zip`;

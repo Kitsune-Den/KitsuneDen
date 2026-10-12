@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
+import { getModsDir } from "@/lib/server-paths";
 
 function getServerId(request: NextRequest): string {
   return request.nextUrl.searchParams.get("server") || getDefaultServerId();
-}
-
-function getModsDir(adapter: { def: { dir: string; modsDir?: string } }): string {
-  return path.join(adapter.def.dir, adapter.def.modsDir || "mods");
 }
 
 async function getDirSize(dirPath: string): Promise<number> {
@@ -51,7 +48,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Mods not available for this server" }, { status: 404 });
   }
 
-  const modsDir = getModsDir(adapter);
+  const modsDir = getModsDir(adapter.def);
   try {
     const entries = await fs.readdir(modsDir, { withFileTypes: true });
     const files = await Promise.all(
@@ -95,7 +92,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, message: "No files uploaded" }, { status: 400 });
   }
 
-  const modsDir = getModsDir(adapter);
+  const modsDir = getModsDir(adapter.def);
   await fs.mkdir(modsDir, { recursive: true });
 
   const saved: string[] = [];
@@ -161,7 +158,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: false, message: "Missing file name" }, { status: 400 });
   }
 
-  const modsDir = getModsDir(adapter);
+  const modsDir = getModsDir(adapter.def);
   const safeName = path.basename(name);
   const target = path.join(modsDir, safeName);
 

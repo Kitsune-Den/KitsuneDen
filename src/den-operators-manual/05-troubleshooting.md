@@ -218,7 +218,7 @@ Either approach works. The permanent fix is cleaner if you use PowerShell regula
 
 **Remedies:**
 1. Check if both servers are running: `tasklist | findstr java` — if you see two Java processes, consider stopping the one you don't need
-2. Reduce the max memory allocation via the Memory dropdowns in the ServerControl panel
+2. Reduce the max memory allocation via the Memory Allocation card on the Dashboard page
 3. Remove heavy mods (world generation mods and shader-adjacent mods tend to be the hungriest)
 4. Restart the server — Java doesn't return freed heap memory to the OS, but a fresh start resets the baseline
 
