@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   SESSION_COOKIE_NAME,
   SESSION_TTL_SECONDS,
+  SESSION_SECRET_ERROR,
   checkPassword,
   isAuthConfigured,
+  isSessionSecretConfigured,
+  shouldUseSecureCookie,
   signSession,
 } from "@/lib/auth";
 
@@ -13,7 +16,10 @@ import {
  *
  * On success: sets the HttpOnly session cookie and returns 200 { ok: true }.
  * On wrong password: 401 { ok: false, error: "..." }.
- * On unconfigured server: 503 — tells the operator to set KITSUNEDEN_PASSWORD.
+ * On unconfigured server: 503 — tells the operator to set KITSUNEDEN_PASSWORD
+ * and/or KITSUNEDEN_SESSION_SECRET. Both are checked before the password so a
+ * half-configured server fails clearly instead of issuing a cookie the proxy
+ * can't verify (which looked like "login succeeds, then bounces back").
  *
  * We intentionally don't rate-limit here yet. Behind Cloudflare Access or on
  * a tailnet that's fine; if/when KitsuneDen ever sits on a raw public IP
@@ -29,6 +35,9 @@ export async function POST(request: NextRequest) {
       },
       { status: 503 }
     );
+  }
+  if (!isSessionSecretConfigured()) {
+    return NextResponse.json({ ok: false, error: SESSION_SECRET_ERROR }, { status: 503 });
   }
 
   let body: { password?: unknown };
@@ -51,7 +60,7 @@ export async function POST(request: NextRequest) {
     value: cookieValue,
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookie(request),
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
   });

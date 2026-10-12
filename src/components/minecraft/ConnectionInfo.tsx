@@ -27,8 +27,8 @@ export default function ConnectionInfo() {
   };
 
   return (
-    <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl p-5">
-      <h3 className="text-sm font-bold mb-3">Connection Info</h3>
+    <div className="den-card p-5">
+      <h3 className="den-card-title mb-3">Connection Info</h3>
       <div className="flex gap-4 flex-wrap">
         <button
           onClick={() => copyToClipboard(lanIp, "lan")}

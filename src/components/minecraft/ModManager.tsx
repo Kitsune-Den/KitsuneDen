@@ -11,10 +11,10 @@ export default function ModManager() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-den-border flex items-center gap-2">
+    <div className="den-card overflow-hidden">
+      <div className="den-card-header !justify-start gap-2">
         <Package size={16} className="text-den-cyan" />
-        <h3 className="text-sm font-bold">Mod Manager</h3>
+        <h3 className="den-card-title">Mod Manager</h3>
       </div>
       <div className="p-5">
         <div className="text-center py-10 text-den-text-dim text-[13px]">

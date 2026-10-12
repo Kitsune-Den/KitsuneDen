@@ -15,283 +15,352 @@
 
 *When a spirit grows restless, here is how to calm her. Practical fixes for real problems.*
 
-Every workshop has its creaky floorboards. The Den is no different — ports get tangled, processes linger, and occasionally a spirit refuses to wake. This chapter covers the problems you will actually encounter, with clear remedies for each.
-
-Every issue follows the same format: what you see, why it happened, how to fix it, and a brief observation from the Den.
+Every workshop has its creaky floorboards. Ports get tangled, processes linger, and occasionally a spirit refuses to wake. Each issue below follows the same shape: what you see, why it happens, how to fix it, and a brief word from the Den.
 
 ---
 
 ## 1. Dashboard Not Loading
 
 **Symptoms:**
-- Browser shows a blank page at `localhost:3000`
-- "Cannot connect" or "This site can't be reached" error
-- `localhost` refuses the connection entirely
+- "This site can't be reached" at `localhost:3001`
+- The page loads but every panel is empty or shows errors
 
 **Likely Causes:**
-- The dashboard process isn't running
-- The process started but crashed during initialization
-- Wrong port (you're checking the wrong service)
-- Missing `node_modules` — dependencies were never installed or got corrupted
+- The dashboard process isn't running, or crashed during startup
+- You're on the wrong port (it's **3001**, not 3000)
+- `node_modules` is missing or stale
+- `servers.json` is missing or isn't valid JSON, so every server-aware API call fails
 
 **Remedies:**
-1. Check if the process is running: open a terminal and run `tasklist | findstr node`
-2. If nothing shows up, the dashboard isn't running. Start it manually:
-   - `cd F:\MinecraftServer\dashboard && npm run dev`
-3. Watch the terminal output for errors. If you see module-not-found errors, run `npm install` in the dashboard directory
-4. If the process is running but the page is blank, try a hard refresh (Ctrl+Shift+R) or check a different browser
+1. Check for a running Node process: `tasklist | findstr node`
+2. Start it by hand from the repo root with `npm run dev` and read the terminal output
+3. Module-not-found errors: run `npm install`. If `better-sqlite3` complains about its native binding, `npm rebuild better-sqlite3`
+4. Make sure `servers.json` exists at the repo root (copy `servers.example.json` if not) and parses as JSON
+5. If the page is up but stale, hard-refresh (Ctrl+Shift+R)
 
 > **Den Note:** *A lantern that won't light usually just needs its wick trimmed. Check the simplest explanation first.*
 
 ---
 
-## 2. Port Already in Use
+## 2. Stuck at the Gate (Login Problems)
 
 **Symptoms:**
-- `EADDRINUSE` error in the Node.js console
-- `Address already in use` or `FAILED TO BIND TO PORT` in the Java server output
-- Dashboard or server exits immediately after starting
+- The login page shows a **setup** banner instead of a password box
+- API calls return `503` with "Auth not configured" or "KITSUNEDEN_SESSION_SECRET missing or too short"
+- You sign in, the page reloads, and you're back at the login screen
 
 **Likely Causes:**
-- A leftover Java process from a previous server session is still holding the port
-- Another service on the machine claimed the port
-- A zombie dashboard process is lingering in the background
+- `KITSUNEDEN_PASSWORD` isn't set
+- `KITSUNEDEN_SESSION_SECRET` is missing or shorter than 32 characters
+- `.env` was edited but the dashboard wasn't restarted
+- A proxy in front of the Den sets `X-Forwarded-Proto: https` while the browser is actually on plain HTTP, so the cookie comes back `Secure` and the browser drops it
+
+**Remedies:**
+1. Check `.env` at the repo root (or the service's environment, if the Den runs as a service). Both variables must be present, and the secret must be 32+ characters
+2. Restart the dashboard after any change to them
+3. If you're in production mode and the sign-in loops, reach the Den over HTTPS, or from `localhost` on the host itself. `npm run dev` doesn't set the `Secure` flag, which makes it a quick way to confirm this is the cause
+
+> **Den Note:** *The gate isn't being difficult. It just won't open for a key it can't remember.*
+
+---
+
+## 3. Port Already in Use
+
+**Symptoms:**
+- `EADDRINUSE` in the dashboard's output
+- `Address already in use` or `FAILED TO BIND TO PORT` in a game server's output
+- A server exits immediately after starting
+
+**Likely Causes:**
+- A leftover Java process from a previous session is still holding the port
+- Two spirits are configured with the same port. The classic: **Minecraft RCON and Palworld RCON both default to 25575**
+- A zombie dashboard process is lingering
 
 **Remedies:**
 1. Find what's on the port:
    ```
    netstat -ano | findstr :<port>
    ```
-   Replace `<port>` with the number (e.g., 3000, 25565).
-
-2. Identify the process using the PID from the output:
+2. Identify it from the PID:
    ```
    powershell -Command "Get-CimInstance Win32_Process -Filter 'ProcessId=<PID>' | Select CommandLine"
    ```
-
-3. If it's safe to kill (a leftover Java or Node process, not a system service):
+3. If it's safely a leftover Java or Node process (not a system service):
    ```
    taskkill /PID <PID> /F
    ```
+4. If two servers genuinely want the same port, change one of them in its own config and in `servers.json`
+5. Start the server again
 
-4. Now restart the dashboard or server.
-
-This is the **most common issue in the Den**. Leftover Java processes from previous server runs are the usual culprit. When in doubt, check for zombies before starting anything.
+This is the most common issue in the Den. When in doubt, look for zombies before starting anything.
 
 > **Den Note:** *Spirits don't always leave when asked. Sometimes you have to show them the door.*
 
 ---
 
-## 3. PowerShell Execution Policy Blocking npm
+## 4. PowerShell Execution Policy Blocking npm
 
 **Symptoms:**
-- `UnauthorizedAccess` error when running `npm run dev` in PowerShell
-- The command is recognized but PowerShell refuses to execute the underlying script
+- `UnauthorizedAccess` when running `npm run dev` in PowerShell
 
 **Likely Causes:**
-- PowerShell's default execution policy (`Restricted`) blocks all script execution, and `npm run dev` invokes a `.ps1` script internally
+- PowerShell's default policy blocks scripts, and `npm` on Windows is a `.ps1` shim
 
 **Remedies:**
 
-**Permanent fix** — allow locally-authored scripts to run:
+**Permanent fix**: allow locally authored scripts:
 ```
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-**Quick workaround** — bypass PowerShell entirely:
+**Quick workaround**: skip PowerShell:
 ```
 cmd /c "npm run dev"
 ```
-
-Either approach works. The permanent fix is cleaner if you use PowerShell regularly.
 
 > **Den Note:** *PowerShell means well. It just doesn't know this particular fox is friendly.*
 
 ---
 
-## 4. "Unable to Access Jarfile" Error
+## 5. "Unable to Access Jarfile"
 
 **Symptoms:**
-- Server startup fails immediately with a message like `Error: Unable to access jarfile server.jar`
-- No Java process appears in the task list
+- A manual launch fails at once with `Error: Unable to access jarfile ...`
 
 **Likely Causes:**
-- Running `start.bat` or `run.bat` from the wrong directory. The jar paths inside those scripts are relative, so they only work when your working directory is the server's root.
+- Running `start.bat` or `run.bat` from the wrong directory. The paths inside are relative
 
 **Remedies:**
-1. Make sure you `cd` into the correct server directory first:
-   - Fabric: `cd F:\MinecraftServer\server`
-   - NeoForge: `cd F:\MinecraftServer\server-neoforge`
-2. Then run the startup script from that directory
-3. If starting via the dashboard, this isn't an issue — the dashboard sets the working directory automatically
+1. `cd` into the server's own directory first, then run the script
+2. From the dashboard, check that `jar` in `servers.json` names a file that really exists in `dir` (it defaults to `server.jar`)
 
 > **Den Note:** *A spirit can't find her jar if you call from another room. Stand in the right doorway.*
 
 ---
 
-## 5. Server Won't Start from Dashboard
+## 6. Server Won't Start from the Dashboard
 
 **Symptoms:**
-- Click the Start button in the ServerControl panel — nothing happens
-- The process starts but exits immediately (the status dot flickers and goes red)
-- Console shows a brief flash of output then goes silent
+- You press Start and nothing seems to happen
+- The status flickers to starting and falls back to stopped
+- The console shows a short burst of output, then silence
 
-**Likely Causes:**
-- Java is not on the system PATH
-- The port the server needs is already in use (see issue #2)
-- The EULA hasn't been accepted
-- Corrupted server files or missing jar
+**Likely Causes and Remedies (read the console first, it usually says which):**
 
-**Remedies:**
-1. **Check the console first** — it will usually tell you exactly what went wrong
-2. Verify Java is accessible: open a terminal and run `java -version`. If it's not found, install Java or add it to your PATH
-3. Check `eula.txt` in the server directory — it must contain `eula=true`
-4. Check that the server's port isn't already occupied (see issue #2)
-5. If the jar file is missing or corrupted, re-download it from the mod loader's official source
+| Message or symptom | Fix |
+|---|---|
+| `spawn java ENOENT` | Java isn't on PATH. Install it, or set `javaPath` to the full path of `java.exe` |
+| EULA complaint | Set `eula=true` in `eula.txt` in the server directory |
+| `7DaysToDieServer.exe not found` | `dir` points at the wrong folder |
+| `enshrouded_server.exe not found` | Run the Update page (SteamCMD) first, or fix `dir` |
+| `Cannot start a remote MC server (rconHost=...)` | Expected. Add a `lifecycle` block, or start it on its own machine |
+| "Server is already running" | The dashboard already sees a process for her. Check for a zombie (issue 3) |
+| Port bind errors | See issue 3 |
 
 > **Den Note:** *When a spirit won't wake, read her journal first. The console almost always explains.*
 
 ---
 
-## 6. Mods Not Loading or Crashing
+## 7. Status Looks Wrong
 
 **Symptoms:**
-- Server crashes on startup after adding new mods
-- Server starts but mods appear inactive (items/blocks/features missing)
-- Console shows `ClassNotFoundException`, `MixinApplyError`, or loader-specific errors
+- A server is clearly up (players are on) but the dashboard says stopped
+- A server is stuck on "starting"
 
 **Likely Causes:**
-- **Wrong loader:** A Fabric mod placed in the NeoForge server (or vice versa)
-- **Wrong Minecraft version:** The mod was built for a different MC version than the server runs
-- **Mod conflicts:** Two mods that modify the same system in incompatible ways
+- The reachability probe has nothing to knock on. Status comes from a TCP connection to one port (Chapter 2, section 4):
+  - Minecraft: `gamePort` on `rconHost` or 127.0.0.1
+  - 7 Days to Die: `telnetPort`
+  - Palworld: `rconPort`, else `restApiPort`
+  - Hytale: `gamePort`, else the process list
+  - Enshrouded: the process list only
+- The port is set wrong in `servers.json`, or the service listens on a different interface
+- Palworld and Enshrouded wait up to two minutes after Start for their process to appear before giving up
 
 **Remedies:**
-1. Check the mod's page or filename — confirm it's for the correct loader (Fabric or NeoForge) AND the correct Minecraft version
-2. Remove recently added mods one at a time to isolate the culprit
-3. Read the console error output carefully — it usually names the problematic mod
-4. If using a mod pack, try reverting to the previous pack to confirm the issue is mod-related
+1. Make sure the probe port is set in `servers.json` and matches what the server actually listens on
+2. For 7 Days to Die, enable telnet in `serverconfig.xml` and set `telnetPort`
+3. For Hytale, make sure `processFilter` matches something in the server's Java command line
+4. Probe results are cached for 5 seconds. Give it a moment after a change
+
+> **Den Note:** *If you can't hear a spirit, check that you're knocking on the right door.*
+
+---
+
+## 8. Remote Minecraft Won't Answer
+
+**Symptoms:**
+- Players and online lists are empty for a remote server
+- `RCON stop failed` or `[RCON Error]` lines in the console
+- Start over SSH reports `SSH start command failed (exit ...)`
+
+**Likely Causes:**
+- RCON isn't enabled on the remote server, is bound only to 127.0.0.1 there, or a firewall blocks it
+- `rconPort` or `rconPassword` in `servers.json` doesn't match the remote `server.properties`
+- SSH problems: `ssh.exe` missing from PATH, no key-based login (the dashboard uses `BatchMode=yes`, so it never prompts for a password), or the key file isn't readable by the account the dashboard runs as
+
+**Remedies:**
+1. On the remote host, check `server.properties`: `enable-rcon=true`, the right `rcon.port` and `rcon.password`, and nothing restricting RCON to localhost
+2. Allow the RCON port through the remote host's firewall for the dashboard's address
+3. Test SSH by hand **as the same account the dashboard runs as**:
+   ```
+   ssh -i <identityFile> -o BatchMode=yes <user>@<host> "powershell -NoProfile -Command Get-Date"
+   ```
+   If that fails, the dashboard will too. If the Den runs as a service under LocalSystem, the key file must be readable by SYSTEM
+4. Read the `[ssh stdout]` and `[ssh stderr]` lines in the console. They are the remote side's own words
+
+> **Den Note:** *Calling across the house only works if someone on the other side is listening, and the door between you is unlocked.*
+
+---
+
+## 9. Mods Not Loading or Crashing
+
+**Symptoms:**
+- Server crashes on startup after adding mods
+- Server starts but the mods seem absent
+- `ClassNotFoundException`, `MixinApplyError`, or loader-specific errors in the console
+
+**Likely Causes:**
+- **Wrong loader:** a Fabric mod on a NeoForge server, or the reverse
+- **Wrong game version:** built for a different Minecraft version
+- **Conflicts:** two mods changing the same system incompatibly
+- **Leftovers:** activating a pack adds mods but never removes old ones
+
+**Remedies:**
+1. Confirm each mod's loader and version against the server's
+2. Remove recent additions one at a time to find the culprit
+3. Read the console error; it usually names the mod
+4. Clear `mods\` and reactivate the pack to rule out leftovers
 
 > **Den Note:** *A fox wearing a cat's collar will still trip. Every mod must match its loader.*
 
 ---
 
-## 7. RCON Connection Refused
+## 10. RCON Connection Refused
 
 **Symptoms:**
-- Dashboard features that rely on RCON don't respond
-- Console shows RCON-related connection errors
-- Player commands or server queries fail silently
+- No online players on Minecraft or Palworld
+- Palworld kick, ban, save, and broadcast fail
+- Remote Minecraft commands fail
 
 **Likely Causes:**
-- RCON is disabled in `server.properties` (`enable-rcon=false`)
-- The RCON port or password in `.env.local` doesn't match what's in `server.properties`
-- The server hasn't fully started yet — RCON only becomes available after the "Done!" message
+- RCON is disabled in the game's own config
+- `rconPort` or `rconPassword` in `servers.json` doesn't match the game's config
+- The server hasn't finished starting. Minecraft opens RCON only after its "Done!" line
 
 **Remedies:**
-1. Open `server.properties` in the server directory and verify:
-   ```
-   enable-rcon=true
-   rcon.port=25575       # (or 25576 for NeoForge)
-   rcon.password=<your-password>
-   ```
-2. Check that `.env.local` in `F:\MinecraftServer\dashboard\` has matching values
-3. Wait for the server to fully start — look for the "Done!" line in the console before testing RCON
-4. Restart the server if you changed any RCON settings (they're read at startup)
+1. Minecraft: in `server.properties`, set `enable-rcon=true`, `rcon.port`, and `rcon.password`
+2. Palworld: in `PalWorldSettings.ini`, set `RCONEnabled=True` and `RCONPort`. With no `rconPassword` in `servers.json`, the dashboard uses the ini's `AdminPassword`
+3. Make the values in `servers.json` match, then restart the dashboard if you edited the file by hand
+4. Restart the game server after changing RCON settings; they're read at boot
 
 > **Den Note:** *RCON is a patient listener, but she only opens her door once the hearth is warm.*
 
 ---
 
-## 8. High Memory Usage
+## 11. Players Page Empty or Incomplete
 
 **Symptoms:**
-- System feels sluggish, fans running hard
-- Java process consuming far more RAM than expected
-- Dashboard's ServerStats shows memory near the maximum allocation
-- Windows itself starts swapping to disk
+- No players listed, or online players missing
+
+**Likely Causes and Remedies:**
+
+| Spirit | Cause | Remedy |
+|---|---|---|
+| Minecraft | RCON unavailable, so only roster files show | Fix RCON (issue 10) |
+| Minecraft (remote) | Roster lists come from the stub `dir` on the dashboard host | Expected; online players and roster actions still go over RCON |
+| 7 Days to Die | The dashboard empties `logs\7d2d-server.log` on each start, and a server launched elsewhere may log to another path | Players reappear as they log in; launch through the dashboard if you want the history kept in one place |
+| 7 Days to Die | No online tags | Set `telnetPort` / `telnetPassword` |
+| Palworld | Lists only who is online right now | Expected |
+| Enshrouded | List is built from log lines read since the dashboard started | Expected after a dashboard restart |
+
+> **Den Note:** *Some spirits keep a guest book. Others only remember the faces in the room.*
+
+---
+
+## 12. High Memory Usage
+
+**Symptoms:**
+- The machine feels sluggish; fans running hard
+- The Dashboard page shows a process near its allocation, or the host nearly out of memory
 
 **Likely Causes:**
-- Memory allocation set too high for the machine's available RAM
-- Too many heavy mods loaded simultaneously
-- Both Fabric AND NeoForge servers running at the same time (each consumes its own allocation)
-- Memory leak in a mod (rare but possible over long uptimes)
+- Minecraft heap set too high for the machine
+- Several servers awake at once, each with its own appetite
+- Heavy mods (world generation is usually the hungriest)
+- A slow leak in a mod over long uptimes
 
 **Remedies:**
-1. Check if both servers are running: `tasklist | findstr java` — if you see two Java processes, consider stopping the one you don't need
-2. Reduce the max memory allocation via the Memory dropdowns in the ServerControl panel
-3. Remove heavy mods (world generation mods and shader-adjacent mods tend to be the hungriest)
-4. Restart the server — Java doesn't return freed heap memory to the OS, but a fresh start resets the baseline
+1. `tasklist | findstr java`. Stop any server nobody is using
+2. Lower `maxMemoryGB` in that server's `dashboard-config.json`, then restart it
+3. Trim heavy mods
+4. Restart the server. Java rarely hands freed heap back to the OS, so a fresh start resets the baseline
 
 > **Den Note:** *Two spirits sharing one hearth will both grow cold. Give each the warmth she needs, but not more than the workshop can provide.*
 
 ---
 
-## 9. Bitdefender Blocking Startup Scripts
+## 13. Antivirus Blocking Startup Scripts
 
 **Symptoms:**
-- `.bat` files placed in `shell:startup` don't execute on boot
-- Files get quarantined or flagged by Bitdefender
-- The dashboards used to auto-start but stopped after a Bitdefender update
+- `.bat` files in `shell:startup` don't run on boot, or get quarantined
+- The Den used to auto-start and stopped after an antivirus update
 
 **Likely Causes:**
-- Bitdefender's behavioral analysis flags batch file execution from startup locations as potentially suspicious. This is a known behavior, not a bug.
+- Bitdefender (and others) flag batch files launched from startup locations. Known behavior, not a bug
 
 **Remedies:**
-- **Use Task Scheduler instead of `shell:startup`.** This is the standard approach for the Den. Task Scheduler jobs are not flagged the same way.
-- See the Task Scheduler settings in Section 1 of this chapter (or Appendix H) for the recommended configuration
+- **Use Task Scheduler instead of `shell:startup`.** Settings are in Chapter 4, section 1, and Appendix H
 
-> **Den Note:** *The guardian at the gate is doing her job. Use the side entrance — Task Scheduler — and she won't mind.*
+> **Den Note:** *The guardian at the gate is doing her job. Use the side entrance, Task Scheduler, and she won't mind.*
 
 ---
 
-## 10. Dashboard Build Fails (TypeScript Errors)
+## 14. Build or Type Errors
 
 **Symptoms:**
-- `npx next build` reports type errors
-- The dashboard won't compile or deploy
-- Red error output with file paths and line numbers
+- `npm run build` fails
+- `npx tsc --noEmit` reports errors even though the build succeeded
 
 **Likely Causes:**
-- Recent code changes introduced type mismatches or missing imports
+- `next.config.ts` sets `typescript.ignoreBuildErrors: true`, so the build never fails on type errors. They hide until you run `tsc`
 - A dependency update changed type signatures
-- Stale build cache from a previous version
+- A stale `.next` cache
 
 **Remedies:**
-1. Read the build output carefully — TypeScript errors are specific. They tell you the file, the line, and exactly what's wrong
-2. Fix the reported issues one at a time (they often cascade, so fixing the first may resolve several others)
-3. If the errors seem stale or phantom, clear the build cache and rebuild:
+1. Run `npx tsc --noEmit` for the honest type report; fix errors from the top, since they cascade
+2. If build errors look stale or phantom, clear the cache and rebuild from the repo root:
    ```
-   cd F:\MinecraftServer\dashboard
    rmdir /s /q .next
-   npx next build
+   npm run build
    ```
-4. If a dependency update caused the issue, check `package.json` for version mismatches
+3. Run `npm test` as well; the Vitest suites cover adapters, auth, and reachability
 
-> **Den Note:** *TypeScript is the strictest spirit in the Den, but she's always honest. Read what she says — she's never wrong about what's broken.*
+> **Den Note:** *TypeScript is the strictest spirit in the Den, and she's always honest. She just isn't consulted at build time, so go ask her.*
 
 ---
 
-## 11. The Calm Reset (Universal Remedy)
+## 15. The Calm Reset (Universal Remedy)
 
-When something is broken and you're not sure what, this sequence resolves most minor issues. It takes about two minutes and resets the Den to a known-good state.
+When something is broken and you're not sure what, this sequence clears most minor trouble in about two minutes.
 
-1. **Stop the game server** — via the dashboard's Stop button, or kill the Java process directly
-2. **Stop the dashboard** — close the terminal window running it
+1. **Stop the game server** with the Stop button, or end its process
+2. **Stop the dashboard** (close its terminal, or stop the scheduled task)
 3. **Check for lingering processes:**
    ```
    tasklist | findstr java
    tasklist | findstr node
    ```
-4. **Kill any zombies** — use `taskkill /PID <PID> /F` for each leftover process
-5. **Restart the dashboard** — run `npm run dev`
-6. **Restart the game server** — via the dashboard's Start button
-7. **Watch the console for 30 seconds** — confirm the server starts cleanly and no errors appear
+4. **Send zombies home**: `taskkill /PID <PID> /F` for each leftover
+5. **Restart the dashboard**: `npm run dev`, or `npm run start` after a build
+6. **Restart the game server** from the top bar
+7. **Watch the console for 30 seconds** and confirm a clean start
 8. **Breathe.** The Den is patient with those who tend it calmly.
 
-This is the "turn it off and on again" of the Kitsune Den, but done with intention. Most minor issues — stale connections, zombie processes, confused state — dissolve under a Calm Reset.
+This is the "turn it off and on again" of the Kitsune Den, done with intention. Stale connections, zombie processes, and confused state usually dissolve under a Calm Reset.
 
 > **Den Note:** *Sometimes the kindest thing you can do for a restless spirit is to let her sleep and wake fresh.*
 
 ---
 
-*Every problem in the Den has been seen before. The remedies here are tested, the advice is practical, and the workshop always recovers. Stay calm, read the logs, and trust the process.*
+*Every problem in the Den has been seen before. Stay calm, read the logs, and trust the process.*

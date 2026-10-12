@@ -19,14 +19,14 @@ interface Warp {
 function getWarpIcon(name: string) {
   const lower = name.toLowerCase();
   if (lower.includes("sand") || lower.includes("desert") || lower.includes("dune"))
-    return { icon: "\uD83C\uDFDC\uFE0F", bg: "bg-[rgba(255,167,38,0.15)]" };
+    return { icon: "\uD83C\uDFDC\uFE0F", bg: "bg-den-amber/15" };
   if (lower.includes("tundra") || lower.includes("snow") || lower.includes("ice"))
-    return { icon: "\u2744\uFE0F", bg: "bg-[rgba(79,195,247,0.15)]" };
+    return { icon: "\u2744\uFE0F", bg: "bg-den-cyan/15" };
   if (lower.includes("manala") || lower.includes("dark") || lower.includes("void"))
-    return { icon: "\uD83C\uDF11", bg: "bg-[rgba(171,71,188,0.15)]" };
+    return { icon: "\uD83C\uDF11", bg: "bg-den-purple/15" };
   if (lower.includes("home") || lower.includes("spawn"))
-    return { icon: "\uD83C\uDFE0", bg: "bg-[rgba(102,187,106,0.15)]" };
-  return { icon: "\uD83D\uDCCD", bg: "bg-[rgba(102,187,106,0.15)]" };
+    return { icon: "\uD83C\uDFE0", bg: "bg-den-green/15" };
+  return { icon: "\uD83D\uDCCD", bg: "bg-den-green/15" };
 }
 
 export default function WorldViewer() {
@@ -64,7 +64,7 @@ export default function WorldViewer() {
           const cfg = world.config;
 
           return (
-            <div key={world.name} className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
+            <div key={world.name} className="den-card overflow-hidden">
               {/* Banner */}
               <div
                 className={`h-20 flex items-center justify-center text-4xl ${
@@ -79,7 +79,7 @@ export default function WorldViewer() {
                 <div className="text-base font-bold mb-3">
                   {world.name}
                   {isDefault && (
-                    <span className="ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[rgba(255,167,38,0.15)] text-den-amber">
+                    <span className="ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-den-amber/15 text-den-amber">
                       DEFAULT
                     </span>
                   )}
@@ -95,7 +95,7 @@ export default function WorldViewer() {
                     ["NPC Spawning", cfg.IsSpawningNPC ? "Active" : "Disabled"],
                     ["Block Ticking", cfg.IsBlockTicking ? "Active" : "Paused"],
                   ] as [string, string][]).map(([label, value]) => (
-                    <div key={label} className="flex justify-between py-2 border-b border-[rgba(42,51,85,0.5)] last:border-0 text-[13px]">
+                    <div key={label} className="flex justify-between py-2 border-b border-den-border/60 last:border-0 text-[13px]">
                       <span className="text-den-text-muted">{label}</span>
                       <span className="font-semibold">{value}</span>
                     </div>
@@ -106,7 +106,7 @@ export default function WorldViewer() {
           );
         })}
         {worlds.length === 0 && (
-          <div className="col-span-full bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl p-6 text-center text-den-text-dim">
+          <div className="col-span-full den-card p-6 text-center text-den-text-dim">
             No worlds found yet. Start the server or check the universe folder.
           </div>
         )}
@@ -114,9 +114,9 @@ export default function WorldViewer() {
 
       {/* Warps */}
       {warps.length > 0 && (
-        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-            <h3 className="text-sm font-bold">Warp Points</h3>
+        <div className="den-card overflow-hidden">
+          <div className="den-card-header">
+            <h3 className="den-card-title">Warp Points</h3>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-den-elevated text-den-text-muted border border-den-border min-w-[24px] text-center">
               {warps.length}
             </span>

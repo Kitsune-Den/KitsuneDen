@@ -205,11 +205,11 @@ export default function ModPacks() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
+      <div className="den-card overflow-hidden">
+        <div className="den-card-header">
           <div className="flex items-center gap-2">
             <Boxes size={16} className="text-den-purple" />
-            <h3 className="text-sm font-bold">Mod Packs</h3>
+            <h3 className="den-card-title">Mod Packs</h3>
           </div>
           <div className="flex items-center gap-2">
             <button
