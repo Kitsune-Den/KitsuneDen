@@ -288,14 +288,19 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 ## H. Task Scheduler Settings
 
+What `scripts\install-startup-task.ps1` registers:
+
 | Setting | Value |
 |---|---|
-| Trigger | At startup, delayed 30 seconds |
-| Privileges | Run with highest privileges |
-| On failure | Restart the task |
-| User account | The account that owns the KitsuneDen folder and game servers |
-| Action | `cmd.exe /c npm run start` |
+| Name | `KitsuneDen` (`-TaskName` to change) |
+| Trigger | At sign-in of the installing user, delayed 30 seconds. With `-AtStartup`: at boot, delayed 30 seconds |
+| Runs as | The installing user. Interactive, standard rights; with `-AtStartup`, S4U (no stored password) with highest privileges |
+| Action | `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File data\run-den.ps1` |
 | Start in | The KitsuneDen repo root |
+| Time limit | None (the default 3-day limit would kill the Den) |
+| On failure | Restart every minute, up to 3 times |
+| Multiple instances | Ignore new (never two Dens on one port) |
+| Batteries | Starts and keeps running on battery |
 
 Run `npm run build` once before relying on the task. Task Scheduler is preferred over `shell:startup` because antivirus behavioral analysis (Bitdefender, in the Den's case) can block `.bat` files launched from startup locations.
 

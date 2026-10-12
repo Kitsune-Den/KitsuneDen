@@ -52,18 +52,25 @@ Also port 3001. Rebuild after every update to the code.
 
 ### Via Task Scheduler (auto-start on boot)
 
-Task Scheduler is the preferred way to start the Den on boot. It avoids the antivirus trouble that plagues `shell:startup` batch files.
+Task Scheduler is the preferred way to start the Den on its own. It avoids the antivirus trouble that plagues `shell:startup` batch files. Let the script set it up, from the repo root, as the account that owns the KitsuneDen folder and game servers:
 
-| Setting | Value |
+```
+npm run build
+powershell -ExecutionPolicy Bypass -File scripts\install-startup-task.ps1
+```
+
+It registers a task called **KitsuneDen** that starts when you sign in (30 seconds after, so networking is up before the Den binds its port), runs hidden, restarts up to three times if it fails, and never runs two copies. From an elevated PowerShell, `-AtStartup` makes it start at boot instead, before anyone signs in. `-Uninstall` removes it. Appendix H lists every setting.
+
+Day to day:
+
+| To | Run |
 |---|---|
-| Trigger | At startup, delayed 30 seconds |
-| Privileges | Run with highest privileges |
-| On failure | Restart the task |
-| User account | the account that owns the KitsuneDen folder and game servers |
-| Action | `cmd.exe` with arguments `/c npm run start` |
-| Start in | the KitsuneDen repo root |
+| Start the Den | `Start-ScheduledTask KitsuneDen` |
+| Stop the Den | `Stop-ScheduledTask KitsuneDen` (frees port 3001) |
+| Update | `git pull`, stop, `npm run build`, start |
+| Read its output | `data\den-server.log` |
 
-The delay gives Windows time to bring up networking before the dashboard binds its port. Build once (`npm run build`) before handing the task over.
+**Why stopping works:** the task runs `scripts\run-den.ps1`, which first puts itself in a Windows job object set to kill everything in it when it closes. Without that, Task Scheduler only ends the launcher and leaves `node` holding port 3001. The installer copies the launcher into `data\`, which git ignores, so checking out an older branch can't delete it from under the task.
 
 ### Verifying
 
