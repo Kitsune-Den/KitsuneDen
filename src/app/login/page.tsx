@@ -1,6 +1,19 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
+
+// The query string never changes while this page is mounted, so there is
+// nothing to subscribe to. On the server (and during hydration) it reads as
+// empty, which matches the first client render.
+const subscribeNoop = () => () => {};
+
+function useLocationSearch(): string {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => window.location.search,
+    () => "",
+  );
+}
 
 /**
  * /login — the gate. Shared password, posted to /api/auth/login.
@@ -14,15 +27,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [setupMode, setSetupMode] = useState(false);
-  const [nextPath, setNextPath] = useState("/");
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setSetupMode(params.get("setup") === "1");
-    const next = params.get("next");
-    if (next && next.startsWith("/")) setNextPath(next);
-  }, []);
+  const params = new URLSearchParams(useLocationSearch());
+  const setupMode = params.get("setup") === "1";
+  const next = params.get("next");
+  const nextPath = next && next.startsWith("/") ? next : "/";
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

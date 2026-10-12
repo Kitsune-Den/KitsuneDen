@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import {
   LayoutGrid,
   Activity,
@@ -15,6 +14,7 @@ import {
   Keyboard,
 } from "lucide-react";
 import { confirmDiscard } from "@/lib/unsaved";
+import { useStoredItem } from "@/lib/useStored";
 import { OPEN_SHORTCUTS_EVENT } from "@/components/shell/ShortcutsOverlay";
 
 const SECTIONS: { title: string; items: { href: string; label: string; icon: React.ReactNode; match: (p: string) => boolean }[] }[] = [
@@ -38,19 +38,8 @@ const SECTIONS: { title: string; items: { href: string; label: string; icon: Rea
 const COLLAPSE_KEY = "kitsuneden-sidebar";
 
 export function useSidebarCollapsed(): [boolean, (v: boolean) => void] {
-  const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => {
-    try {
-      setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
-    } catch {}
-  }, []);
-  const set = (v: boolean) => {
-    setCollapsed(v);
-    try {
-      localStorage.setItem(COLLAPSE_KEY, v ? "1" : "0");
-    } catch {}
-  };
-  return [collapsed, set];
+  const [stored, setStored] = useStoredItem(COLLAPSE_KEY);
+  return [stored === "1", (v) => setStored(v ? "1" : "0")];
 }
 
 export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {

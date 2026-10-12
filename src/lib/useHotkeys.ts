@@ -8,7 +8,10 @@ import { useEffect, useRef } from "react";
  */
 export function useHotkeys(bindings: Record<string, (e: KeyboardEvent) => void>, enabled = true) {
   const ref = useRef(bindings);
-  ref.current = bindings;
+  // Keep the latest bindings without re-subscribing on every render.
+  useEffect(() => {
+    ref.current = bindings;
+  });
 
   useEffect(() => {
     if (!enabled) return;
