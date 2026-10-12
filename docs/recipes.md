@@ -12,7 +12,7 @@ The Den does it differently:
 
 - **A game is one object.** Form defaults, firewall hints and the rest are computed from it. `recipeDefaults()` builds the Add Server pre-fill from `defaults` plus the port list, so each port number is written once.
 - **Offsets, not literals.** 7D2D's query port is `gamePort + 2`, so it follows you if you move the game port.
-- **The recipe can't drift from the adapter.** Tests compare each recipe's claims (console, Steam install, launcher update, backups, Steam app id, Enshrouded's generated ports) with what the adapter actually does.
+- **The recipe can't drift from the adapter.** Tests compare each recipe's claims (console, Steam install, launcher update, backups, Steam app id, Enshrouded's generated port) with what the adapter actually does.
 - **Gaps get named.** `tier` says what we've watched work, not what we offer. `gaps` lists the known holes. An empty list means we don't know of any. It doesn't promise there are none.
 
 ## Shape
@@ -39,13 +39,13 @@ The Den does it differently:
 | 7 Days to Die | verified | SteamCMD 294420 (Den doesn't run it) | telnet | none | 26900 tcp+udp, query +2 udp / telnet 8081 |
 | Hytale | verified | Hytale launcher | none | script | 5520 udp |
 | Palworld | verified | SteamCMD 2394010 | RCON + REST | zip | 8211 udp / RCON 25575, REST 8212 |
-| Enshrouded | experimental | SteamCMD 2278520 | none | zip | 15637 + 15638 udp (disputed) |
+| Enshrouded | experimental | SteamCMD 2278520 | none | zip | 15637 udp |
 
 ## What writing them turned up
 
 Putting each game in one place showed some problems:
 
-1. **Enshrouded's ports may be wrong.** The Den writes `gamePort` 15637 and `queryPort` 15638. PackRelay measured a single socket on 15637. If PackRelay is right, 15638 is never bound. This is why Enshrouded is `experimental`. Check a current build before changing anything.
+1. ~~**Enshrouded's ports may be wrong.**~~ Fixed. Current Enshrouded listens on one UDP port, its config's `queryPort` (Keen's own example config has no `gamePort`, and PackRelay measured it on a live server). The Den used to write `queryPort` 15638 while showing players 15637. Server setup's Game Port is now written into `queryPort` before every start, and the start message says when that moves the port. Enshrouded stays `experimental` until the fix has been run through the Den on a live server.
 2. **7D2D has no backups.** The world sits in `%APPDATA%\7DaysToDie\Saves`, outside the server folder. PackRelay launches with `-UserDataFolder=<instance>/UserData` so the world can be backed up with the server. Switching an existing server over would move its world, so it needs a migration, not a quiet flag change.
 3. **7D2D's query port (game + 2, UDP) isn't modelled.** Anyone forwarding only 26900 won't show up in the server browser.
 4. **7D2D has no SteamCMD update**, even though the app installs anonymously and Palworld and Enshrouded already have one.
@@ -60,5 +60,5 @@ Each of these can be its own PR:
 2. ~~**Adapters read recipes.**~~ Done: adapter fallbacks (ports, Steam app ids, start scripts, config files, the Minecraft jar, Hytale's process filter) come from `recipeDefault()`, and a test fails if an adapter hardcodes a port or app id again. Process names stay in the adapters: they're for detecting a running server, which recipes don't model.
 3. ~~**Networking card.**~~ Done: each server's Status tab lists its ports (protocol, purpose, forward or keep private, where the number came from) and warns when one collides with another server on the same machine. The logic is in `src/lib/networking.ts`.
 4. ~~**Recipe card in the picker.**~~ Done: Add Server picks the game from tiles (experimental games are marked), with a card showing the tier and its evidence, install, console, stop, backups, ports to forward, how players join and the known gaps.
-5. **Fix the gaps above,** starting with the Enshrouded port check and 7D2D backups.
+5. **Fix the gaps above.** Enshrouded's ports are done; 7D2D backups are next.
 6. **New games are a recipe plus an adapter.** Valheim, V Rising and Project Zomboid are the obvious next ones, and PackRelay has already measured their ports and quirks.

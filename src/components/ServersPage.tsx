@@ -58,7 +58,6 @@ const TYPE_FIELDS: Record<string, FieldDef[]> = {
     { key: "restApiPassword", label: "REST API Password", type: "password", hint: "Admin password for the REST API" },
   ],
   enshrouded: [
-    { key: "queryPort", label: "Query Port", type: "number", hint: "Steam query port" },
     { key: "configFile", label: "Config File", type: "text", hint: "Config filename" },
     { key: "startScript", label: "Start Script", type: "text", hint: "Optional bat file in the install directory. Falls back to launching enshrouded_server.exe directly." },
     { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates" },

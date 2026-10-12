@@ -203,8 +203,7 @@ By default KitsuneDen reads and writes `servers.json` in the directory it's star
 | `startScript` | Optional | Startup bat (falls back to `enshrouded_server.exe`) |
 | `configFile` | Optional | Config filename (default `enshrouded_server.json`) |
 | `steamCmdPath` | Optional | Path to steamcmd.exe for updates (Steam app id 2278520) |
-| `gamePort` | Optional | UDP game port (default 15637) |
-| `queryPort` | Optional | UDP Steam query port (default 15638) |
+| `gamePort` | Optional | The server's one UDP port, for joining and the server browser (default 15637). The Den writes it into `enshrouded_server.json` as `queryPort` before every start. |
 
 > Enshrouded ships no RCON or REST API, so live commands aren't available.
 > Player presence is a best guess, scraped from connect/disconnect lines in the log.

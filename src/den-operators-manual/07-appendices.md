@@ -61,8 +61,7 @@ This chapter is for skimming. Keep it open in a tab and reach for whatever you n
 | Palworld game | 8211 | UDP | `gamePort` |
 | Palworld RCON | 25575 | TCP | `rconPort`; also the status probe |
 | Palworld REST API | 8212 | TCP | `restApiPort`; probe fallback |
-| Enshrouded game | 15637 | UDP | `gamePort` |
-| Enshrouded query | 15638 | UDP | `queryPort` |
+| Enshrouded game | 15637 | UDP | `gamePort`; one port for joining and the server browser, written into the config's `queryPort` |
 | SSH (remote lifecycle) | 22 | TCP | `lifecycle.port` |
 
 ---
@@ -206,7 +205,7 @@ Deep night blues underneath, warm and bright accents on top. Check `globals.css`
 |---|---|---|
 | `startScript` | `start_enshrouded.bat` | Launch script; falls back to the exe |
 | `configFile` | `enshrouded_server.json` | Config filename |
-| `queryPort` | 15638 | Steam query port |
+| `gamePort` | 15637 | The one UDP port, written into `enshrouded_server.json` as `queryPort` before every start |
 | `steamCmdPath` | | `steamcmd.exe` for updates |
 | `steamAppId` | 2278520 | Steam app id |
 

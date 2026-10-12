@@ -22,7 +22,6 @@ const PROCESS_NAME = "enshrouded_server.exe";
 // Fallbacks for fields servers.json leaves unset, from the Enshrouded recipe.
 const STEAM_APP_ID = recipeDefault("enshrouded", "steamAppId");
 const DEFAULT_GAME_PORT = recipeDefault("enshrouded", "gamePort");
-const DEFAULT_QUERY_PORT = recipeDefault("enshrouded", "queryPort");
 const CONFIG_FILENAME = recipeDefault("enshrouded", "configFile");
 const START_SCRIPT = recipeDefault("enshrouded", "startScript");
 const SAVEGAME_DIRNAME = "savegame";
@@ -79,9 +78,9 @@ export function defaultConfig(def: ServerDefinition): Record<string, unknown> {
     saveDirectory: "./savegame",
     logDirectory: "./logs",
     ip: "0.0.0.0",
-    queryPort: def.queryPort || DEFAULT_QUERY_PORT,
+    // Enshrouded's one port, for joining and the server browser. See syncPort.
+    queryPort: def.gamePort || DEFAULT_GAME_PORT,
     slotCount: 16,
-    gamePort: def.gamePort || DEFAULT_GAME_PORT,
     voiceChatMode: "Proximity",
     enableTextChat: true,
     enableVoiceChat: true,
@@ -91,6 +90,34 @@ export function defaultConfig(def: ServerDefinition): Record<string, unknown> {
       { name: "Friend", password: generateGroupPassword(), canKickBan: false, canAccessInventories: true, canEditBase: true, canExtendBase: false, reservedSlots: 0 },
       { name: "Guest", password: "", canKickBan: false, canAccessInventories: false, canEditBase: false, canExtendBase: false, reservedSlots: 0 },
     ],
+  };
+}
+
+/**
+ * Bring an enshrouded_server.json in line with Server setup's Game Port.
+ *
+ * Current Enshrouded listens on ONE UDP port, named `queryPort` in its config,
+ * for joining and the server browser. Older Den configs also carried a
+ * `gamePort` key (which the game now ignores) and put queryPort on 15638, so
+ * the server listened somewhere other than the port the Den showed players.
+ * Server setup is the one place the port is set; this copies it across and
+ * drops the stale key. Pure, so it can be tested without a disk.
+ */
+export function syncPort(
+  config: Record<string, unknown>,
+  def: ServerDefinition
+): { config: Record<string, unknown>; changed: boolean; movedFrom: number | null } {
+  const port = def.gamePort || DEFAULT_GAME_PORT;
+  const current = config.queryPort;
+  const hasStaleKey = Object.prototype.hasOwnProperty.call(config, "gamePort");
+  if (current === port && !hasStaleKey) return { config, changed: false, movedFrom: null };
+
+  const next: Record<string, unknown> = { ...config, queryPort: port };
+  delete next.gamePort;
+  return {
+    config: next,
+    changed: true,
+    movedFrom: typeof current === "number" && current !== port ? current : null,
   };
 }
 
@@ -247,6 +274,7 @@ export class EnshroudedAdapter implements ServerAdapter {
     }
 
     const created = await this.ensureConfig();
+    const portNote = created ? null : await this.syncPortOnDisk();
 
     const batPath = path.join(this.def.dir, this.def.startScript || START_SCRIPT);
     const workDir = this.def.dir.replace(/\//g, "\\");
@@ -288,7 +316,7 @@ export class EnshroudedAdapter implements ServerAdapter {
         };
       }
 
-      return { success: true, message: "Server starting..." };
+      return { success: true, message: portNote ? `Server starting... ${portNote}` : "Server starting..." };
     } catch (e) {
       return { success: false, message: (e as Error).message };
     }
@@ -444,6 +472,29 @@ export class EnshroudedAdapter implements ServerAdapter {
     return groups.filter((g) => g.password !== "").map(({ name, password }) => ({ name, password }));
   }
 
+  /**
+   * Apply syncPort to the config on disk before a start. Returns a sentence
+   * for the start result when the port actually moved, so the change is never
+   * silent; null otherwise.
+   */
+  private async syncPortOnDisk(): Promise<string | null> {
+    const { config, changed, movedFrom } = syncPort(await this.getConfig(), this.def);
+    if (!changed) return null;
+    const saved = await this.saveConfig(config);
+    if (!saved.success) {
+      this.addLog(`[Dashboard] Couldn't update the port in ${CONFIG_FILENAME}: ${saved.message}`);
+      return null;
+    }
+    const port = config.queryPort as number;
+    if (movedFrom === null) {
+      this.addLog(`[Dashboard] Removed the unused gamePort key from ${CONFIG_FILENAME}. Port stays ${port}.`);
+      return null;
+    }
+    const sentence = `Moved the server's port from ${movedFrom} to ${port} to match Game Port in Server setup. Players who saved the old address need the new one.`;
+    this.addLog(`[Dashboard] ${sentence}`);
+    return sentence;
+  }
+
   // ---- Players ----
 
   async getPlayers(): Promise<PlayerData> {
@@ -501,8 +552,8 @@ export class EnshroudedAdapter implements ServerAdapter {
       running,
       serverName: config.name || "Enshrouded Server",
       maxPlayers: typeof config.slotCount === "number" ? config.slotCount : 16,
-      gamePort: config.gamePort || this.def.gamePort || DEFAULT_GAME_PORT,
-      queryPort: config.queryPort || this.def.queryPort || DEFAULT_QUERY_PORT,
+      // Server setup's port, which start() writes into the config.
+      gamePort: this.def.gamePort || DEFAULT_GAME_PORT,
       serverVersion: "Unknown",
       steamAppId: this.def.steamAppId || STEAM_APP_ID,
       steamCmdConfigured: !!this.def.steamCmdPath,

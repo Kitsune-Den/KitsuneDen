@@ -80,11 +80,12 @@ describe("game recipes", () => {
     expect(recipeDefaults("7d2d").queryPort).toBe(26902);
   });
 
-  it("Enshrouded's generated config uses the recipe's ports", () => {
+  it("Enshrouded's generated config puts the recipe's one port in queryPort", () => {
     const def = { id: "e", name: "e", type: "enshrouded", dir } as ServerDefinition;
     const config = defaultConfig(def);
-    expect(config.gamePort).toBe(portDefault(RECIPES.enshrouded, "gamePort"));
-    expect(config.queryPort).toBe(portDefault(RECIPES.enshrouded, "queryPort"));
+    expect(RECIPES.enshrouded.ports.map((p) => p.field)).toEqual(["gamePort"]);
+    expect(config.queryPort).toBe(portDefault(RECIPES.enshrouded, "gamePort"));
+    expect(config).not.toHaveProperty("gamePort");
   });
 
   it("an unknown type has no recipe and no defaults", () => {

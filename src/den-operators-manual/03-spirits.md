@@ -165,7 +165,7 @@ If she has no `enshrouded_server.json` when you press Start, the dashboard write
 | Launch | `startScript` (default `start_enshrouded.bat`), else `enshrouded_server.exe` |
 | Commands | none |
 | Status | process list (she has no TCP port to probe) |
-| Ports | `gamePort` 15637, `queryPort` 15638 (both UDP) |
+| Ports | `gamePort` 15637, UDP: one port for joining and the server browser, written into her config's `queryPort` before each start |
 | Config | `enshrouded_server.json` (or `configFile`) |
 | Players | best-effort scrape of the in-memory log |
 | Backups | zips of `savegame\` in `<dir>\..\backups\enshrouded\hourly\` or `daily\` |

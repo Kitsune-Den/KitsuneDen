@@ -286,7 +286,7 @@ export const RECIPES: Record<GameType, GameRecipe> = {
   enshrouded: {
     type: "enshrouded",
     tier: "experimental",
-    evidence: "Runs in the maintainers' own Den, but its port layout disagrees with a measurement from PackRelay (see the known gaps).",
+    evidence: "Runs in the maintainers' own Den. Its single-port setup follows Keen's docs and a PackRelay measurement, and hasn't been run through the Den on a live server yet.",
     platforms: { windows: true, linux: false },
     install: { kind: "steamcmd", appId: 2278520, anonymous: true, denCanInstall: true },
     launch: {
@@ -294,15 +294,21 @@ export const RECIPES: Record<GameType, GameRecipe> = {
       entry: "start_enshrouded.bat",
       fallback: "enshrouded_server.exe",
     },
+    // One UDP port for joining and the server browser. Enshrouded's config
+    // names it `queryPort`; the separate `gamePort` key is gone. Sources:
+    // Keen's "Dedicated Server Configuration" article (updated 2025-02-21),
+    // whose example config has only "queryPort": 15637, and PackRelay's
+    // measurement of a v0.0.15.0 server: it bound and answered A2S on 15637,
+    // with 15636 silent. The Den keeps it in servers.json's gamePort, like
+    // every other game, and writes it into the config before each start.
     ports: [
-      { field: "gamePort", purpose: "game", proto: "udp", default: 15637, public: true },
       {
-        field: "queryPort",
-        purpose: "query",
+        field: "gamePort",
+        purpose: "game",
         proto: "udp",
-        default: 15638,
+        default: 15637,
         public: true,
-        note: "Unconfirmed: PackRelay measured one socket (15637) for joining and queries, so this one may go unused.",
+        note: "One port for joining and the server browser. Enshrouded's config calls it queryPort; the Den writes it there before every start.",
       },
     ],
     control: {
@@ -315,7 +321,7 @@ export const RECIPES: Record<GameType, GameRecipe> = {
     connect: "Join the server by IP with the address.",
     defaults: { steamAppId: 2278520, startScript: "start_enshrouded.bat", configFile: "enshrouded_server.json" },
     gaps: [
-      "Port layout: the Den writes gamePort 15637 + queryPort 15638 into enshrouded_server.json; PackRelay measured a single port on 15637. If PackRelay is right, 15638 is never bound and the firewall hint is wrong. Needs a check against a current build before we change anything.",
+      "The single-port setup hasn't been run through the Den on a live server yet. Once someone has started it, joined on the Game Port and stopped it, this can be marked verified.",
       "No remote console, so no live commands, and player presence is scraped from the log.",
     ],
   },
