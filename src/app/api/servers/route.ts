@@ -43,7 +43,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const sanitized = sanitizeServerWrite(updates);
+    // Pass the stored definition so unchanged legacy values aren't re-validated.
+    const current = getAllAdapters().find((a) => a.def.id === serverId)?.def;
+    const sanitized = sanitizeServerWrite(updates, current);
     if (!sanitized.ok) {
       return NextResponse.json({ success: false, message: sanitized.message }, { status: 400 });
     }
@@ -123,7 +125,8 @@ export async function DELETE(request: NextRequest) {
     const result = await removeServer(serverId, deleteFiles ?? false);
 
     if (!result.success) {
-      return NextResponse.json(result, { status: 404 });
+      const status = result.reason === "unsafe-delete" ? 400 : 404;
+      return NextResponse.json({ success: false, message: result.message }, { status });
     }
     recordActivity({
       level: "warn",
