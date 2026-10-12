@@ -20,7 +20,6 @@ interface PlayerResponse {
 interface McEntry {
   uuid?: string;
   name?: string;
-  expiresOn?: string;
   [key: string]: unknown;
 }
 
