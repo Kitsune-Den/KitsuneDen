@@ -163,6 +163,48 @@ export interface PlayerData {
   bans: unknown;
 }
 
+// ---- 7D2D serveradmin.xml ----
+
+export interface AdminUser {
+  platform: string;
+  userId: string;
+  name: string;
+  permissionLevel: number;
+}
+
+export interface AdminWhitelistEntry {
+  platform: string;
+  userId: string;
+  name: string;
+}
+
+export interface AdminBlacklistEntry {
+  platform: string;
+  userId: string;
+  name: string;
+  unbanDate: string;
+  reason: string;
+}
+
+export interface AdminCommand {
+  cmd: string;
+  permissionLevel: number;
+}
+
+export interface AdminData {
+  users: AdminUser[];
+  whitelist: AdminWhitelistEntry[];
+  blacklist: AdminBlacklistEntry[];
+  commands: AdminCommand[];
+}
+
+/** Extra methods exposed by the 7D2D adapter for managing serveradmin.xml. */
+export interface SevenDaysAdminApi {
+  getAdminFilePath(): string | null;
+  getAdminData(): AdminData;
+  saveAdminData(data: AdminData): ActionResult;
+}
+
 // ---- Server State (internal) ----
 
 export interface ServerState {
