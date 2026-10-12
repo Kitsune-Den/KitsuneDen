@@ -18,20 +18,27 @@ KitsuneDen treats your servers like living things. Each one gets its own persona
 
 ## What it does
 
-- **One dashboard, every server.** Switch between servers from the top bar, with live status on each one.
+- **Every server at a glance.** A grid of server cards with live status, memory, players online and uptime, plus quick start/stop/restart.
 - **Add servers from the UI.** Pick a game, browse to the install folder, fill in the ports. No hand-editing JSON unless you want to.
-- **Start, stop, restart.** Right there in the top bar.
+- **A page per server.** Status, console, config, players, mods, backups and more as tabs, each with its own URL.
 - **Live console** with command input and history.
 - **Players.** Whitelist, op, ban, kick, plus who's online right now (via RCON for Minecraft and Palworld, telnet for 7D2D).
 - **Mods and mod packs.** Upload, organize, and flip whole sets on.
-- **Config editor** with friendly widgets where they help (the 7D2D day/night slider is the favorite).
+- **Config editor** with friendly widgets where they help (the 7D2D day/night slider is the favorite). Edits are staged: changed fields are marked until you save, and it offers a restart when one's needed.
 - **Worlds, backups, and updates** for the games that support them: SteamCMD for Palworld and Enshrouded, the launcher for Hytale.
 - **Remote Minecraft.** The dashboard and the server don't have to share a machine. See [Remote Minecraft servers](#remote-minecraft-servers).
+- **Activity log.** Starts, stops, crashes, config saves and roster changes, for one server or the whole Den.
+- **Dark, light, or match your OS**, plus a colour-blind friendly status palette.
+- **Keyboard shortcuts.** `s` / `x` / `r` to start, stop and restart, `[` `]` to flip tabs, `?` for the full list.
 - **A password at the door.** One shared password keeps randos off your dashboard.
 
-| Configuration | Players |
+| A server's page | Staged config editing |
 |---|---|
-| ![Configuration](docs/configuration.png) | ![Players](docs/players.png) |
+| ![Server page](docs/instance.png) | ![Configuration](docs/configuration.png) |
+| **Players** | **Activity** |
+| ![Players](docs/players.png) | ![Activity](docs/activity.png) |
+| **Light theme** | |
+| ![Light theme](docs/dashboard-light.png) | |
 
 <sub>Screenshots use demo data. Those aren't real players or real IPs.</sub>
 
@@ -289,6 +296,8 @@ The [Operator's Manual](src/den-operators-manual/07-appendices.md) has more on r
 KitsuneDen has a philosophy: your servers aren't cold infrastructure, they're creatures worth tending. Dashboards are companions. Logs are journals. Ports are doorways.
 
 The [Operator's Manual](src/den-operators-manual/00-preface.md) covers the Den's architecture, its spirits (one per game), day-to-day operations, and what to do when things break. It's also readable inside the dashboard, under **Library**.
+
+The panel's look and layout borrow from [PackRelay](https://pack-relay.com), in the fox's colours.
 
 ---
 

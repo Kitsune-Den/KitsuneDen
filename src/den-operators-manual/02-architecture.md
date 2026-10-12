@@ -32,15 +32,20 @@ KitsuneDen\
   src\
     proxy.ts                 The Gate: session check on every request
     app\
-      page.tsx               The single-page shell (sidebar, top bar, switcher, pages)
+      (panel)\               Every signed-in page, wrapped in the shell (sidebar, toasts, shortcuts)
+        page.tsx             Server grid (home)
+        instances\[id]\      One server, tabs as URL segments (/instances/<id>/<tab>)
+        activity\ manage\ library\ settings\
       login\page.tsx         Login + first-boot setup banner
-      globals.css            Den theme tokens (Tailwind @theme)
+      globals.css            Theme tokens (dark / light / colour-blind) + shared component classes
       api\                   One folder per route (see Appendix D)
-    components\              Pages and panels: Dashboard, Console, Servers, Config,
-                             Players, Mods, Docs, plus per-game folders
+    components\              Tab bodies: Dashboard (status), Console, Config, Players,
+                             Mods, Docs, ActivityFeed, plus per-game folders
                              (minecraft\, hytale\, palworld\, enshrouded\)
+      instances\            Server cards, controls, card art, live stats hook
+      shell\                Page frame, toasts, shortcuts overlay
     contexts\
-      ServerContext.tsx      Selected server + server list, polled every 5s
+      ServerContext.tsx      Server list (polled every 5s) + the server in the URL
     lib\
       adapters\
         types.ts             ServerDefinition, ServerAdapter, capabilities
@@ -81,7 +86,9 @@ Two build details worth knowing:
 - `next.config.ts` sets `typescript.ignoreBuildErrors: true`. **A green `npm run build` does not mean the types are clean.** Run `npx tsc --noEmit` when you want the honest answer.
 - `better-sqlite3` is listed in `serverExternalPackages`, so Next leaves its native binding alone.
 
-The UI is a single page. The sidebar picks which panel shows; the server switcher picks which server every panel talks to.
+The UI follows PackRelay's panel. The home page is a grid of server cards. Each server has its own page at `/instances/<id>`, and its sections are tabs that live in the URL (`/instances/<id>/console`, `/config`, ...), so they can be bookmarked and shared. `ServerContext` reads the server id from the URL, which is how the older panel components know which server to talk to.
+
+Look and feel come from CSS variables in `globals.css`: plum surfaces from PackRelay, with the Den's lantern orange as the accent. The `den-*` Tailwind colours point at those variables, so everything follows the dark, light and colour-blind themes. The theme is applied by a tiny script in `<head>` before first paint.
 
 ---
 
@@ -106,7 +113,7 @@ Adapters may add game-specific methods (backups, updates, worlds, admin files). 
 
 ### Capabilities
 
-Each adapter declares what it can do. The sidebar hides pages a server can't use.
+Each adapter declares what it can do. A server's page hides the tabs it can't use.
 
 | Capability | MC | Hytale | 7D2D | Palworld | Enshrouded |
 |---|---|---|---|---|---|

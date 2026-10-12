@@ -30,16 +30,19 @@ Each adapter knows how its game likes to be spoken to: a child process's stdin f
 
 ### What she can do
 
-- **Server switcher**: every server in `servers.json`, with a live status indicator, refreshed every 5 seconds
+- **Server grid**: every server in `servers.json` as a card with live status, memory, players and uptime, refreshed every few seconds
+- **A page per server**: `/instances/<id>`, with tabs for status, console, config, players and whatever else that game supports
 - **Add, edit, and remove servers from the UI**: with a native folder picker for the install directory
 - **Live console**: streamed server output, plus command input for games that accept commands
-- **Lifecycle controls**: start, stop, and restart from the top bar
+- **Lifecycle controls**: start, stop, and restart from each card and from the server's page (stop and restart ask first)
 - **Players**: rosters, online status, and the admin actions each game supports
-- **Config editor**: `server.properties`, `serverconfig.xml`, `config.json`, `PalWorldSettings.ini`, or `enshrouded_server.json`, with friendly widgets where they help (like the 7D2D day/night slider)
+- **Config editor** with staged saving (changes are marked until you save, then it offers a restart): `server.properties`, `serverconfig.xml`, `config.json`, `PalWorldSettings.ini`, or `enshrouded_server.json`, with friendly widgets where they help (like the 7D2D day/night slider)
 - **Mods and mod packs**: uploads, a mod library, and swappable packs for Minecraft
 - **Backups, updates, and airdrops**: for the games that support them
 - **Connection info**: LAN and public IP with the game port, ready to share
-- **Docs**: this manual, readable in-app
+- **Activity log**: starts, stops, crashes, config saves and roster changes, per server and Den-wide
+- **Themes and shortcuts**: dark, light or system theme, a colour-blind palette, and single-key shortcuts (press `?`)
+- **Docs**: this manual, readable in-app under Library
 
 ---
 
