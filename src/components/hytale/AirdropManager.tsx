@@ -190,7 +190,7 @@ function LootTablesTab({ serverId }: { serverId: string }) {
       ) : (
         <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-cyan/30 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-den-cyan">New Loot Table</h3>
+            <h3 className="den-card-title text-den-cyan">New Loot Table</h3>
             <button onClick={() => setShowCreate(false)} className="text-den-text-dim hover:text-den-text">
               <X size={16} />
             </button>
@@ -221,7 +221,7 @@ function LootTablesTab({ serverId }: { serverId: string }) {
       )}
 
       {message && (
-        <div className="px-4 py-3 rounded-lg text-sm font-medium bg-[rgba(239,83,80,0.1)] text-den-red border border-den-red/30">
+        <div className="px-4 py-3 rounded-lg text-sm font-medium bg-den-red/10 text-den-red border border-den-red/30">
           {message}
         </div>
       )}
@@ -233,20 +233,20 @@ function LootTablesTab({ serverId }: { serverId: string }) {
         </div>
       ) : (
         tables.map((table) => (
-          <div key={table.id} className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
+          <div key={table.id} className="den-card overflow-hidden">
             {/* Table header */}
-            <div className="px-5 py-4 border-b border-den-border flex items-center gap-3">
+            <div className="den-card-header !justify-start gap-3">
               <button onClick={() => toggleExpand(table.id)} className="text-den-text-muted hover:text-den-text">
                 {expanded.has(table.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
               </button>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold truncate">{table.name}</h3>
+                  <h3 className="den-card-title truncate">{table.name}</h3>
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       table.isEnabled
-                        ? "bg-[rgba(102,187,106,0.15)] text-den-green"
-                        : "bg-[rgba(239,83,80,0.15)] text-den-red"
+                        ? "bg-den-green/15 text-den-green"
+                        : "bg-den-red/15 text-den-red"
                     }`}
                   >
                     {table.isEnabled ? "ENABLED" : "DISABLED"}
@@ -692,9 +692,9 @@ function HistoryTab({ serverId }: { serverId: string }) {
   }, [loadHistory]);
 
   return (
-    <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-        <h3 className="text-sm font-bold">Drop History</h3>
+    <div className="den-card overflow-hidden">
+      <div className="den-card-header">
+        <h3 className="den-card-title">Drop History</h3>
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-den-elevated text-den-text-muted border border-den-border">
           {history.length}
         </span>

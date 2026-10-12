@@ -235,9 +235,9 @@ export default function PlayerManager() {
   return (
     <div className="space-y-4">
       {isMinecraft && (
-        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-den-border">
-            <h3 className="text-sm font-bold">Add Player</h3>
+        <div className="den-card overflow-hidden">
+          <div className="den-card-header">
+            <h3 className="den-card-title">Add Player</h3>
           </div>
           <div className="p-5 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -306,9 +306,9 @@ export default function PlayerManager() {
       )}
 
       {isPalworld && (
-        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-den-border">
-            <h3 className="text-sm font-bold">Quick Actions</h3>
+        <div className="den-card overflow-hidden">
+          <div className="den-card-header">
+            <h3 className="den-card-title">Quick Actions</h3>
           </div>
           <div className="p-5 flex flex-wrap gap-3">
             <button
@@ -347,9 +347,9 @@ export default function PlayerManager() {
         </div>
       )}
 
-      <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-          <h3 className="text-sm font-bold">{isPalworld ? "Online Players" : "Registered Players"}</h3>
+      <div className="den-card overflow-hidden">
+        <div className="den-card-header">
+          <h3 className="den-card-title">{isPalworld ? "Online Players" : "Registered Players"}</h3>
           {isPalworld && (
             <span className="text-[11px] text-den-text-dim font-medium">
               {players.length} online
@@ -374,7 +374,7 @@ export default function PlayerManager() {
                     key={player.uuid}
                     className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
                       player.isOp
-                        ? "border-[rgba(255,167,38,0.35)] bg-gradient-to-r from-[rgba(255,167,38,0.06)] to-den-surface shadow-[0_0_20px_rgba(255,167,38,0.08)]"
+                        ? "border-den-amber/35 bg-gradient-to-r from-den-amber/6 to-den-surface shadow-[0_0_20px_rgba(255,167,38,0.08)]"
                         : "border-den-border bg-den-surface"
                     }`}
                   >
@@ -382,7 +382,7 @@ export default function PlayerManager() {
                       <div
                         className={`w-10 h-10 rounded-md flex items-center justify-center text-lg font-extrabold shrink-0 ${
                           player.isOp
-                            ? "bg-gradient-to-br from-den-amber to-[#ff7043] text-den-bg shadow-[0_0_12px_rgba(255,167,38,0.3)]"
+                            ? "bg-gradient-to-br from-den-amber to-den-lantern text-den-bg shadow-[0_0_12px_rgba(255,167,38,0.3)]"
                             : "bg-gradient-to-br from-den-cyan to-[#29b6f6] text-den-bg"
                         }`}
                       >
@@ -401,12 +401,12 @@ export default function PlayerManager() {
                               key={g}
                               className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
                                 g === "OP"
-                                  ? "bg-[rgba(255,167,38,0.15)] text-den-amber border-[rgba(255,167,38,0.3)]"
+                                  ? "bg-den-amber/15 text-den-amber border-den-amber/30"
                                   : g === "online"
-                                  ? "bg-[rgba(102,187,106,0.15)] text-den-green border-[rgba(102,187,106,0.3)]"
+                                  ? "bg-den-green/15 text-den-green border-den-green/30"
                                   : g === "offline"
                                   ? "bg-[rgba(107,114,128,0.15)] text-gray-400 border-[rgba(107,114,128,0.3)]"
-                                  : "bg-[rgba(79,195,247,0.1)] text-den-cyan border-[rgba(79,195,247,0.2)]"
+                                  : "bg-den-cyan/10 text-den-cyan border-den-cyan/20"
                               }`}
                             >
                               {g}
@@ -426,7 +426,7 @@ export default function PlayerManager() {
                           onClick={() => toggleOp(player.uuid, player.isOp)}
                           className={`relative w-12 h-[26px] rounded-full border-2 transition-all ${
                             player.isOp
-                              ? "border-den-amber bg-[rgba(255,167,38,0.15)]"
+                              ? "border-den-amber bg-den-amber/15"
                               : "border-den-border-light bg-den-bg"
                           }`}
                         >
@@ -554,9 +554,9 @@ export default function PlayerManager() {
       </div>
 
       {isPalworld && pwAdmins.length > 0 && (
-        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-            <h3 className="text-sm font-bold">Admin Whitelist</h3>
+        <div className="den-card overflow-hidden">
+          <div className="den-card-header">
+            <h3 className="den-card-title">Admin Whitelist</h3>
             <span className="text-[11px] text-den-text-dim font-medium">
               {pwAdmins.length} {pwAdmins.length === 1 ? "admin" : "admins"}
             </span>
@@ -585,10 +585,10 @@ export default function PlayerManager() {
                 return (
                   <div
                     key={steamId}
-                    className="flex items-center justify-between p-3 rounded-lg border border-[rgba(255,167,38,0.2)] bg-[rgba(255,167,38,0.04)]"
+                    className="flex items-center justify-between p-3 rounded-lg border border-den-amber/20 bg-den-amber/4"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-md flex items-center justify-center text-sm font-extrabold bg-gradient-to-br from-den-amber to-[#ff7043] text-den-bg shadow-[0_0_12px_rgba(255,167,38,0.3)]">
+                      <div className="w-8 h-8 rounded-md flex items-center justify-center text-sm font-extrabold bg-gradient-to-br from-den-amber to-den-lantern text-den-bg shadow-[0_0_12px_rgba(255,167,38,0.3)]">
                         {"\u2B50"}
                       </div>
                       <div className="min-w-0">
@@ -628,9 +628,9 @@ export default function PlayerManager() {
 
       {isMinecraft && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-den-border">
-              <h3 className="text-sm font-bold">Admins (OP)</h3>
+          <div className="den-card overflow-hidden">
+            <div className="den-card-header">
+              <h3 className="den-card-title">Admins (OP)</h3>
             </div>
             <div className="p-5 space-y-2">
               {ops.length === 0 ? (
@@ -657,9 +657,9 @@ export default function PlayerManager() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-den-border">
-              <h3 className="text-sm font-bold">Whitelist</h3>
+          <div className="den-card overflow-hidden">
+            <div className="den-card-header">
+              <h3 className="den-card-title">Whitelist</h3>
             </div>
             <div className="p-5 space-y-2">
               {whitelistEntries.length === 0 ? (
@@ -690,9 +690,9 @@ export default function PlayerManager() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-den-border">
-              <h3 className="text-sm font-bold">Ban List</h3>
+          <div className="den-card overflow-hidden">
+            <div className="den-card-header">
+              <h3 className="den-card-title">Ban List</h3>
             </div>
             <div className="p-5 space-y-2">
               {banEntries.length === 0 ? (
@@ -726,9 +726,9 @@ export default function PlayerManager() {
       )}
 
       {isMinecraft && userCacheEntries.length > 0 && (
-        <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-            <h3 className="text-sm font-bold">Known Players (Usercache)</h3>
+        <div className="den-card overflow-hidden">
+          <div className="den-card-header">
+            <h3 className="den-card-title">Known Players (Usercache)</h3>
             <span className="text-[11px] text-den-text-dim font-medium">
               {userCacheEntries.length} cached
             </span>
@@ -797,9 +797,9 @@ export default function PlayerManager() {
       {is7d2d && adminData && (
         <>
           {/* Add Admin User */}
-          <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-den-border">
-              <h3 className="text-sm font-bold">Add Admin / Whitelist / Ban</h3>
+          <div className="den-card overflow-hidden">
+            <div className="den-card-header">
+              <h3 className="den-card-title">Add Admin / Whitelist / Ban</h3>
             </div>
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -857,7 +857,7 @@ export default function PlayerManager() {
                     setAdminPermLevel("0");
                   }}
                   disabled={!adminSteamId || busyAction === "admin-add"}
-                  className="px-4 py-2 text-xs font-semibold bg-gradient-to-r from-den-amber to-[#ff7043] text-den-bg rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
+                  className="px-4 py-2 text-xs font-semibold bg-gradient-to-r from-den-amber to-den-lantern text-den-bg rounded-lg disabled:opacity-40 hover:brightness-110 transition-all"
                 >
                   Add Admin
                 </button>
@@ -903,10 +903,10 @@ export default function PlayerManager() {
 
           {/* Admin Users List */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-                <h3 className="text-sm font-bold">Admins</h3>
-                <span className="text-[11px] text-den-text-dim">{adminData.users.length} users</span>
+            <div className="den-card overflow-hidden">
+              <div className="den-card-header">
+                <h3 className="den-card-title">Admins</h3>
+                <span className="text-[11px] text-den-text-dim">{adminData.users.length} {adminData.users.length === 1 ? "user" : "users"}</span>
               </div>
               <div className="p-5 space-y-2">
                 {adminData.users.length === 0 ? (
@@ -915,7 +915,7 @@ export default function PlayerManager() {
                   adminData.users.map((user) => (
                     <div
                       key={user.userId}
-                      className="flex items-center justify-between p-3 rounded-lg bg-den-surface border border-[rgba(255,167,38,0.2)]"
+                      className="flex items-center justify-between p-3 rounded-lg bg-den-surface border border-den-amber/20"
                     >
                       <div className="flex flex-col min-w-0">
                         <span className="text-[13px] font-semibold truncate">{user.name || "Unknown"}</span>
@@ -941,10 +941,10 @@ export default function PlayerManager() {
             </div>
 
             {/* Whitelist */}
-            <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-                <h3 className="text-sm font-bold">Whitelist</h3>
-                <span className="text-[11px] text-den-text-dim">{adminData.whitelist.length} entries</span>
+            <div className="den-card overflow-hidden">
+              <div className="den-card-header">
+                <h3 className="den-card-title">Whitelist</h3>
+                <span className="text-[11px] text-den-text-dim">{adminData.whitelist.length} {adminData.whitelist.length === 1 ? "entry" : "entries"}</span>
               </div>
               <div className="p-5 space-y-2">
                 {adminData.whitelist.length === 0 ? (
@@ -977,10 +977,10 @@ export default function PlayerManager() {
             </div>
 
             {/* Blacklist */}
-            <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-                <h3 className="text-sm font-bold">Ban List</h3>
-                <span className="text-[11px] text-den-text-dim">{adminData.blacklist.length} bans</span>
+            <div className="den-card overflow-hidden">
+              <div className="den-card-header">
+                <h3 className="den-card-title">Ban List</h3>
+                <span className="text-[11px] text-den-text-dim">{adminData.blacklist.length} {adminData.blacklist.length === 1 ? "ban" : "bans"}</span>
               </div>
               <div className="p-5 space-y-2">
                 {adminData.blacklist.length === 0 ? (
@@ -1010,9 +1010,9 @@ export default function PlayerManager() {
           </div>
 
           {/* Command Permissions */}
-          <div className="bg-gradient-to-br from-den-card to-den-surface border border-den-border rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-den-border flex items-center justify-between">
-              <h3 className="text-sm font-bold">Command Permissions</h3>
+          <div className="den-card overflow-hidden">
+            <div className="den-card-header">
+              <h3 className="den-card-title">Command Permissions</h3>
               <span className="text-[11px] text-den-text-dim">
                 {adminData.commands.length} commands configured
               </span>

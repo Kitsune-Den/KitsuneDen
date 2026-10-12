@@ -4,21 +4,8 @@ import { useState, useCallback } from "react";
 import { useServer } from "@/contexts/ServerContext";
 import { Trash2, Pencil, Plus, FolderOpen } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
+import { gameMeta, statusMeta } from "@/lib/game-meta";
 
-const STATUS_DOT: Record<string, string> = {
-  stopped: "bg-den-red",
-  starting: "bg-yellow-500 animate-pulse",
-  running: "bg-den-green",
-  stopping: "bg-yellow-500 animate-pulse",
-};
-
-const TYPE_PILL: Record<string, { label: string; color: string }> = {
-  minecraft: { label: "Minecraft", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-  "7d2d": { label: "7 Days to Die", color: "bg-red-500/20 text-red-400 border-red-500/30" },
-  hytale: { label: "Hytale", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
-  palworld: { label: "Palworld", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-  enshrouded: { label: "Enshrouded", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
-};
 
 interface DeleteTarget {
   id: string;
@@ -312,10 +299,7 @@ export default function ServersPage() {
       {/* Server cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {servers.map((s) => {
-          const pill = TYPE_PILL[s.type] || {
-            label: s.type,
-            color: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-          };
+          const game = gameMeta(s.type);
           const isActive = s.id === serverId;
 
           return (
@@ -323,7 +307,7 @@ export default function ServersPage() {
               key={s.id}
               className={`bg-den-card border rounded-xl p-5 transition-all ${
                 isActive
-                  ? "border-[rgba(79,195,247,0.3)] shadow-sm shadow-[rgba(79,195,247,0.08)]"
+                  ? "border-den-cyan/30 shadow-sm shadow-den-cyan/8"
                   : "border-den-border hover:border-den-border-hover"
               }`}
             >
@@ -331,15 +315,15 @@ export default function ServersPage() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2.5">
                   <div
-                    className={`w-2.5 h-2.5 rounded-full ${STATUS_DOT[s.status] || "bg-gray-500"}`}
+                    className={`w-2.5 h-2.5 rounded-full ${statusMeta(s.status).dot}`}
                   />
                   <h3 className="text-[15px] font-bold text-den-text">{s.name}</h3>
                 </div>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${pill.color}`}
+                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${game.tag}`}
                   >
-                    {pill.label}
+                    {game.label}
                   </span>
                 </div>
               </div>
@@ -537,7 +521,7 @@ export default function ServersPage() {
             <select
               value={addType}
               onChange={(e) => { setAddType(e.target.value); setAddDraft({}); }}
-              className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text focus:outline-none focus:border-[rgba(79,195,247,0.5)] transition-colors"
+              className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text focus:outline-none focus:border-den-cyan/50 transition-colors"
             >
               <option value="7d2d">7 Days to Die</option>
               <option value="minecraft">Minecraft</option>
@@ -562,7 +546,7 @@ export default function ServersPage() {
                   onChange={(e) =>
                     setAddDraft((prev) => ({ ...prev, [field.key]: e.target.value }))
                   }
-                  className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text font-mono focus:outline-none focus:border-[rgba(79,195,247,0.5)] transition-colors"
+                  className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text font-mono focus:outline-none focus:border-den-cyan/50 transition-colors"
                 />
                 {field.key === "dir" && (
                   <button
@@ -620,7 +604,7 @@ export default function ServersPage() {
                     onChange={(e) =>
                       setEditDraft((prev) => ({ ...prev, [field.key]: e.target.value }))
                     }
-                    className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text font-mono focus:outline-none focus:border-[rgba(79,195,247,0.5)] transition-colors"
+                    className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text font-mono focus:outline-none focus:border-den-cyan/50 transition-colors"
                   />
                   {field.key === "dir" && (
                     <button
