@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { ServerDefinition } from "../lib/adapters/types";
-import { advisePorts, detectInstall, gameConfigSecrets, portOwners, type FreeCheck } from "../lib/server-detect";
+import { PORT_SPECS, advisePorts, detectInstall, gameConfigSecrets, portOwners, type FreeCheck } from "../lib/server-detect";
 
 const allFree: FreeCheck = async () => true;
 const busy = (...ports: number[]): FreeCheck => async (p) => !ports.includes(p);
@@ -193,3 +193,24 @@ describe("where the suggested name came from", () => {
     expect(r.detection).toMatchObject({ nameFromConfig: false, fields: { name: path.basename(dir) } });
   });
 });
+
+describe("PORT_SPECS", () => {
+  // Built from the game recipes; these are the values the detector was
+  // written with, so the move changed nothing.
+  it("comes from the recipes, with the detector's search spacing", () => {
+    const brief = Object.fromEntries(
+      Object.entries(PORT_SPECS).map(([type, specs]) => [
+        type,
+        specs.map((s) => `${s.field} ${s.preferred} ${s.protocol} step ${s.step} span ${s.span}`),
+      ])
+    );
+    expect(brief).toEqual({
+      minecraft: ["gamePort 25565 tcp step 1 span 1", "rconPort 25575 tcp step 1 span 1"],
+      "7d2d": ["gamePort 26900 both step 10 span 3", "telnetPort 8081 tcp step 1 span 1"],
+      hytale: ["gamePort 5520 udp step 1 span 1"],
+      palworld: ["gamePort 8211 udp step 1 span 1", "rconPort 25575 tcp step 1 span 1", "restApiPort 8212 tcp step 1 span 1"],
+      enshrouded: ["gamePort 15637 udp step 2 span 1", "queryPort 15638 udp step 2 span 1"],
+    });
+  });
+});
+
