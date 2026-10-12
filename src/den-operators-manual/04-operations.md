@@ -27,17 +27,11 @@ From the repo root:
 
 ```
 npm install
-copy .env.example .env
-copy servers.example.json servers.json
 ```
 
-Then:
+That's all the preparation. There's no `.env` to fill in and no `servers.json` to write: start the Den, open it in a browser, and first-run setup asks for the setup code (printed in the Den's log and saved to `data\setup-code.txt`) and a password. Add servers from the UI afterwards (section 3).
 
-1. Edit `.env`. Set `KITSUNEDEN_PASSWORD` to the shared password and `KITSUNEDEN_SESSION_SECRET` to 32 or more random characters:
-   ```
-   node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
-   ```
-2. Edit `servers.json` to describe your servers, or trim it down to `{ "servers": [], "dashboard": { "port": 3001 } }` and add servers from the UI later (section 3).
+If you'd rather describe servers by hand, `copy servers.example.json servers.json` and edit it. If you'd rather keep the password in a file, `copy .env.example .env` and uncomment `KITSUNEDEN_PASSWORD`.
 
 ### The quick way (development)
 
@@ -58,18 +52,25 @@ Also port 3001. Rebuild after every update to the code.
 
 ### Via Task Scheduler (auto-start on boot)
 
-Task Scheduler is the preferred way to start the Den on boot. It avoids the antivirus trouble that plagues `shell:startup` batch files.
+Task Scheduler is the preferred way to start the Den on its own. It avoids the antivirus trouble that plagues `shell:startup` batch files. Let the script set it up, from the repo root, as the account that owns the KitsuneDen folder and game servers:
 
-| Setting | Value |
+```
+npm run build
+powershell -ExecutionPolicy Bypass -File scripts\install-startup-task.ps1
+```
+
+It registers a task called **KitsuneDen** that starts when you sign in (30 seconds after, so networking is up before the Den binds its port), runs hidden, restarts up to three times if it fails, and never runs two copies. From an elevated PowerShell, `-AtStartup` makes it start at boot instead, before anyone signs in. `-Uninstall` removes it. Appendix H lists every setting.
+
+Day to day:
+
+| To | Run |
 |---|---|
-| Trigger | At startup, delayed 30 seconds |
-| Privileges | Run with highest privileges |
-| On failure | Restart the task |
-| User account | the account that owns the KitsuneDen folder and game servers |
-| Action | `cmd.exe` with arguments `/c npm run start` |
-| Start in | the KitsuneDen repo root |
+| Start the Den | `Start-ScheduledTask KitsuneDen` |
+| Stop the Den | `Stop-ScheduledTask KitsuneDen` (frees port 3001) |
+| Update | `git pull`, stop, `npm run build`, start |
+| Read its output | `data\den-server.log` |
 
-The delay gives Windows time to bring up networking before the dashboard binds its port. Build once (`npm run build`) before handing the task over.
+**Why stopping works:** the task runs `scripts\run-den.ps1`, which first puts itself in a Windows job object set to kill everything in it when it closes. Without that, Task Scheduler only ends the launcher and leaves `node` holding port 3001. The installer copies the launcher into `data\`, which git ignores, so checking out an older branch can't delete it from under the task.
 
 ### Verifying
 
@@ -81,10 +82,11 @@ Open [http://localhost:3001](http://localhost:3001). You should land on the logi
 
 ## 2. Passing the Gate (Login)
 
-- Everyone uses the same password: `KITSUNEDEN_PASSWORD`.
+- Everyone uses the same password: the one chosen at first-run setup (or `KITSUNEDEN_PASSWORD`, if `.env` sets it).
 - A session lasts **7 days**. **Log out** with the button next to *Den operator* at the bottom of the sidebar.
-- **Changing the password** means editing `.env`, restarting the dashboard, and telling everyone. Existing sessions stay valid until they expire.
-- **Ending every session at once** (say, after a password leak): change `KITSUNEDEN_SESSION_SECRET` and restart. Every cookie signed with the old secret stops working.
+- **Changing the password**: **Settings › Den password**. Leave *Sign everyone else out* ticked to end every other session at once (say, after a leak); you stay signed in. Then tell everyone the new one.
+- If the password comes from `.env`, Settings says so: change it there and restart. To end every session in that setup, change `KITSUNEDEN_SESSION_SECRET` and restart.
+- **Forgot the password?** Stop the Den, delete `data\den-auth.json`, and start it again. First-run setup comes back with a fresh setup code. Everyone is signed out.
 
 The session cookie is only marked `Secure` when the request came in over HTTPS (directly, or through a proxy or tunnel that sets `X-Forwarded-Proto: https`). Signing in over plain `http://192.168.x.y:3001` on your LAN works; anything reachable from the internet belongs behind HTTPS anyway.
 
@@ -94,7 +96,13 @@ The session cookie is only marked `Secure` when the request came in over HTTPS (
 
 The **Servers** page manages `servers.json` for you.
 
-- **Add Server**: pick a game type, name it, browse to its install directory, and fill in its ports and passwords. The id must be unique.
+- **Add Server**: pick a game type and browse to its install directory. The form fills itself in (fields marked **auto** until you change them):
+  - **Ports** start at the game's usual ones and are checked against every other Den server (including 7 Days to Die's extra +1/+2 ports) and against anything already listening on this machine. A taken port moves to the next free one, spaced the way that game's servers usually are (7D2D by 10, Enshrouded in game/query pairs).
+  - **From the install folder**: the name and ports from `serverconfig.xml`, `server.properties`, `PalWorldSettings.ini` or `enshrouded_server.json`; the Minecraft jar, loader and version (NeoForge and Forge argument files included); start scripts; the `Mods` folder; SteamCMD if it's in a usual place.
+  - **Ports from the game's config are kept**, because that's what the game binds. If one clashes, the form says with what and offers **Use** with the best free port. Tick *Also change the port in …* and the Den writes it back into the game's config (keeping a `.bak`).
+  - **Passwords** found in the game's config are never sent to the browser. The field says *Found in … Leave blank to use it*, and the Den copies it into `servers.json` when you save.
+
+  The id is made from the name and must be unique.
 - **Edit**: change any field except `id` and `type`. The adapter is rebuilt immediately.
 - **Remove**: stops the server if the dashboard thinks it's running, then removes it from `servers.json`. There is an option to **delete the server's files from disk** as well. That deletion is permanent; read the dialog twice.
 

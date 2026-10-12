@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recordActivity } from "@/lib/activity";
 import {
-  SESSION_COOKIE_NAME,
-  SESSION_TTL_SECONDS,
   SESSION_SECRET_ERROR,
   checkPassword,
   isAuthConfigured,
   isSessionSecretConfigured,
-  shouldUseSecureCookie,
-  signSession,
+  setSessionCookie,
 } from "@/lib/auth";
 
 /**
@@ -32,7 +29,7 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         error:
-          "Server has no KITSUNEDEN_PASSWORD configured. Set it in the environment and restart.",
+          "The Den has no password yet. Open it in a browser to run first-run setup.",
       },
       { status: 503 }
     );
@@ -55,17 +52,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Wrong password." }, { status: 401 });
   }
 
-  const cookieValue = signSession();
   recordActivity({ level: "info", kind: "auth", message: "Someone signed in" });
   const response = NextResponse.json({ ok: true });
-  response.cookies.set({
-    name: SESSION_COOKIE_NAME,
-    value: cookieValue,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: shouldUseSecureCookie(request),
-    path: "/",
-    maxAge: SESSION_TTL_SECONDS,
-  });
+  setSessionCookie(response, request);
   return response;
 }
