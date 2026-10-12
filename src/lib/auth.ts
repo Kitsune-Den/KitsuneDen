@@ -2,16 +2,15 @@
  * Shared-password auth for KitsuneDen.
  *
  * Design (v1):
- * - One password lives in env (KITSUNEDEN_PASSWORD). Everyone who's allowed
- *   into the Den knows it.
+ * - One shared password. Everyone who's allowed into the Den knows it. It
+ *   comes from KITSUNEDEN_PASSWORD, or from first-run setup (an scrypt hash in
+ *   data/den-auth.json). den-auth-config.ts owns where it lives.
  * - A successful login sets an HttpOnly cookie containing a signed payload:
  *     base64url(JSON.stringify({ v: 1, iat: <unix-seconds> })) + "." + hmacSha256
  *   We don't need claims-rich JWTs; just "this came from us and isn't expired."
- * - HMAC key is KITSUNEDEN_SESSION_SECRET (any random string ≥ 32 chars).
- *   It is required. The edge proxy (auth-edge.ts) can only verify against the
- *   env secret, so an in-process random fallback here would mint cookies the
- *   proxy rejects — a silent login loop. Instead login fails with a 503 that
- *   names the missing variable, and the proxy sends pages to /login?setup=1.
+ * - HMAC key is KITSUNEDEN_SESSION_SECRET when set (≥ 32 chars), otherwise a
+ *   secret generated once and persisted next to the password hash. The proxy
+ *   reads the same source, so a cookie signed here always verifies there.
  *
  * Trade-off: shared password = no per-user audit trail. Rotation means
  * telling everyone the new password. Acceptable for "home dashboard for
@@ -19,6 +18,13 @@
  */
 
 import { createHmac, timingSafeEqual } from "node:crypto";
+import {
+  MIN_SESSION_SECRET_LENGTH,
+  _resetAuthConfigForTests,
+  getSessionSecret as getConfiguredSecret,
+  isPasswordConfigured,
+  verifyPassword,
+} from "@/lib/den-auth-config";
 
 export const SESSION_COOKIE_NAME = "kitsuneden_session";
 
@@ -26,8 +32,7 @@ export const SESSION_COOKIE_NAME = "kitsuneden_session";
  * forgotten laptop in a coffee shop isn't open forever. */
 export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
-/** Keep in sync with getSessionSecretEdge() in auth-edge.ts. */
-export const MIN_SESSION_SECRET_LENGTH = 32;
+export { MIN_SESSION_SECRET_LENGTH };
 
 interface SessionPayload {
   v: 1;
@@ -35,62 +40,33 @@ interface SessionPayload {
   iat: number;
 }
 
-/** Cached at module-load. We deliberately do NOT re-read env on every request
- * — a swap of KITSUNEDEN_SESSION_SECRET requires a restart, which is exactly
- * the behavior we want (rotating the secret should invalidate sessions). */
-let cachedSecret: Buffer | null = null;
-
 export const SESSION_SECRET_ERROR =
-  `KITSUNEDEN_SESSION_SECRET is missing or shorter than ${MIN_SESSION_SECRET_LENGTH} characters. ` +
-  "Set it in the environment and restart.";
+  "The Den has no session secret yet. Finish first-run setup, or set KITSUNEDEN_SESSION_SECRET (32+ characters).";
 
-function readSecretFromEnv(): string | null {
-  const fromEnv = process.env.KITSUNEDEN_SESSION_SECRET;
-  if (!fromEnv || fromEnv.length < MIN_SESSION_SECRET_LENGTH) return null;
-  return fromEnv;
-}
-
-/** Throws if the secret isn't configured — callers reachable without one
- * (the login route) must check isSessionSecretConfigured() first. */
+/** Throws when no secret is available, which only happens before any
+ * password exists; the login route checks isSessionSecretConfigured() first. */
 function getSessionSecret(): Buffer {
-  if (cachedSecret) return cachedSecret;
-
-  const fromEnv = readSecretFromEnv();
-  if (!fromEnv) throw new Error(SESSION_SECRET_ERROR);
-  cachedSecret = Buffer.from(fromEnv, "utf8");
-  return cachedSecret;
+  const secret = getConfiguredSecret();
+  if (!secret) throw new Error(SESSION_SECRET_ERROR);
+  return Buffer.from(secret, "utf8");
 }
 
 export function isSessionSecretConfigured(): boolean {
-  return readSecretFromEnv() !== null;
+  return getConfiguredSecret() !== null;
 }
 
-/** Test-only: forget the cached secret. NEVER call this from app code. */
+/** Test-only: forget cached auth config. NEVER call this from app code. */
 export function _resetSecretCacheForTests(): void {
-  cachedSecret = null;
-}
-
-function getConfiguredPassword(): string | null {
-  const p = process.env.KITSUNEDEN_PASSWORD;
-  if (!p || p.length === 0) return null;
-  return p;
+  _resetAuthConfigForTests();
 }
 
 /**
- * Constant-time compare between the user's submitted password and the
- * configured one. Returns false if no password is configured (locks the
- * gate by default — safer than fail-open).
+ * Constant-time check of a submitted password against the configured one.
+ * Returns false if no password is configured (locks the gate by default —
+ * safer than fail-open).
  */
 export function checkPassword(submitted: string): boolean {
-  const expected = getConfiguredPassword();
-  if (expected === null) return false;
-  if (typeof submitted !== "string") return false;
-
-  // timingSafeEqual requires equal-length buffers. Hash both sides first
-  // so length doesn't leak and we get fixed-length input either way.
-  const a = createHmac("sha256", "compare").update(submitted).digest();
-  const b = createHmac("sha256", "compare").update(expected).digest();
-  return timingSafeEqual(a, b);
+  return verifyPassword(submitted);
 }
 
 function base64url(buf: Buffer): string {
@@ -177,7 +153,7 @@ export function verifySession(
  * with an unguessable random gate.
  */
 export function isAuthConfigured(): boolean {
-  return getConfiguredPassword() !== null;
+  return isPasswordConfigured();
 }
 
 /**
@@ -200,4 +176,22 @@ export function shouldUseSecureCookie(request: Request): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Sign a fresh session and attach it to `response`. Shared by login, first-run
+ * setup and password changes so the cookie attributes can't drift apart.
+ */
+export function setSessionCookie(response: { cookies: { set: (c: {
+  name: string; value: string; httpOnly: boolean; sameSite: "lax"; secure: boolean; path: string; maxAge: number;
+}) => unknown } }, request: Request): void {
+  response.cookies.set({
+    name: SESSION_COOKIE_NAME,
+    value: signSession(),
+    httpOnly: true,
+    sameSite: "lax",
+    secure: shouldUseSecureCookie(request),
+    path: "/",
+    maxAge: SESSION_TTL_SECONDS,
+  });
 }
