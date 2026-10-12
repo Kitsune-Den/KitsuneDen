@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     config,
     redactedSecrets,
     format: adapter.capabilities.hasServerProperties ? "properties" : "json",
+    gameVersion: adapter.getGameVersion?.(),
   });
 }
 

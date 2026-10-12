@@ -3,14 +3,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import type { AdminData } from "../lib/adapters/types";
-import {
-  decodeXmlEntities,
-  escapeXmlAttr,
-  parseAdminXml,
-  parseXmlConfig,
-  writeAdminXml,
-  writeXmlConfig,
-} from "../lib/adapters/seven-days-adapter";
+import { parseAdminXml, parseXmlConfig, writeAdminXml, writeXmlConfig } from "../lib/adapters/seven-days-adapter";
+import { xmlEscape as escapeXmlAttr, xmlUnescape as decodeXmlEntities } from "../lib/seven-days-config";
 
 /**
  * serverconfig.xml / serveradmin.xml are edited with regexes. Values used to
@@ -40,7 +34,7 @@ const TRICKY = [
   "emoji 🦊 and ünïcödé",
 ];
 
-describe("escapeXmlAttr / decodeXmlEntities", () => {
+describe("xmlEscape / xmlUnescape", () => {
   for (const value of TRICKY) {
     it(`round-trips ${JSON.stringify(value)}`, () => {
       const escaped = escapeXmlAttr(value);

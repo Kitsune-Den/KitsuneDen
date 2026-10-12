@@ -237,6 +237,9 @@ export interface ServerAdapter {
   // Config
   getConfig(): Promise<Record<string, unknown>>;
   saveConfig(config: Record<string, unknown>): Promise<ActionResult>;
+  /** The game version the server last reported, where the adapter can read it.
+   *  The config editor uses it to pick a version-appropriate field set. */
+  getGameVersion?(): string | undefined;
 
   // Players
   getPlayers(): Promise<PlayerData>;

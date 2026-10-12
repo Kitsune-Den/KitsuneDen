@@ -4,6 +4,13 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { probeReachability } from "./reachability";
+import {
+  parseServerConfigXml,
+  patchServerConfigXml,
+  sevenDaysVersionFromLog,
+  xmlEscape,
+  xmlUnescape,
+} from "../seven-days-config";
 import type {
   ServerAdapter,
   ServerDefinition,
@@ -123,57 +130,19 @@ export function syncKnownPlayers(logFile: string, cacheFile: string): Map<string
   return known;
 }
 
-// ---- XML helpers ----
+// ---- serveradmin.xml helpers ----
 //
-// serverconfig.xml and serveradmin.xml are read and written with regexes, not
-// a DOM, so every value has to be escaped on the way out and decoded on the
-// way in. Before this, a `"` in a config value or a player name closed the
-// attribute early: `x"/><property name="TelnetPassword" value="y` set a second
-// property, and a name like `a" permission_level="0` became an admin entry.
-
-/** Escape a value for a double-quoted XML attribute. Newlines/tabs become
- * character references so attribute-value normalization doesn't eat them. */
-export function escapeXmlAttr(value: unknown): string {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\r/g, "&#13;")
-    .replace(/\n/g, "&#10;")
-    .replace(/\t/g, "&#9;");
-}
-
-const NAMED_ENTITIES: Record<string, string> = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">" };
-
-/** Decode the predefined XML entities and numeric character references. */
-export function decodeXmlEntities(value: string): string {
-  return value.replace(/&(?:#(\d+)|#x([0-9a-fA-F]+)|(amp|quot|apos|lt|gt));/g, (match, dec, hex, name) => {
-    if (name) return NAMED_ENTITIES[name];
-    const code = dec !== undefined ? parseInt(dec, 10) : parseInt(hex, 16);
-    try {
-      return String.fromCodePoint(code);
-    } catch {
-      return match; // out of range — leave it as written
-    }
-  });
-}
+// Edited with regexes, not a DOM, so every value is escaped on the way out
+// and decoded on the way in (xmlEscape / xmlUnescape, shared with
+// serverconfig.xml). Before this, a `"` in a player name or ban reason closed
+// the attribute: a name like `a" permission_level="0` became an admin entry.
 
 const XML_COMMENT = /<!--[\s\S]*?-->/g;
-
-/** Apply `fn` to the parts of `xml` outside comments. The stock files ship
- * commented-out example entries; those must be neither read nor edited. */
-function mapOutsideComments(xml: string, fn: (chunk: string) => string): string {
-  return xml
-    .split(/(<!--[\s\S]*?-->)/)
-    .map((part, i) => (i % 2 === 1 ? part : fn(part)))
-    .join("");
-}
 
 /** Read one attribute from a tag's attribute string, decoded. */
 function readAttr(attrs: string, name: string): string {
   const m = attrs.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`));
-  return m ? decodeXmlEntities(m[1]) : "";
+  return m ? xmlUnescape(m[1]) : "";
 }
 
 /** Self-closing <tag ... /> entries. Quoted values may contain "/" or ">"
@@ -266,7 +235,7 @@ export function writeAdminXml(filePath: string, data: AdminData): void {
 
   const userTag = useNewFormat ? "users" : "admins";
   const cmdTag = useNewFormat ? "commands" : "permissions";
-  const a = escapeXmlAttr;
+  const a = (v: unknown) => xmlEscape(String(v));
 
   const userLines = data.users.map((u) => {
     const level = permissionLevelOf(u.permissionLevel, 1000);
@@ -325,58 +294,18 @@ ${cmdLines.join("\n")}
 
 export function parseXmlConfig(filePath: string): Record<string, string> {
   try {
-    const xml = fs.readFileSync(filePath, "utf8").replace(XML_COMMENT, "");
-    const props: Record<string, string> = {};
-    const re = /<property\s+name="([^"]+)"\s+value="([^"]*)"\s*\/>/g;
-    let m;
-    while ((m = re.exec(xml)) !== null) {
-      props[decodeXmlEntities(m[1])] = decodeXmlEntities(m[2]);
-    }
-    return props;
+    return parseServerConfigXml(fs.readFileSync(filePath, "utf8"));
   } catch {
     return {};
   }
 }
 
-/** 7D2D property names are plain identifiers. Anything else is refused: the
- * name is used in a RegExp and written into the file. */
-const CONFIG_KEY = /^[A-Za-z][A-Za-z0-9_.-]*$/;
-
 export function writeXmlConfig(
   filePath: string,
   changes: Record<string, string>
 ): void {
-  // Validate everything before touching the file, so a bad key writes nothing.
-  for (const key of Object.keys(changes)) {
-    if (!CONFIG_KEY.test(key)) throw new Error(`Invalid config property name: ${JSON.stringify(key)}`);
-  }
-
-  let xml = fs.readFileSync(filePath, "utf8");
-  const added: string[] = [];
-  for (const [key, value] of Object.entries(changes)) {
-    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp(`(<property\\s+name="${escapedKey}"\\s+value=")([^"]*)("\\s*/>)`, "g");
-    const escapedValue = escapeXmlAttr(value);
-    let found = false;
-    xml = mapOutsideComments(xml, (chunk) =>
-      // Function replacer: a string replacement would expand $&, $1, $' in
-      // the value.
-      chunk.replace(re, (_m, pre: string, _old: string, post: string) => {
-        found = true;
-        return pre + escapedValue + post;
-      })
-    );
-    if (!found) {
-      // Property doesn't exist yet (or only as a commented-out example)
-      added.push(`\t<property name="${key}"\t\t\t\tvalue="${escapedValue}"/>`);
-    }
-  }
-  // Insert new properties before the closing </ServerSettings> tag
-  if (added.length > 0) {
-    const insertBlock = "\n\t<!-- Added by Dashboard -->\n" + added.join("\n") + "\n";
-    xml = xml.replace(/([\t ]*<\/ServerSettings>)/, (closing) => insertBlock + closing);
-  }
-  fs.writeFileSync(filePath, xml, "utf8");
+  const xml = fs.readFileSync(filePath, "utf8");
+  fs.writeFileSync(filePath, patchServerConfigXml(xml, changes), "utf8");
 }
 
 /** Send a single telnet command and return the response */
@@ -819,6 +748,17 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
     return parseXmlConfig(this.configPath);
   }
 
+  /** The version the game printed on its last boot ("V 3.3.0 (b18)"), so the
+   *  config editor can tell a 3.x server apart even when its serverconfig.xml
+   *  predates the SandboxCode. Undefined until the server has logged once. */
+  getGameVersion(): string | undefined {
+    try {
+      return sevenDaysVersionFromLog(fs.readFileSync(this.logFilePath, "utf8")) ?? undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   async saveConfig(config: Record<string, unknown>): Promise<ActionResult> {
     try {
       // Backup first
@@ -962,8 +902,7 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
     const uniquePlayers = new Set<string>();
     try {
       const log = fs.readFileSync(this.logFilePath, "utf8");
-      const versionMatch = log.match(/INF Version:\s*(V\s*[\d.]+\s*\([^)]+\))/);
-      if (versionMatch) serverVersion = versionMatch[1];
+      serverVersion = sevenDaysVersionFromLog(log) ?? "";
       const loginRe = /INF PlayerLogin:\s*(.+?)\/V/g;
       let m;
       while ((m = loginRe.exec(log)) !== null) {
