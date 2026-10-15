@@ -3,6 +3,7 @@ import net from "net";
 import dgram from "dgram";
 import path from "path";
 import type { ServerDefinition } from "./adapters/types";
+import { RECIPES, portDefault } from "./recipes";
 import { parseServerConfigXml } from "./seven-days-config";
 import { parseOptionSettings } from "./adapters/palworld-adapter";
 import { validatePathFields } from "./server-def-security";
@@ -41,26 +42,47 @@ interface PortSpec {
   protocol: Protocol;
 }
 
-export const PORT_SPECS: Record<GameType, PortSpec[]> = {
-  minecraft: [
-    { field: "gamePort", preferred: 25565, step: 1, span: 1, protocol: "tcp" },
-    { field: "rconPort", preferred: 25575, step: 1, span: 1, protocol: "tcp" },
-  ],
-  "7d2d": [
-    { field: "gamePort", preferred: 26900, step: 10, span: 3, protocol: "both" },
-    { field: "telnetPort", preferred: 8081, step: 1, span: 1, protocol: "tcp" },
-  ],
-  hytale: [{ field: "gamePort", preferred: 5520, step: 1, span: 1, protocol: "udp" }],
-  palworld: [
-    { field: "gamePort", preferred: 8211, step: 1, span: 1, protocol: "udp" },
-    { field: "rconPort", preferred: 25575, step: 1, span: 1, protocol: "tcp" },
-    { field: "restApiPort", preferred: 8212, step: 1, span: 1, protocol: "tcp" },
-  ],
-  enshrouded: [
-    { field: "gamePort", preferred: 15637, step: 2, span: 1, protocol: "udp" },
-    { field: "queryPort", preferred: 15638, step: 2, span: 1, protocol: "udp" },
-  ],
+/** Games whose install folder can be read. */
+const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded"];
+
+/**
+ * How far apart to look when the usual port is taken, where that isn't just
+ * the ports the field spans: 7D2D game ports sit 10 apart, Enshrouded's in
+ * pairs. Everything else steps by its span.
+ */
+const PORT_STEP: Partial<Record<GameType, Partial<Record<PortField, number>>>> = {
+  "7d2d": { gamePort: 10 },
+  enshrouded: { gamePort: 2, queryPort: 2 },
 };
+
+/**
+ * A game's port specs, from its recipe: the preferred port and protocol of
+ * each port with its own field, and a span covering the ports it opens at an
+ * offset (7D2D's query port, game + 2, makes its game port span 3). One
+ * statement of each port fact, shared with the form, adapters and Networking
+ * card.
+ */
+function specsFromRecipe(type: GameType): PortSpec[] {
+  const recipe = RECIPES[type];
+  return recipe.ports
+    .filter((port) => !port.offset)
+    .map((port) => {
+      const offsets = recipe.ports.filter((q) => q.offset?.from === port.field).map((q) => q.offset!.by);
+      const span = 1 + Math.max(0, ...offsets);
+      return {
+        field: port.field,
+        preferred: portDefault(recipe, port.field)!,
+        step: PORT_STEP[type]?.[port.field] ?? span,
+        span,
+        protocol: port.proto === "tcp+udp" ? "both" : port.proto,
+      };
+    });
+}
+
+export const PORT_SPECS = Object.fromEntries(DETECT_GAMES.map((t) => [t, specsFromRecipe(t)])) as Record<
+  GameType,
+  PortSpec[]
+>;
 
 export function isGameType(t: unknown): t is GameType {
   return typeof t === "string" && t in PORT_SPECS;

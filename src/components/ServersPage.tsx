@@ -5,6 +5,7 @@ import { useServer } from "@/contexts/ServerContext";
 import { Trash2, Pencil, Plus, FolderOpen, Sparkles, Loader, TriangleAlert, Info } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
 import { gameMeta, statusMeta } from "@/lib/game-meta";
+import { RECIPES, portDefault, recipeDefaults, recipeFor, type GameType, type RecipePort } from "@/lib/recipes";
 import { PORT_FIELDS, useServerAutofill } from "./servers/useServerAutofill";
 
 
@@ -25,42 +26,81 @@ interface FieldDef {
 const SHARED_FIELDS: FieldDef[] = [
   { key: "name", label: "Server Name", type: "text", hint: "Display name shown in the dashboard" },
   { key: "dir", label: "Install Directory", type: "text", hint: "Full path to the server's root folder" },
-  { key: "gamePort", label: "Game Port", type: "number", hint: "Port players connect to (e.g. 26900, 25565)" },
+  { key: "gamePort", label: "Game Port", type: "number", hint: "Port players connect to" },
 ];
 
+// Defaults and port facts live in the game's recipe (src/lib/recipes.ts);
+// fieldHint() adds them, so no number here can drift from it.
 const TYPE_FIELDS: Record<string, FieldDef[]> = {
   "7d2d": [
-    { key: "telnetPort", label: "Telnet Port", type: "number", hint: "Telnet port for server commands (default 8081)" },
+    { key: "telnetPort", label: "Telnet Port", type: "number", hint: "Telnet port for server commands" },
     { key: "telnetPassword", label: "Telnet Password", type: "password", hint: "Password set in serverconfig.xml under TelnetPassword" },
     { key: "configFile", label: "Config File", type: "text", hint: "Config filename (e.g. serverconfig.xml or serverconfig-custom.xml)" },
-    { key: "modsDir", label: "Mods Directory", type: "text", hint: "Mods folder name relative to install dir (default: Mods)" },
+    { key: "modsDir", label: "Mods Directory", type: "text", hint: "Mods folder name relative to install dir" },
   ],
   minecraft: [
-    { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port from server.properties (default 25575)" },
+    { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port from server.properties" },
     { key: "rconPassword", label: "RCON Password", type: "password", hint: "RCON password from server.properties" },
     { key: "javaPath", label: "Java Path", type: "text", hint: "Full path to java.exe (e.g. C:\\Program Files\\Java\\bin\\java.exe)" },
     { key: "loader", label: "Loader", type: "text", hint: "Mod loader type (Fabric, NeoForge, Paper, Vanilla, etc.)" },
     { key: "version", label: "Version", type: "text", hint: "Minecraft version (e.g. 1.21.4)" },
   ],
   hytale: [
-    { key: "startScript", label: "Start Script", type: "text", hint: "Bat file to launch the server, relative to the install directory (e.g. start.bat)" },
+    { key: "startScript", label: "Start Script", type: "text", hint: "Bat file to launch the server, relative to the install directory" },
     { key: "backupScript", label: "Backup Script", type: "text", hint: "PowerShell script for backups, relative to the install directory (optional)" },
     { key: "processFilter", label: "Process Filter", type: "text", hint: "Process name to detect if server is running" },
   ],
   palworld: [
-    { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port (default 25575)" },
+    { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port" },
     { key: "rconPassword", label: "RCON Password", type: "password", hint: "RCON password from PalWorldSettings.ini" },
     { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates" },
-    { key: "restApiPort", label: "REST API Port", type: "number", hint: "REST API port (default 8212)" },
+    { key: "restApiPort", label: "REST API Port", type: "number", hint: "REST API port" },
     { key: "restApiPassword", label: "REST API Password", type: "password", hint: "Admin password for the REST API" },
   ],
   enshrouded: [
-    { key: "queryPort", label: "Query Port", type: "number", hint: "Steam query port (default 15638)" },
-    { key: "configFile", label: "Config File", type: "text", hint: "Config filename (default: enshrouded_server.json)" },
-    { key: "startScript", label: "Start Script", type: "text", hint: "Optional bat file in the install directory (default: start_enshrouded.bat). Falls back to launching enshrouded_server.exe directly." },
-    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates (app id 2278520)" },
+    { key: "queryPort", label: "Query Port", type: "number", hint: "Steam query port" },
+    { key: "configFile", label: "Config File", type: "text", hint: "Config filename" },
+    { key: "startScript", label: "Start Script", type: "text", hint: "Optional bat file in the install directory. Falls back to launching enshrouded_server.exe directly." },
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates" },
   ],
 };
+
+const GAME_TYPES = Object.keys(RECIPES) as GameType[];
+
+const PROTO_LABEL: Record<RecipePort["proto"], string> = { tcp: "TCP", udp: "UDP", "tcp+udp": "TCP and UDP" };
+
+function fieldsFor(type: string): FieldDef[] {
+  return [...SHARED_FIELDS, ...(TYPE_FIELDS[type] || [])];
+}
+
+/**
+ * The recipe's default for a field, shown as its placeholder. Not filled in:
+ * autofill only fills empty fields, and it knows better (what's in the
+ * install folder, which ports are free). Left empty, the adapter uses this.
+ */
+function defaultPlaceholder(type: string, field: FieldDef): string | undefined {
+  if (field.type === "password") return undefined;
+  const v: unknown = (recipeDefaults(type) as Record<string, unknown>)[field.key];
+  return typeof v === "string" || typeof v === "number" ? `${v} (default)` : undefined;
+}
+
+/** The field's own hint, plus what the game's recipe says about it. */
+function fieldHint(type: string, field: FieldDef): string | undefined {
+  const recipe = recipeFor(type);
+  if (!recipe) return field.hint;
+  const parts = [field.hint];
+  const port = recipe.ports.find((p) => p.field === field.key);
+  if (port) {
+    const n = portDefault(recipe, port.field);
+    parts.push(`${PROTO_LABEL[port.proto]}${n !== undefined ? `, default ${n}` : ""}`);
+    parts.push(port.public ? "forward it for players" : "keep it off the internet");
+    if (port.note) parts.push(port.note);
+  } else {
+    const d: unknown = (recipe.defaults as Record<string, unknown>)[field.key];
+    if (typeof d === "string" || typeof d === "number") parts.push(`default ${d}`);
+  }
+  return parts.filter(Boolean).join(" · ");
+}
 
 export default function ServersPage() {
   const { servers, serverId, setServerId, refreshServers } = useServer();
@@ -113,7 +153,7 @@ export default function ServersPage() {
     setAddMessage(null);
 
     try {
-      const fields = [...SHARED_FIELDS, ...(TYPE_FIELDS[addType] || [])];
+      const fields = fieldsFor(addType);
       // Detected launch settings (jar, launch mode, arg files) have no inputs; form values win.
       const server: Record<string, unknown> = { ...autofill.hiddenFields(), id, type: addType };
       for (const f of fields) {
@@ -212,7 +252,7 @@ export default function ServersPage() {
   const openEdit = (server: { id: string; name: string; type: string }) => {
     // Pre-populate draft from the full server data
     const full = servers.find((s) => s.id === server.id);
-    const fields = [...SHARED_FIELDS, ...(TYPE_FIELDS[server.type] || [])];
+    const fields = fieldsFor(server.type);
     const draft: Record<string, string | number> = {};
     for (const f of fields) {
       // Secrets are write-only: the API never returns them, so the input
@@ -238,7 +278,7 @@ export default function ServersPage() {
 
     try {
       // Convert number fields from strings
-      const fields = [...SHARED_FIELDS, ...(TYPE_FIELDS[editTarget.type] || [])];
+      const fields = fieldsFor(editTarget.type);
       const updates: Record<string, unknown> = {};
       for (const f of fields) {
         const val = editDraft[f.key];
@@ -533,21 +573,25 @@ export default function ServersPage() {
             </label>
             <select
               value={addType}
-              onChange={(e) => { setAddType(e.target.value); setAddDraft({}); autofill.reset(e.target.value); }}
+              onChange={(e) => {
+                // Keep the name and folder; autofill re-detects the rest for the new game.
+                const type = e.target.value;
+                setAddType(type);
+                setAddDraft((prev) => ({ name: prev.name ?? "", dir: prev.dir ?? "" }));
+                autofill.reset(type);
+              }}
               className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text focus:outline-none focus:border-den-cyan/50 transition-colors"
             >
-              <option value="7d2d">7 Days to Die</option>
-              <option value="minecraft">Minecraft</option>
-              <option value="hytale">Hytale</option>
-              <option value="palworld">Palworld</option>
-              <option value="enshrouded">Enshrouded</option>
+              {GAME_TYPES.map((t) => (
+                <option key={t} value={t}>{gameMeta(t).label}</option>
+              ))}
             </select>
           </div>
 
           <div className="text-[10px] font-bold text-den-text-dim tracking-widest pt-2 pb-1">
             CONNECTION
           </div>
-          {[...SHARED_FIELDS, ...(TYPE_FIELDS[addType] || [])].map((field) => {
+          {fieldsFor(addType).map((field) => {
             const autoLabel = autofill.autoLabel(field.key);
             const advice = autofill.portAdvice(field.key);
             const secretIn = field.type === "password" ? autofill.secretFoundIn(field.key) : null;
@@ -566,7 +610,7 @@ export default function ServersPage() {
                 <input
                   type={field.type === "password" ? "password" : field.type === "number" ? "number" : "text"}
                   value={addDraft[field.key] ?? ""}
-                  placeholder={secretIn ? `Found in ${secretIn}. Leave blank to use it.` : undefined}
+                  placeholder={secretIn ? `Found in ${secretIn}. Leave blank to use it.` : defaultPlaceholder(addType, field)}
                   onChange={(e) => {
                     autofill.markEdited(field.key);
                     setAddDraft((prev) => ({ ...prev, [field.key]: e.target.value }));
@@ -610,7 +654,7 @@ export default function ServersPage() {
               ) : autoLabel ? (
                 <div className="text-[11px] text-den-text-dim mt-1">Auto-filled {autoLabel}.</div>
               ) : (
-                field.hint && <div className="text-[11px] text-den-text-dim mt-1">{field.hint}</div>
+                fieldHint(addType, field) && <div className="text-[11px] text-den-text-dim mt-1">{fieldHint(addType, field)}</div>
               )}
               {field.key === "dir" && (autofill.detecting || autofill.dirError || autofill.notes.length > 0) && (
                 <div className="mt-2 space-y-1 text-[11.5px]">
@@ -674,7 +718,7 @@ export default function ServersPage() {
             <div className="text-[10px] font-bold text-den-text-dim tracking-widest pb-1">
               CONNECTION
             </div>
-            {[...SHARED_FIELDS, ...(TYPE_FIELDS[editTarget.type] || [])].map((field) => (
+            {fieldsFor(editTarget.type).map((field) => (
               <div key={field.key}>
                 <label className="block text-[11px] text-den-text-muted font-medium mb-1">
                   {field.label}
@@ -709,7 +753,7 @@ export default function ServersPage() {
                     </button>
                   )}
                 </div>
-                {field.hint && <div className="text-[11px] text-den-text-dim mt-1">{field.hint}</div>}
+                {fieldHint(editTarget.type, field) && <div className="text-[11px] text-den-text-dim mt-1">{fieldHint(editTarget.type, field)}</div>}
               </div>
             ))}
             {editMessage && (
