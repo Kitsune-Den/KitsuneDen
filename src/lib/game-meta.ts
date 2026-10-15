@@ -4,7 +4,7 @@
  * Den ships no game artwork). One place, so every surface agrees.
  */
 
-export type GameIcon = "pickaxe" | "skull" | "castle" | "paw" | "flame" | "axe" | "droplet" | "biohazard" | "server";
+export type GameIcon = "pickaxe" | "skull" | "castle" | "paw" | "flame" | "axe" | "droplet" | "biohazard" | "radiation" | "server";
 
 export interface GameMeta {
   label: string;
@@ -77,6 +77,13 @@ const GAME_META: Record<string, GameMeta> = {
     tag: "bg-lime-400/10 text-lime-600 border-lime-400/30",
     art: art("#3d4a1a", "#12160a", "rgba(190,242,100,0.28)"),
     icon: "biohazard",
+  },
+  rust: {
+    label: "Rust",
+    short: "Rust",
+    tag: "bg-orange-400/10 text-orange-600 border-orange-400/30",
+    art: art("#6b3414", "#1c0f07", "rgba(251,146,60,0.3)"),
+    icon: "radiation",
   },
 };
 

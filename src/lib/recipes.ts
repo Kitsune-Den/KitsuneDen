@@ -493,6 +493,66 @@ export const RECIPES: Record<GameType, GameRecipe> = {
       "A backup of a running server copies its open database. PackRelay captured one cleanly, but restoring one hasn't been tested.",
     ],
   },
+
+  // Launch, ports, identity and RCON as PackRelay measured them on a real
+  // Windows server. See src/lib/rust-settings.ts.
+  rust: {
+    type: "rust",
+    tier: "experimental",
+    evidence: "New in the Den and not yet run through it. Its launch, ports and RCON follow PackRelay, which has run Rust on Windows (first boot ~7.5 min of map generation, a clean quit in 2 s).",
+    platforms: { windows: true, linux: true },
+    install: { kind: "steamcmd", appId: 258550, anonymous: true, denCanInstall: true },
+    launch: {
+      kind: "exe",
+      entry: "RustDedicated.exe",
+      help: "Started with -batchmode -logfile and the settings from kitsuneden-rust.json as +convar arguments: identity, ports, RCON (+rcon.web 0, the TCP protocol), hostname, map, world size, seed and slots.",
+    },
+    // Measured layout: UDP game, TCP RCON one above, UDP query two above. The
+    // Den passes all three, derived from the game port, so servers never
+    // interleave.
+    ports: [
+      { field: "gamePort", purpose: "game", proto: "udp", default: 28015, public: true },
+      {
+        field: "rconPort",
+        purpose: "rcon",
+        proto: "tcp",
+        offset: { from: "gamePort", by: 1 },
+        public: false,
+        note: "One above the game port. Rust's RCON listens on every interface, so keep it closed to the internet.",
+      },
+      {
+        field: "queryPort",
+        purpose: "query",
+        proto: "udp",
+        offset: { from: "gamePort", by: 2 },
+        public: true,
+        note: "Two above the game port, for the server browser. Forward it with the game port.",
+      },
+    ],
+    control: {
+      console: "rcon",
+      stop: "RCON `quit`, and Rust saves on the way out (2 s when PackRelay measured it). A kill if it's still up a minute later.",
+      players: "RCON `playerlist`.",
+    },
+    saves: {
+      path: "server\\<identity>",
+      backup: "zip",
+      note: "Backups send `server.save` first, then zip a copy of server\\<identity> without the .map and occlusion caches (regenerated from the seed; most of the size), with kitsuneden-rust.json, into ../backups/rust.",
+    },
+    config: [
+      { file: "kitsuneden-rust.json", format: "json" },
+      { file: "server\\<identity>\\cfg\\server.cfg", format: "properties" },
+    ],
+    connect: "Press F1 in the main menu and run: client.connect <address>:<game port>. Or find it in the server browser.",
+    steamClientAppId: 252490,
+    defaults: { steamAppId: 258550 },
+    gaps: [
+      "Not yet run through the Den. Once someone has installed it, started it, joined and stopped it, mark it verified.",
+      "RCON runs in Rust's TCP mode (+rcon.web 0) so the Den needs no websocket library. Rust logs that mode as deprecated on every boot; if Facepunch removes it, the Den will need WebRCON.",
+      "The Rust+ companion port (app.port, 28082 by default) isn't managed. A second Rust server on the same machine needs its own, set in its server.cfg.",
+      "Other convars (server.cfg), wipes and Oxide/uMod plugins are handled by hand. Changing the identity points the server at a new, empty world.",
+    ],
+  },
 };
 
 export function recipeFor(type: string | undefined): GameRecipe | undefined {

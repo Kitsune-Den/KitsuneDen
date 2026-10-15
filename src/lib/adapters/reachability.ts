@@ -1,5 +1,6 @@
 import net from "net";
 import type { ServerDefinition, ServerAdapter, ServerStatus } from "./types";
+import { recipeDefault } from "../recipes";
 
 export type Reachable = "running" | "stopped" | "unknown";
 
@@ -102,6 +103,9 @@ export function getProbeTarget(
       return def.gamePort ? { host: "127.0.0.1", port: def.gamePort } : null;
     case "7d2d":
       return def.telnetPort ? { host: "127.0.0.1", port: def.telnetPort } : null;
+    case "rust":
+      // RCON is the one TCP socket, at game + 1 (the recipe's layout).
+      return { host: "127.0.0.1", port: (def.gamePort || recipeDefault("rust", "gamePort")) + 1 };
     case "vrising":
     case "projectzomboid":
       // RCON is the one TCP socket, and the Den turns it on every start.
@@ -147,7 +151,7 @@ export async function resolveServerStatus(
   // secondary signal — catches the case where the process is running but the
   // probe is inconclusive (or there's no probe target at all).
   const def = adapter.def;
-  if (def.type === "hytale" || def.type === "palworld" || def.type === "enshrouded" || def.type === "valheim" || def.type === "vrising" || def.type === "projectzomboid") {
+  if (def.type === "hytale" || def.type === "palworld" || def.type === "enshrouded" || def.type === "valheim" || def.type === "vrising" || def.type === "projectzomboid" || def.type === "rust") {
     const stats = await adapter.getStats();
     if (stats.process) return "running";
     return "stopped";

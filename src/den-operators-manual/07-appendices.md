@@ -70,6 +70,9 @@ This chapter is for skimming. Keep it open in a tab and reach for whatever you n
 | Project Zomboid game | 16261 | UDP | `gamePort`, written into `servertest.ini` as `DefaultPort` |
 | Project Zomboid second port | 16262 | UDP | `gamePort` + 1, written as `UDPPort` |
 | Project Zomboid RCON | 27015 | TCP | `rconPort`; also the status probe |
+| Rust game | 28015 | UDP | `gamePort`, passed as `+server.port` |
+| Rust RCON | 28016 | TCP | `gamePort` + 1, passed as `+rcon.port`; also the status probe |
+| Rust query | 28017 | UDP | `gamePort` + 2, passed as `+server.queryport` |
 | SSH (remote lifecycle) | 22 | TCP | `lifecycle.port` |
 
 ---
@@ -129,6 +132,7 @@ Every route except `/api/auth/*` needs a valid session. Server-aware routes take
 | `/api/valheim-update` | GET, POST | Branch and app id / SteamCMD install or update on the installed branch |
 | `/api/vrising-update` | GET, POST | Branch and app id / SteamCMD install or update on the installed branch |
 | `/api/projectzomboid-update` | GET, POST | Branch and app id / SteamCMD install or update on the installed branch |
+| `/api/rust-update` | GET, POST | Branch and app id / SteamCMD install or update on the installed branch |
 | `/api/airdrops/settings` | GET, PUT | KitsuneCommand airdrop settings |
 | `/api/airdrops/loot-tables` | GET, POST, PUT, DELETE | Loot tables and entries |
 | `/api/airdrops/history` | GET | Recent drops (`?limit=`, default 50) |
@@ -259,6 +263,17 @@ Host settings live in `save-data\Settings\ServerHostSettings.json` (Config tab);
 | `steamAppId` | 380870 | Steam app id |
 
 Server settings live in `zomboid-data\Server\servertest.ini` (Config tab, after the first start). The `admin` password and Java heap (`minMemoryGB`, `maxMemoryGB`) live in `kitsuneden-zomboid.json` in the server folder.
+
+### Rust (`rust`)
+
+| Field | Default | Description |
+|---|---|---|
+| `gamePort` | 28015 | UDP game port; RCON is `gamePort` + 1 (TCP) and query `gamePort` + 2 (UDP) |
+| `rconPassword` | generated | RCON password; kept in `kitsuneden-rust.json` when not set here |
+| `steamCmdPath` | | `steamcmd.exe` for installs and updates |
+| `steamAppId` | 258550 | Steam app id |
+
+Server name, map, world size, seed, slots and `identity` (the world's folder under `server\`) live in `kitsuneden-rust.json` (Config tab). Other convars go in `server\<identity>\cfg\server.cfg`.
 
 ### Top level
 

@@ -56,6 +56,7 @@ KitsuneDen treats your servers like living things. Each one gets its own persona
 | Valheim | `valheim` | 🧪 Experimental: new, not yet run through the Den (no console, so no live commands) |
 | V Rising | `vrising` | 🧪 Experimental: new, not yet run through the Den (RCON commands; Windows only) |
 | Project Zomboid | `projectzomboid` | 🧪 Experimental: new, not yet run through the Den (RCON commands and player list) |
+| Rust | `rust` | 🧪 Experimental: new, not yet run through the Den (RCON commands and player list) |
 | Something else | - | 🔧 [Write an adapter](#adding-a-new-game) |
 
 ---
@@ -242,6 +243,18 @@ By default KitsuneDen reads and writes `servers.json` in the directory it's star
 
 > The Den runs the game's bundled Java directly (not `StartServer64.bat`, which fixes the heap at 16 GB and passes on only two arguments) with `-cachedir=./zomboid-data`, so the world, database, logs and `servertest.ini` live in the server folder. Before every start it writes the ports and RCON into `zomboid-data\Server\servertest.ini`; the Config tab edits the rest of that file once the first start has created it.
 > The first start also writes `kitsuneden-zomboid.json` with the in-game `admin` password (shown once, and only applied when the world is first created) and the Java heap (2 to 4 GB). Stop sends RCON `quit`, and backups send RCON `save` first.
+
+**`rust`**: Rust
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `dir` | ✅ | Path to the server directory |
+| `gamePort` | Optional | UDP game port (default 28015). RCON is the next port up (TCP) and the query port the one after (UDP), so each server takes three in a row. |
+| `rconPassword` | Optional | RCON password. Leave it out and the Den generates one. |
+| `steamCmdPath` | Optional | Path to steamcmd.exe, to install and update the server (Steam app id 258550) |
+
+> Server name, description, slots, map, world size, seed and the world's folder (`server.identity`) live in `kitsuneden-rust.json` in the server folder, edited on the Config tab and passed to `RustDedicated.exe` as `+convar` arguments at each start. The first start picks a random seed.
+> RCON runs in Rust's TCP mode (`+rcon.web 0`), which Rust logs as deprecated; stop sends `quit` (Rust saves on the way out) and backups send `server.save` first. Block the RCON port from the internet: Rust binds it on every interface.
 
 ### Remote Minecraft servers
 
