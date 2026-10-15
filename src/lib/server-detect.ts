@@ -30,7 +30,7 @@ import { validatePathFields } from "./server-def-security";
  * gameConfigSecrets() fills them in server-side when the server is saved.
  */
 
-export type GameType = "minecraft" | "7d2d" | "hytale" | "palworld" | "enshrouded" | "valheim" | "vrising" | "projectzomboid";
+export type GameType = "minecraft" | "7d2d" | "hytale" | "palworld" | "enshrouded" | "valheim" | "vrising" | "projectzomboid" | "rust";
 export type PortField = "gamePort" | "rconPort" | "telnetPort" | "restApiPort" | "queryPort";
 type Protocol = "tcp" | "udp" | "both";
 
@@ -45,7 +45,7 @@ interface PortSpec {
 }
 
 /** Games whose install folder can be read. */
-const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded", "valheim", "vrising", "projectzomboid"];
+const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded", "valheim", "vrising", "projectzomboid", "rust"];
 
 /**
  * How far apart to look when the usual port is taken, where that isn't just
@@ -68,14 +68,17 @@ function specsFromRecipe(type: GameType): PortSpec[] {
   return recipe.ports
     .filter((port) => !port.offset)
     .map((port) => {
-      const offsets = recipe.ports.filter((q) => q.offset?.from === port.field).map((q) => q.offset!.by);
-      const span = 1 + Math.max(0, ...offsets);
+      const followers = recipe.ports.filter((q) => q.offset?.from === port.field);
+      const span = 1 + Math.max(0, ...followers.map((q) => q.offset!.by));
+      // A block mixing protocols (Rust: UDP game, TCP RCON, UDP query) is
+      // checked on both, so a TCP holder of the RCON slot isn't missed.
+      const protos = new Set([port.proto, ...followers.map((q) => q.proto)]);
       return {
         field: port.field,
         preferred: portDefault(recipe, port.field)!,
         step: PORT_STEP[type]?.[port.field] ?? span,
         span,
-        protocol: port.proto === "tcp+udp" ? "both" : port.proto,
+        protocol: port.proto === "tcp+udp" || protos.size > 1 ? "both" : port.proto,
       };
     });
 }
@@ -536,6 +539,31 @@ function detectProjectZomboid(dir: string, d: Detection) {
   if (!d.fields.name) d.fields.name = path.basename(dir);
 }
 
+/**
+ * Rust takes its settings as launch arguments the Den builds from
+ * kitsuneden-rust.json, so there are no config ports to read.
+ */
+function detectRust(dir: string, d: Detection) {
+  if (!exists(path.join(dir, "RustDedicated.exe"))) {
+    d.notes.push("No RustDedicated.exe here yet. Once the SteamCMD path is set, the Update tab can install it.");
+  }
+  const settings = readText(path.join(dir, "kitsuneden-rust.json"));
+  if (settings) {
+    try {
+      const c = JSON.parse(settings) as Record<string, unknown>;
+      if (typeof c.hostname === "string" && c.hostname.trim()) {
+        d.fields.name = c.hostname;
+        d.nameFromConfig = true;
+      }
+    } catch {
+      d.notes.push("kitsuneden-rust.json isn't valid JSON, so it was skipped.");
+    }
+  }
+  const steam = findSteamCmd(dir);
+  if (steam) d.fields.steamCmdPath = steam;
+  if (!d.fields.name) d.fields.name = path.basename(dir);
+}
+
 export type DetectResult = { ok: true; detection: Detection } | { ok: false; error: string };
 
 /** Read what's already in an install folder. Never returns secret values. */
@@ -558,6 +586,7 @@ export function detectInstall(type: GameType, dir: string): DetectResult {
   else if (type === "valheim") detectValheim(dir, d);
   else if (type === "vrising") detectVRising(dir, d);
   else if (type === "projectzomboid") detectProjectZomboid(dir, d);
+  else if (type === "rust") detectRust(dir, d);
   else detectHytale(dir, d);
   return { ok: true, detection: d };
 }

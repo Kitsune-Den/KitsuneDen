@@ -32,7 +32,7 @@ describe("serverPorts", () => {
   });
 
   it("has nothing for a game without a recipe", () => {
-    expect(serverPorts({ id: "r", name: "Rust", type: "rust" })).toEqual([]);
+    expect(serverPorts({ id: "a", name: "ARK", type: "ark" })).toEqual([]);
   });
 
   it("derives Valheim's query port as the game port + 1", () => {

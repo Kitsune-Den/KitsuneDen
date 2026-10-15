@@ -80,6 +80,11 @@ const TYPE_FIELDS: Record<string, FieldDef[]> = {
     { key: "rconPassword", label: "RCON Password", type: "password", hint: "Leave blank and the Den generates one in servertest.ini" },
     { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe, to install and update the server" },
   ],
+  // RCON and query sit at game + 1 and + 2; name, map and slots are on the Config tab.
+  rust: [
+    { key: "rconPassword", label: "RCON Password", type: "password", hint: "Leave blank and the Den generates one in kitsuneden-rust.json" },
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe, to install and update the server" },
+  ],
 };
 
 const PROTO_LABEL: Record<RecipePort["proto"], string> = { tcp: "TCP", udp: "UDP", "tcp+udp": "TCP and UDP" };

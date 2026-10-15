@@ -84,6 +84,13 @@ describe("advisePorts", () => {
     expect(ports.rconPort).toMatchObject({ value: 25576, status: "adjusted" });
   });
 
+  it("moves a second Rust server's whole block (game, RCON, query)", async () => {
+    const owners = portOwners([def({ name: "Rusty", type: "rust", gamePort: 28015 })]);
+    const ports = await advisePorts("rust", {}, owners, allFree);
+    expect(ports.gamePort).toMatchObject({ value: 28018, status: "adjusted" });
+    expect(ports.rconPort).toBeUndefined();
+  });
+
   it("moves Enshrouded's one port to the next free one", async () => {
     // One UDP port for joining and queries (its config's queryPort).
     const owners = portOwners([def({ name: "Shroud", type: "enshrouded", gamePort: 15637 })]);
@@ -266,6 +273,7 @@ describe("PORT_SPECS", () => {
       valheim: ["gamePort 2456 udp step 2 span 2"],
       vrising: ["gamePort 9876 udp step 2 span 2", "rconPort 25575 tcp step 1 span 1"],
       projectzomboid: ["gamePort 16261 udp step 2 span 2", "rconPort 27015 tcp step 1 span 1"],
+      rust: ["gamePort 28015 both step 3 span 3"],
     });
   });
 });

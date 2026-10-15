@@ -172,6 +172,16 @@ export default function ConfigEditor() {
     crossplay: "Crossplay",
   };
 
+  const rustFieldHelp: Record<string, string> = {
+    hostname: "Server name in the server browser.",
+    description: "Shown on the server's page in the browser.",
+    maxplayers: "Player slots.",
+    level: "Map type. \"Procedural Map\" generates one from the seed and world size.",
+    worldsize: "Map size, 1000 to 6000. Bigger maps take longer to generate on first boot.",
+    seed: "Map seed. A new seed means a new map: a map wipe.",
+    identity: "The world's folder under server\\. Changing it starts a new, empty world; the old one stays on disk.",
+  };
+
   const zomboidFieldHelp: Record<string, string> = {
     PublicName: "Server name in the public list.",
     PublicDescription: "Shown under the name in the public list.",
@@ -239,6 +249,7 @@ export default function ConfigEditor() {
     ...(currentServer?.type === "valheim" ? valheimFieldHelp : {}),
     ...(currentServer?.type === "vrising" ? vrisingFieldHelp : {}),
     ...(currentServer?.type === "projectzomboid" ? zomboidFieldHelp : {}),
+    ...(currentServer?.type === "rust" ? rustFieldHelp : {}),
     ...(currentServer?.type === "hytale"
       ? {
           DisplayTmpTagsInStrings:
@@ -1429,6 +1440,15 @@ export default function ConfigEditor() {
         { title: "Saves", keys: ["SaveWorldEveryMinutes", "BackupsCount", "BackupsOnStart", "BackupsPeriod"] },
       ],
     },
+    // The RCON password isn't returned; ports are derived from the game port.
+    rust: {
+      core: ["hostname", "description", "maxplayers"],
+      hidden: [],
+      groups: [
+        { title: "Map", keys: ["level", "worldsize", "seed"] },
+        { title: "World folder", keys: ["identity"] },
+      ],
+    },
   };
   const layout = groupedLayouts[currentServer?.type ?? ""];
 
@@ -1537,6 +1557,8 @@ export default function ConfigEditor() {
                     ? "ServerHostSettings.json"
                     : currentServer?.type === "projectzomboid"
                     ? "servertest.ini"
+                    : currentServer?.type === "rust"
+                    ? "kitsuneden-rust.json"
                     : format === "properties"
                       ? "server.properties"
                       : "config.json"})

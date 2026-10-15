@@ -132,15 +132,20 @@ export function listZipBackups(root: string): { hourly: unknown[]; daily: unknow
 /**
  * Copy folders and files into a staging folder (plain reads, so files the
  * running game holds open still copy), zip the copy to `dest`, and always
- * remove the staging folder. `items` maps a source path to its name in the zip.
+ * remove the staging folder. `items` maps a source path to its name in the
+ * zip; a folder's `skip` leaves out files by name (regenerable caches).
  */
-export async function zipCopy(items: { from: string; as: string }[], dest: string, timeoutMs: number): Promise<void> {
+export async function zipCopy(
+  items: { from: string; as: string; skip?: (fileName: string) => boolean }[],
+  dest: string,
+  timeoutMs: number
+): Promise<void> {
   const staging = fs.mkdtempSync(path.join(os.tmpdir(), "den-backup-"));
   try {
-    for (const { from, as } of items) {
+    for (const { from, as, skip } of items) {
       if (!fs.existsSync(from)) continue;
       const to = path.join(staging, as);
-      if (fs.statSync(from).isDirectory()) copyTree(from, to);
+      if (fs.statSync(from).isDirectory()) copyTree(from, to, skip);
       else {
         fs.mkdirSync(path.dirname(to), { recursive: true });
         fs.copyFileSync(from, to);
