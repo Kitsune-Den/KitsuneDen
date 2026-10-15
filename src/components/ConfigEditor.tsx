@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useServer } from "@/contexts/ServerContext";
 import { recipeDefault } from "@/lib/recipes";
+import { MODIFIERS, PRESETS } from "@/lib/valheim-settings";
+import { DIFFICULTY_PRESETS, GAME_PRESETS } from "@/lib/vrising-settings";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { resolveDayNightConfig, reverseDayNightConfig } from "@/lib/day-night";
 import { setUnsaved } from "@/lib/unsaved";
@@ -158,9 +160,85 @@ export default function ConfigEditor() {
     userGroups: "Per-group permissions and passwords (Admin/Friend/Guest etc.). Edit as raw JSON. Passwords of groups that can kick/ban are hidden and show as \"\" — leave them blank to keep them, or type a new one.",
   };
 
+  const valheimLabels: Record<string, string> = {
+    deathpenalty: "Death penalty",
+    nobuildcost: "No build cost",
+    playerevents: "Player-based raids",
+    passivemobs: "Passive enemies",
+    nomap: "No map",
+    saveinterval: "Autosave (seconds)",
+    backups: "World backups kept",
+    password: "Join password",
+    crossplay: "Crossplay",
+  };
+
+  const zomboidFieldHelp: Record<string, string> = {
+    PublicName: "Server name in the public list.",
+    PublicDescription: "Shown under the name in the public list.",
+    Password: "Join password. Leave empty for none.",
+    MaxPlayers: "Player slots.",
+    Public: "List the server publicly.",
+    Open: "Let new players join without being whitelisted.",
+    PVP: "Players can hurt each other.",
+    PauseEmpty: "Pause the world while nobody is on.",
+    GlobalChat: "Server-wide chat.",
+    ServerWelcomeMessage: "Shown to players as they join.",
+    Map: "Map(s) to load, separated by semicolons.",
+    Mods: "Mod IDs, separated by semicolons. These are mod IDs, not the Workshop numbers below; both lists are needed.",
+    WorkshopItems: "Workshop item numbers, separated by semicolons.",
+    SaveWorldEveryMinutes: "Minutes between saves (0 = only when the server stops).",
+    BackupsCount: "How many of its own backups the game keeps. Separate from the Den's backups.",
+    BackupsOnStart: "Have the game back up the world each time it starts.",
+    BackupsPeriod: "Minutes between the game's own backups (0 = off).",
+    PlayerSafehouse: "Players can claim safehouses.",
+    HoursForLootRespawn: "In-game hours before looted containers refill (0 = never).",
+  };
+
+  const vrisingFieldHelp: Record<string, string> = {
+    Name: "Server name in the server list.",
+    Description: "Shown under the name in the server list.",
+    Password: "Join password. Leave empty for none.",
+    SaveName: "The world's save folder. A new name starts a new world; the old one stays in save-data\\Saves.",
+    MaxConnectedUsers: "Player slots.",
+    MaxConnectedAdmins: "Extra slots kept for admins.",
+    ListOnSteam: "List the server on Steam's server browser.",
+    ListOnEOS: "List the server for Epic (crossplay) players.",
+    HideIPAddress: "Hide the address in the server list.",
+    Secure: "Enable Valve Anti-Cheat.",
+    LanMode: "LAN only: no online listing or authentication.",
+    GameSettingsPreset: "A built-in rule preset. While one is set it replaces the rules in ServerGameSettings.json.",
+    GameDifficultyPreset: "A built-in difficulty preset. It overrides the difficulty and stat rules in ServerGameSettings.json.",
+    AutoSaveInterval: "Seconds between autosaves. Also what a backup of a running server can be behind by.",
+    AutoSaveCount: "How many autosaves the game keeps.",
+    CompressSaveFiles: "Compress save files.",
+    ServerFps: "Server tick rate.",
+    LowerFPSWhenEmpty: "Lower the tick rate while nobody is on.",
+    LowerFPSWhenEmptyValue: "Tick rate while empty.",
+    ResetDaysInterval: "Wipe the world every this many days (0 = never).",
+    DayOfReset: "The day a scheduled wipe happens.",
+  };
+
+  const valheimFieldHelp: Record<string, string> = {
+    name: "Server name in the community list.",
+    world: "World to load, or create if it doesn't exist. Saved under valheim-data\\worlds_local.",
+    password: "Join password. At least 5 characters, and not inside the server or world name, or Valheim won't start.",
+    public: "List the server in the community browser. Off: join by address only.",
+    crossplay: "Join through PlayFab with a code shown in the log, for Xbox and Game Pass players.",
+    preset: "World difficulty preset. Applied before the modifiers below, so they adjust it.",
+    saveinterval: "Seconds between autosaves. A stop can't save first, so this is the most a stop can lose.",
+    backups: "How many of its own world backups Valheim keeps in valheim-data.",
+    nobuildcost: "Building costs no materials.",
+    playerevents: "Raids depend on each player's progress, not the world's.",
+    passivemobs: "Enemies don't attack unless provoked.",
+    nomap: "No map or minimap.",
+  };
+
   const fieldHelp = {
     ...(currentServer?.type === "palworld" ? palworldFieldHelp : {}),
     ...(currentServer?.type === "enshrouded" ? enshroudedFieldHelp : {}),
+    ...(currentServer?.type === "valheim" ? valheimFieldHelp : {}),
+    ...(currentServer?.type === "vrising" ? vrisingFieldHelp : {}),
+    ...(currentServer?.type === "projectzomboid" ? zomboidFieldHelp : {}),
     ...(currentServer?.type === "hytale"
       ? {
           DisplayTmpTagsInStrings:
@@ -596,7 +674,7 @@ export default function ConfigEditor() {
     const isObject = value && typeof value === "object";
     const error = formErrors[key];
     const helpText = fieldHelp[key as keyof typeof fieldHelp];
-    const label = formatLabel(key);
+    const label = (currentServer?.type === "valheim" && valheimLabels[key]) || formatLabel(key);
     const tooltip = helpText ? `${helpText} (key: ${key})` : `Key: ${key}`;
 
     const isMinecraft = currentServer?.type === "minecraft";
@@ -612,7 +690,13 @@ export default function ConfigEditor() {
       ? Array.from(new Set([String(value ?? ""), ...selectOptions].filter(Boolean)))
       : null;
     const sdSelectOptions = is7d2d ? sevenDaysSelectOptions[key] : undefined;
-    const enSelectOptions = isEnshrouded ? enshroudedSelectOptions[key] : undefined;
+    const enSelectOptions = isEnshrouded
+      ? enshroudedSelectOptions[key]
+      : currentServer?.type === "valheim"
+        ? valheimSelectOptions[key]
+        : currentServer?.type === "vrising"
+          ? vrisingSelectOptions[key]
+          : undefined;
 
     return (
       <div key={key} className="flex flex-col gap-2">
@@ -1310,11 +1394,63 @@ export default function ConfigEditor() {
     },
   ];
 
+  // Games laid out as Core Settings plus titled groups. `hidden` keys are
+  // shown elsewhere (or not edited here) and kept out of "Other".
+  const groupedLayouts: Record<string, { core: string[]; hidden: string[]; groups: { title: string; keys: string[] }[] }> = {
+    enshrouded: { core: enshroudedCoreKeys, hidden: enshroudedPortKeys, groups: enshroudedGroups },
+    valheim: {
+      core: ["name", "world", "password", "public", "crossplay"],
+      hidden: [],
+      groups: [
+        { title: "Difficulty", keys: ["preset", "combat", "deathpenalty", "resources", "raids", "portals"] },
+        { title: "World keys", keys: ["nobuildcost", "playerevents", "passivemobs", "nomap"] },
+        { title: "Saves", keys: ["saveinterval", "backups"] },
+      ],
+    },
+    // Port, QueryPort and Rcon aren't returned: the Den writes them every start.
+    vrising: {
+      core: ["Name", "Description", "Password", "SaveName", "MaxConnectedUsers", "MaxConnectedAdmins"],
+      hidden: [],
+      groups: [
+        { title: "Listing", keys: ["ListOnSteam", "ListOnEOS", "HideIPAddress", "Secure", "LanMode", "Address"] },
+        { title: "Presets", keys: ["GameSettingsPreset", "GameDifficultyPreset"] },
+        { title: "Saves", keys: ["AutoSaveInterval", "AutoSaveCount", "AutoSaveSmartKeep", "CompressSaveFiles"] },
+        { title: "Performance", keys: ["ServerFps", "LowerFPSWhenEmpty", "LowerFPSWhenEmptyValue"] },
+        { title: "Scheduled wipes", keys: ["ResetDaysInterval", "DayOfReset"] },
+      ],
+    },
+    // DefaultPort, UDPPort, RCONPort and RCONPassword aren't returned: the Den writes them.
+    projectzomboid: {
+      core: ["PublicName", "PublicDescription", "Password", "MaxPlayers", "Public", "Open"],
+      hidden: [],
+      groups: [
+        { title: "Gameplay", keys: ["PVP", "PauseEmpty", "GlobalChat", "ServerWelcomeMessage", "PlayerSafehouse", "HoursForLootRespawn"] },
+        { title: "Map & mods", keys: ["Map", "Mods", "WorkshopItems"] },
+        { title: "Saves", keys: ["SaveWorldEveryMinutes", "BackupsCount", "BackupsOnStart", "BackupsPeriod"] },
+      ],
+    },
+  };
+  const layout = groupedLayouts[currentServer?.type ?? ""];
+
   const enshroudedSelectOptions: Record<string, { value: string; label: string }[]> = {
     voiceChatMode: [
       { value: "Proximity", label: "Proximity (positional)" },
       { value: "Disabled", label: "Disabled" },
     ],
+  };
+
+  // "" is the game's own default for each choice.
+  const valheimChoice = (v: string) => ({ value: v, label: v || "Game default" });
+  const valheimSelectOptions: Record<string, { value: string; label: string }[]> = {
+    preset: PRESETS.map(valheimChoice),
+    ...Object.fromEntries(Object.entries(MODIFIERS).map(([key, values]) => [key, values.map(valheimChoice)])),
+  };
+
+  // "" is no preset: the rules in ServerGameSettings.json apply.
+  const vrisingChoice = (v: string) => ({ value: v, label: v || "None (use the game rules)" });
+  const vrisingSelectOptions: Record<string, { value: string; label: string }[]> = {
+    GameSettingsPreset: GAME_PRESETS.map(vrisingChoice),
+    GameDifficultyPreset: DIFFICULTY_PRESETS.map(vrisingChoice),
   };
 
   const minecraftCoreKeys = ["server-name", "level-seed", "motd"];
@@ -1395,6 +1531,12 @@ export default function ConfigEditor() {
                   ? "PalWorldSettings.ini"
                   : currentServer?.type === "enshrouded"
                     ? "enshrouded_server.json"
+                    : currentServer?.type === "valheim"
+                    ? "kitsuneden-valheim.json"
+                    : currentServer?.type === "vrising"
+                    ? "ServerHostSettings.json"
+                    : currentServer?.type === "projectzomboid"
+                    ? "servertest.ini"
                     : format === "properties"
                       ? "server.properties"
                       : "config.json"})
@@ -1442,7 +1584,11 @@ export default function ConfigEditor() {
         ) : (
           <div className="p-5 space-y-4">
             {Object.keys(formValues).length === 0 ? (
-              <div className="text-sm text-den-text-dim">No config fields found.</div>
+              <div className="text-sm text-den-text-dim">
+                {currentServer?.type === "projectzomboid"
+                  ? "Project Zomboid writes servertest.ini on its first start. Start the server once and its settings show up here."
+                  : "No config fields found."}
+              </div>
             ) : currentServer?.type === "7d2d" ? (
               (() => {
                 const usedKeys = new Set<string>([
@@ -1652,17 +1798,17 @@ export default function ConfigEditor() {
                   </>
                 );
               })()
-            ) : currentServer?.type === "enshrouded" ? (
+            ) : layout ? (
               (() => {
                 const usedKeys = new Set<string>([
-                  ...enshroudedCoreKeys,
-                  ...enshroudedPortKeys,
-                  ...enshroudedGroups.flatMap((group) => group.keys),
+                  ...layout.core,
+                  ...layout.hidden,
+                  ...layout.groups.flatMap((group) => group.keys),
                 ]);
                 const remainingKeys = Object.keys(formValues)
                   .filter((key) => !usedKeys.has(key))
                   .sort((a, b) => a.localeCompare(b));
-                const groups = enshroudedGroups
+                const groups = layout.groups
                   .filter((group) =>
                     group.keys.some((key) => Object.prototype.hasOwnProperty.call(formValues, key))
                   )
@@ -1686,7 +1832,7 @@ export default function ConfigEditor() {
                         <h4 className="text-sm font-bold tracking-wide uppercase text-den-text">Core Settings</h4>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {enshroudedCoreKeys.map((key) =>
+                        {layout.core.map((key) =>
                           Object.prototype.hasOwnProperty.call(formValues, key) ? renderField(key) : null
                         )}
                       </div>
@@ -1694,6 +1840,7 @@ export default function ConfigEditor() {
 
                     {/* Categorized Groups */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      {currentServer?.type === "enshrouded" && (
                       <div className="bg-den-surface/40 border border-den-border rounded-xl p-4 space-y-2">
                         <div className="text-[12px] uppercase tracking-widest text-den-text-dim font-semibold">
                           Network
@@ -1713,6 +1860,7 @@ export default function ConfigEditor() {
                           start, so change it there rather than here.
                         </p>
                       </div>
+                      )}
                       {groups.map((group) => (
                         <div
                           key={group.title}

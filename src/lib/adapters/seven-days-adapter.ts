@@ -26,6 +26,7 @@ import type {
 } from "./types";
 import { recipeDefault } from "../recipes";
 import { copyTree, findWorldSave, savesDir } from "../seven-days-saves";
+import { appUpdateCommand, readInstalledBuild, restoreFiles, snapshotFiles } from "../steamcmd";
 
 // Fallbacks for fields servers.json leaves unset, from the 7D2D recipe.
 const DEFAULT_TELNET_PORT = recipeDefault("7d2d", "telnetPort");
@@ -33,6 +34,9 @@ const DEFAULT_CONFIG_FILE = recipeDefault("7d2d", "configFile");
 
 /** A big world zips slowly; Palworld's two minutes isn't enough. */
 const BACKUP_TIMEOUT_MS = 10 * 60_000;
+const STEAM_APP_ID = recipeDefault("7d2d", "steamAppId");
+/** The server is ~15 GB; a first install or a big patch takes a while. */
+const UPDATE_TIMEOUT_MS = 60 * 60_000;
 /** After `saveworld`, give the game a moment to finish writing. */
 const SAVE_SETTLE_MS = 3000;
 
@@ -397,7 +401,7 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
     hasJsonConfig: false,
     hasKitsuneCommand: false,
     hasRestApi: false,
-    hasSteamUpdate: false,
+    hasSteamUpdate: true,
     hasLauncherUpdate: false,
   };
 
@@ -883,6 +887,65 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
     }
     // Return the first candidate path even if it doesn't exist yet (for creation)
     return candidates[0];
+  }
+
+  // ---- SteamCMD update ----
+
+  private get steamAppId(): number {
+    return this.def.steamAppId || STEAM_APP_ID;
+  }
+
+  async getUpdateInfo(): Promise<Record<string, unknown>> {
+    return {
+      serverVersion: this.getGameVersion() ?? "Unknown",
+      steamAppId: this.steamAppId,
+      branch: readInstalledBuild(this.def.dir, this.steamAppId)?.branch ?? "public",
+      steamCmdConfigured: !!this.def.steamCmdPath,
+    };
+  }
+
+  /**
+   * Update in place with SteamCMD, staying on the installed branch and
+   * putting back any config file `validate` resets to the shipped copy.
+   */
+  async updateServer(): Promise<ActionResult> {
+    const steamCmd = this.def.steamCmdPath;
+    if (!steamCmd) {
+      return { success: false, message: "Set the SteamCMD path in Server setup first." };
+    }
+    const state = this.getState();
+    if (state.process || state.status !== "stopped" || (await this.isRunningExternally())) {
+      return { success: false, message: "Stop the server before updating." };
+    }
+
+    const branch = readInstalledBuild(this.def.dir, this.steamAppId)?.branch ?? "public";
+    const kept = snapshotFiles(this.def.dir, [this.def.configFile || DEFAULT_CONFIG_FILE, "serverconfig.xml"]);
+    this.addLog(`[Dashboard] Starting SteamCMD update (branch: ${branch})...`);
+
+    let failure: string | null = null;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        exec(
+          appUpdateCommand(steamCmd, this.def.dir, this.steamAppId, branch),
+          { timeout: UPDATE_TIMEOUT_MS, maxBuffer: 32 * 1024 * 1024 },
+          (err) => (err ? reject(err) : resolve())
+        );
+      });
+    } catch (e) {
+      failure = (e as Error).message;
+    }
+
+    // Whatever SteamCMD managed, the operator's config goes back.
+    const restored = restoreFiles(this.def.dir, kept);
+    const putBack = restored.length ? ` Put back your ${restored.join(" and ")}, which SteamCMD had reset.` : "";
+    if (restored.length) this.addLog(`[Dashboard] Restored ${restored.join(", ")} after SteamCMD.`);
+
+    if (failure) {
+      this.addLog(`[Dashboard] Update failed: ${failure}`);
+      return { success: false, message: `Update failed: ${failure}${putBack}` };
+    }
+    this.addLog(`[Dashboard] Update complete (branch: ${branch}).`);
+    return { success: true, message: `Updated on the ${branch} branch.${putBack}` };
   }
 
   // ---- Backups ----

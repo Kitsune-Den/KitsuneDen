@@ -4,6 +4,8 @@ import dgram from "dgram";
 import path from "path";
 import type { ServerDefinition } from "./adapters/types";
 import { RECIPES, portDefault } from "./recipes";
+import { parseSettingsJson } from "./vrising-settings";
+import { INI_PATH, parseIni } from "./zomboid-settings";
 import { parseServerConfigXml } from "./seven-days-config";
 import { parseOptionSettings } from "./adapters/palworld-adapter";
 import { validatePathFields } from "./server-def-security";
@@ -28,7 +30,7 @@ import { validatePathFields } from "./server-def-security";
  * gameConfigSecrets() fills them in server-side when the server is saved.
  */
 
-export type GameType = "minecraft" | "7d2d" | "hytale" | "palworld" | "enshrouded";
+export type GameType = "minecraft" | "7d2d" | "hytale" | "palworld" | "enshrouded" | "valheim" | "vrising" | "projectzomboid";
 export type PortField = "gamePort" | "rconPort" | "telnetPort" | "restApiPort" | "queryPort";
 type Protocol = "tcp" | "udp" | "both";
 
@@ -43,7 +45,7 @@ interface PortSpec {
 }
 
 /** Games whose install folder can be read. */
-const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded"];
+const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded", "valheim", "vrising", "projectzomboid"];
 
 /**
  * How far apart to look when the usual port is taken, where that isn't just
@@ -446,6 +448,94 @@ function detectHytale(dir: string, d: Detection) {
   d.fields.name = path.basename(dir);
 }
 
+/**
+ * Valheim has no config of its own (settings are launch flags the Den keeps
+ * in kitsuneden-valheim.json), so there are no config ports to read.
+ */
+function detectValheim(dir: string, d: Detection) {
+  if (!exists(path.join(dir, "valheim_server.exe"))) {
+    d.notes.push("No valheim_server.exe here yet. Once the SteamCMD path is set, the Update tab can install it.");
+  }
+  const settings = readText(path.join(dir, "kitsuneden-valheim.json"));
+  if (settings) {
+    try {
+      const c = JSON.parse(settings) as Record<string, unknown>;
+      if (typeof c.name === "string" && c.name.trim()) {
+        d.fields.name = c.name;
+        d.nameFromConfig = true;
+      }
+    } catch {
+      d.notes.push("kitsuneden-valheim.json isn't valid JSON, so it was skipped.");
+    }
+  }
+  const steam = findSteamCmd(dir);
+  if (steam) d.fields.steamCmdPath = steam;
+  if (!d.fields.name) d.fields.name = path.basename(dir);
+}
+
+/**
+ * V Rising keeps ServerHostSettings.json under save-data (written with a
+ * BOM). Its ports are read so an existing server keeps them, but no
+ * configFile is reported: the Den writes Server setup's ports into that file
+ * before every start, so there's nothing for the form to keep in step.
+ */
+function detectVRising(dir: string, d: Detection) {
+  if (!exists(path.join(dir, "VRisingServer.exe"))) {
+    d.notes.push("No VRisingServer.exe here yet. Once the SteamCMD path is set, the Update tab can install it.");
+  }
+  const text = readText(path.join(dir, "save-data", "Settings", "ServerHostSettings.json"));
+  if (text) {
+    try {
+      const c = parseSettingsJson(text);
+      const port = num(c.Port);
+      if (port) d.configPorts.gamePort = port;
+      const rcon = c.Rcon && typeof c.Rcon === "object" ? (c.Rcon as Record<string, unknown>) : null;
+      const rconPort = num(rcon?.Port);
+      if (rconPort) d.configPorts.rconPort = rconPort;
+      if (typeof rcon?.Password === "string" && rcon.Password) d.secretsFound.push("rconPassword");
+      if (typeof c.Name === "string" && c.Name.trim() && c.Name !== "V Rising Server") {
+        d.fields.name = c.Name;
+        d.nameFromConfig = true;
+      }
+      d.notes.push("Ports read from ServerHostSettings.json. The Den writes Server setup's ports there before every start.");
+    } catch {
+      d.notes.push("ServerHostSettings.json isn't valid JSON, so it was skipped.");
+    }
+  }
+  const steam = findSteamCmd(dir);
+  if (steam) d.fields.steamCmdPath = steam;
+  if (!d.fields.name) d.fields.name = path.basename(dir);
+}
+
+/**
+ * Project Zomboid keeps servertest.ini under zomboid-data (with -cachedir).
+ * Like V Rising, its ports are read but no configFile is reported: the Den
+ * writes Server setup's ports into the ini before every start.
+ */
+function detectProjectZomboid(dir: string, d: Detection) {
+  if (!exists(path.join(dir, "jre64", "bin", "java.exe"))) {
+    d.notes.push("No jre64\\bin\\java.exe here yet. Once the SteamCMD path is set, the Update tab can install the server.");
+  }
+  const text = readText(path.join(dir, ...INI_PATH.split("/")));
+  if (text) {
+    const ini = parseIni(text);
+    const port = num(ini.DefaultPort);
+    if (port) d.configPorts.gamePort = port;
+    const rconPort = num(ini.RCONPort);
+    if (rconPort) d.configPorts.rconPort = rconPort;
+    if (ini.RCONPassword) d.secretsFound.push("rconPassword");
+    // A stock name isn't the operator's; leave the folder name instead.
+    if (ini.PublicName && !["My PZ Server", "A Project Zomboid Server"].includes(ini.PublicName)) {
+      d.fields.name = ini.PublicName;
+      d.nameFromConfig = true;
+    }
+    d.notes.push("Ports read from servertest.ini. The Den writes Server setup's ports there before every start.");
+  }
+  const steam = findSteamCmd(dir);
+  if (steam) d.fields.steamCmdPath = steam;
+  if (!d.fields.name) d.fields.name = path.basename(dir);
+}
+
 export type DetectResult = { ok: true; detection: Detection } | { ok: false; error: string };
 
 /** Read what's already in an install folder. Never returns secret values. */
@@ -465,6 +555,9 @@ export function detectInstall(type: GameType, dir: string): DetectResult {
   else if (type === "7d2d") detect7d2d(dir, d);
   else if (type === "palworld") detectPalworld(dir, d);
   else if (type === "enshrouded") detectEnshrouded(dir, d);
+  else if (type === "valheim") detectValheim(dir, d);
+  else if (type === "vrising") detectVRising(dir, d);
+  else if (type === "projectzomboid") detectProjectZomboid(dir, d);
   else detectHytale(dir, d);
   return { ok: true, detection: d };
 }

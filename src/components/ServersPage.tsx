@@ -38,6 +38,7 @@ const TYPE_FIELDS: Record<string, FieldDef[]> = {
     { key: "telnetPassword", label: "Telnet Password", type: "password", hint: "Password set in serverconfig.xml under TelnetPassword" },
     { key: "configFile", label: "Config File", type: "text", hint: "Config filename (e.g. serverconfig.xml or serverconfig-custom.xml)" },
     { key: "modsDir", label: "Mods Directory", type: "text", hint: "Mods folder name relative to install dir" },
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates. Updates stay on the installed branch and keep your serverconfig.xml." },
   ],
   minecraft: [
     { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port from server.properties" },
@@ -62,6 +63,22 @@ const TYPE_FIELDS: Record<string, FieldDef[]> = {
     { key: "configFile", label: "Config File", type: "text", hint: "Config filename" },
     { key: "startScript", label: "Start Script", type: "text", hint: "Optional bat file in the install directory. Falls back to launching enshrouded_server.exe directly." },
     { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates" },
+  ],
+  // Name, world, password and the rest live in kitsuneden-valheim.json (Config tab).
+  valheim: [
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe, to install and update the server" },
+  ],
+  // Name, save, password and listing live in ServerHostSettings.json (Config tab).
+  vrising: [
+    { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port the Den turns on and writes into ServerHostSettings.json" },
+    { key: "rconPassword", label: "RCON Password", type: "password", hint: "Leave blank and the Den generates one in ServerHostSettings.json" },
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe, to install and update the server" },
+  ],
+  // Game settings are in servertest.ini (Config tab); admin password and heap in kitsuneden-zomboid.json.
+  projectzomboid: [
+    { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port the Den writes into servertest.ini" },
+    { key: "rconPassword", label: "RCON Password", type: "password", hint: "Leave blank and the Den generates one in servertest.ini" },
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe, to install and update the server" },
   ],
 };
 
@@ -636,7 +653,7 @@ export default function ServersPage() {
                 <div className="text-[11px] text-den-text-dim mt-1">{advice.reason}. This one is free.</div>
               ) : configWas ? (
                 <div className="text-[11px] text-den-text-dim mt-1">
-                  {autofill.configFile?.split("/").pop()} says {configWas}.
+                  {autofill.configFile?.split("/").pop() ?? "Its settings file"} says {configWas}.
                 </div>
               ) : autoLabel ? (
                 <div className="text-[11px] text-den-text-dim mt-1">Auto-filled {autoLabel}.</div>

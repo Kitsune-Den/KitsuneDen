@@ -25,7 +25,7 @@ KitsuneDen treats your servers like living things. Each one gets its own persona
 - **Players.** Whitelist, op, ban, kick, plus who's online right now (via RCON for Minecraft and Palworld, telnet for 7D2D).
 - **Mods and mod packs.** Upload, organize, and flip whole sets on.
 - **Config editor** with friendly widgets where they help (the 7D2D day/night slider is the favorite). Edits are staged: changed fields are marked until you save, and it offers a restart when one's needed.
-- **Worlds, backups, and updates** for the games that support them: SteamCMD for Palworld and Enshrouded, the launcher for Hytale.
+- **Worlds, backups, and updates** for the games that support them: SteamCMD for Palworld, Enshrouded and 7 Days to Die, the launcher for Hytale.
 - **Remote Minecraft.** The dashboard and the server don't have to share a machine. See [Remote Minecraft servers](#remote-minecraft-servers).
 - **Activity log.** Starts, stops, crashes, config saves and roster changes, for one server or the whole Den.
 - **Dark, light, or match your OS**, plus a colour-blind friendly status palette.
@@ -53,6 +53,9 @@ KitsuneDen treats your servers like living things. Each one gets its own persona
 | Hytale | `hytale` | ✅ Full support |
 | Palworld | `palworld` | ✅ Full support |
 | Enshrouded | `enshrouded` | ✅ Full support (no RCON, so no live commands) |
+| Valheim | `valheim` | 🧪 Experimental: new, not yet run through the Den (no console, so no live commands) |
+| V Rising | `vrising` | 🧪 Experimental: new, not yet run through the Den (RCON commands; Windows only) |
+| Project Zomboid | `projectzomboid` | 🧪 Experimental: new, not yet run through the Den (RCON commands and player list) |
 | Something else | - | 🔧 [Write an adapter](#adding-a-new-game) |
 
 ---
@@ -166,6 +169,7 @@ By default KitsuneDen reads and writes `servers.json` in the directory it's star
 | `telnetPort` | Optional | Telnet port |
 | `telnetPassword` | Optional | Telnet password |
 | `modsDir` | Optional | Mods directory name |
+| `steamCmdPath` | Optional | Path to steamcmd.exe for updates (Steam app id 294420). Updates stay on the installed branch and keep your `serverconfig.xml`. |
 
 **`hytale`**: Hytale
 
@@ -201,6 +205,43 @@ By default KitsuneDen reads and writes `servers.json` in the directory it's star
 
 > Enshrouded ships no RCON or REST API, so live commands aren't available.
 > Player presence is a best guess, scraped from connect/disconnect lines in the log.
+
+**`valheim`**: Valheim
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `dir` | ✅ | Path to the server directory |
+| `gamePort` | Optional | UDP game port (default 2456). The query port is always the next one up; forward both. |
+| `steamCmdPath` | Optional | Path to steamcmd.exe, to install and update the server (Steam app id 896660) |
+
+> Everything else (server name, world, join password, public, crossplay, autosave, preset and world modifiers) lives in `kitsuneden-valheim.json` in the server folder, edited on the Config tab and turned into launch flags at each start. Worlds are kept in `valheim-data\` inside the server folder.
+> Valheim has no console, so a stop can't make it save first: the world keeps its last autosave, which the Den sets to every 10 minutes.
+
+**`vrising`**: V Rising
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `dir` | ✅ | Path to the server directory |
+| `gamePort` | Optional | UDP game port (default 9876). The Den writes the query port as the next one up; forward both. |
+| `rconPort` | Optional | RCON port (default 25575, so move it if Minecraft or Palworld is using it) |
+| `rconPassword` | Optional | RCON password. Leave it out and the Den generates one. |
+| `steamCmdPath` | Optional | Path to steamcmd.exe, to install and update the server (Steam app id 1829350) |
+
+> V Rising runs with `-persistentDataPath save-data`, so its settings and saves live in `save-data\` inside the server folder. Before every start the Den writes the ports and turns RCON on in `save-data\Settings\ServerHostSettings.json`; the first time, it creates the file from the game's template, listed on Steam and EOS. Name, save, password, listing and presets are on the Config tab; the game rules (`ServerGameSettings.json`) are edited by hand for now.
+> Stop sends RCON `shutdown`, and V Rising saves as it exits.
+
+**`projectzomboid`**: Project Zomboid
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `dir` | ✅ | Path to the server directory |
+| `gamePort` | Optional | UDP game port (default 16261). The Den writes the second UDP port as the next one up; forward both. |
+| `rconPort` | Optional | RCON port (default 27015, which the Steam client also uses on a machine someone plays on) |
+| `rconPassword` | Optional | RCON password. Leave it out and the Den generates one. |
+| `steamCmdPath` | Optional | Path to steamcmd.exe, to install and update the server (Steam app id 380870) |
+
+> The Den runs the game's bundled Java directly (not `StartServer64.bat`, which fixes the heap at 16 GB and passes on only two arguments) with `-cachedir=./zomboid-data`, so the world, database, logs and `servertest.ini` live in the server folder. Before every start it writes the ports and RCON into `zomboid-data\Server\servertest.ini`; the Config tab edits the rest of that file once the first start has created it.
+> The first start also writes `kitsuneden-zomboid.json` with the in-game `admin` password (shown once, and only applied when the world is first created) and the Java heap (2 to 4 GB). Stop sends RCON `quit`, and backups send RCON `save` first.
 
 ### Remote Minecraft servers
 

@@ -4,7 +4,7 @@
  * Den ships no game artwork). One place, so every surface agrees.
  */
 
-export type GameIcon = "pickaxe" | "skull" | "castle" | "paw" | "flame" | "server";
+export type GameIcon = "pickaxe" | "skull" | "castle" | "paw" | "flame" | "axe" | "droplet" | "biohazard" | "server";
 
 export interface GameMeta {
   label: string;
@@ -56,6 +56,27 @@ const GAME_META: Record<string, GameMeta> = {
     tag: "bg-violet-400/10 text-violet-500 border-violet-400/30",
     art: art("#4a2a7a", "#130c21", "rgba(196,181,253,0.32)"),
     icon: "flame",
+  },
+  valheim: {
+    label: "Valheim",
+    short: "Valheim",
+    tag: "bg-teal-400/10 text-teal-500 border-teal-400/30",
+    art: art("#1d5a5a", "#0a1a1c", "rgba(153,246,228,0.3)"),
+    icon: "axe",
+  },
+  vrising: {
+    label: "V Rising",
+    short: "V Rising",
+    tag: "bg-fuchsia-400/10 text-fuchsia-500 border-fuchsia-400/30",
+    art: art("#5c1033", "#1a060f", "rgba(244,114,182,0.32)"),
+    icon: "droplet",
+  },
+  projectzomboid: {
+    label: "Project Zomboid",
+    short: "PZ",
+    tag: "bg-lime-400/10 text-lime-600 border-lime-400/30",
+    art: art("#3d4a1a", "#12160a", "rgba(190,242,100,0.28)"),
+    icon: "biohazard",
   },
 };
 

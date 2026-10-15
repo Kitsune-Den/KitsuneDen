@@ -147,7 +147,10 @@ export const RECIPES: Record<GameType, GameRecipe> = {
     tier: "verified",
     evidence: "Tested in the maintainers' own Den. The config, Sandbox and admin editors are tested against 3.x.",
     platforms: { windows: true, linux: true },
-    install: { kind: "steamcmd", appId: 294420, anonymous: true, denCanInstall: false },
+    // Updates stay on the installed branch (steamapps/appmanifest betakey) and
+    // put serverconfig.xml back afterwards: `validate` restores the shipped
+    // copy, and PackRelay lost a server's port to exactly that (2026-10-03).
+    install: { kind: "steamcmd", appId: 294420, anonymous: true, denCanInstall: true },
     launch: {
       kind: "exe",
       entry: "7DaysToDieServer.exe",
@@ -184,10 +187,10 @@ export const RECIPES: Record<GameType, GameRecipe> = {
     ],
     connect: "Find it in the in-game server browser, or Connect to IP with the address.",
     steamClientAppId: 251570,
-    defaults: { configFile: "serverconfig.xml", modsDir: "Mods" },
+    defaults: { configFile: "serverconfig.xml", modsDir: "Mods", steamAppId: 294420 },
     gaps: [
       "Backups leave out random-gen map files (GeneratedWorlds, often hundreds of MB). The game rebuilds them from the seed, but only reliably on the same game version.",
-      "No SteamCMD update, though the app is anonymous and the other Steam games already have it.",
+      "An update puts back only serverconfig.xml (and a custom configFile). Any other shipped file edited in place, like the XMLs under Data\\Config, is reset to stock by SteamCMD; keep those changes in a mod under Mods instead.",
     ],
   },
 
@@ -322,6 +325,172 @@ export const RECIPES: Record<GameType, GameRecipe> = {
     gaps: [
       "The single-port setup hasn't been run through the Den on a live server yet. Once someone has started it, joined on the Game Port and stopped it, this can be marked verified.",
       "No remote console, so no live commands, and player presence is scraped from the log.",
+    ],
+  },
+
+  // Launch flags, ports, password rules and save layout as PackRelay
+  // measured them on real servers (verified there on Windows and Linux).
+  // See src/lib/valheim-settings.ts for the details behind each flag.
+  valheim: {
+    type: "valheim",
+    tier: "experimental",
+    evidence: "New in the Den and not yet run through it. Its launch flags, ports and password rules follow PackRelay, which has run Valheim on Windows and Linux.",
+    platforms: { windows: true, linux: true },
+    install: { kind: "steamcmd", appId: 896660, anonymous: true, denCanInstall: true },
+    launch: {
+      kind: "exe",
+      entry: "valheim_server.exe",
+      help: "Started directly with -nographics -batchmode and the settings from kitsuneden-valheim.json (name, port, world, password, public, crossplay, autosave, preset and modifiers), -preset ahead of the modifiers it would otherwise reset.",
+    },
+    // Query is always game + 1: measured with gamePort 2466, A2S answered on
+    // 2467 and nothing on 2466 or 2457.
+    ports: [
+      { field: "gamePort", purpose: "game", proto: "udp", default: 2456, public: true },
+      {
+        field: "queryPort",
+        purpose: "query",
+        proto: "udp",
+        offset: { from: "gamePort", by: 1 },
+        public: true,
+        note: "Always one above the game port. Forward both, or the server won't show in the community list.",
+      },
+    ],
+    control: {
+      console: "none",
+      stop: "Process kill. Valheim has no console and Windows gives it no Ctrl+C, so the world keeps its last autosave.",
+      players: "Characters seen spawning in the log; there's no live online list.",
+    },
+    saves: {
+      path: "valheim-data",
+      backup: "zip",
+      note: "-savedir keeps worlds in the server folder (valheim-data\\worlds_local), not the shared AppData\\LocalLow\\IronGate profile. Backups zip a copy of it with kitsuneden-valheim.json into ../backups/valheim.",
+    },
+    config: [{ file: "kitsuneden-valheim.json", format: "json" }],
+    connect: "Join Game → Join IP with the address and port, or find it in the community list when it's public. Crossplay servers are joined with the code in the log.",
+    steamClientAppId: 892970,
+    defaults: { steamAppId: 896660 },
+    gaps: [
+      "Not yet run through the Den. Once someone has installed it, started it, joined and stopped it, mark it verified.",
+      "Stop is a kill, so anything since the last autosave is lost. The Den sets autosave to every 10 minutes (the game's default is 30); lower it on the Config tab to lose less.",
+      "Backups of a running server hold its last autosave, since there's no way to make it save first.",
+      "No live player list: only characters seen in the log. Valheim's query port could give one later.",
+    ],
+  },
+
+  // Launch, settings files, BOM handling and RCON setup as PackRelay
+  // measured them (verified there). See src/lib/vrising-settings.ts.
+  vrising: {
+    type: "vrising",
+    tier: "experimental",
+    evidence: "New in the Den and not yet run through it. Its launch, settings files and RCON setup follow PackRelay, which has run V Rising on Windows.",
+    platforms: { windows: true, linux: false },
+    install: { kind: "steamcmd", appId: 1829350, anonymous: true, denCanInstall: true },
+    launch: {
+      kind: "exe",
+      entry: "VRisingServer.exe",
+      help: "Started with -persistentDataPath save-data, so settings and saves live in the server folder. Its output is the log (logs\\VRisingServer.log); -logFile would leave the console empty.",
+    },
+    // All three are written into ServerHostSettings.json before every start.
+    ports: [
+      { field: "gamePort", purpose: "game", proto: "udp", default: 9876, public: true },
+      {
+        field: "queryPort",
+        purpose: "query",
+        proto: "udp",
+        offset: { from: "gamePort", by: 1 },
+        public: true,
+        note: "The Den writes it as one above the game port, so servers pair up (9876/9877, 9878/9879). Forward both.",
+      },
+      {
+        field: "rconPort",
+        purpose: "rcon",
+        proto: "tcp",
+        default: 25575,
+        public: false,
+        note: "Same default as Minecraft's and Palworld's RCON. Running more than one? Move it in Server setup.",
+      },
+    ],
+    control: {
+      console: "rcon",
+      stop: "RCON `shutdown`, and V Rising saves as it exits. A kill if it's still up a minute later.",
+      players: "Not listed yet: the RCON player list isn't confirmed, and the Steam query only answers when listed.",
+    },
+    saves: {
+      path: "save-data",
+      backup: "zip",
+      note: "Saves and Settings both live under save-data. Backups zip a copy of it into ../backups/vrising. There's no save command, so a running server's backup is its last autosave (every 2 minutes by default).",
+    },
+    config: [
+      { file: "save-data\\Settings\\ServerHostSettings.json", format: "json" },
+      { file: "save-data\\Settings\\ServerGameSettings.json", format: "json" },
+    ],
+    connect: "Find it in the server list (a new server is listed on Steam and EOS), or Direct Connect with the address and game port.",
+    steamClientAppId: 1604030,
+    defaults: { steamAppId: 1829350 },
+    gaps: [
+      "Not yet run through the Den. Once someone has installed it, started it, joined and stopped it, mark it verified.",
+      "The Config tab edits ServerHostSettings.json only. The game rules (ServerGameSettings.json, about 165 settings) are edited by hand in save-data\\Settings for now, and a preset on the Config tab overrides them.",
+      "No player list yet.",
+      "No mod support (BepInEx).",
+    ],
+  },
+
+  // Launch, servertest.ini and RCON setup as PackRelay measured them on a
+  // real Windows server. See src/lib/zomboid-settings.ts.
+  projectzomboid: {
+    type: "projectzomboid",
+    tier: "experimental",
+    evidence: "New in the Den and not yet run through it. Its launch, settings and RCON setup follow PackRelay, which has run Project Zomboid on Windows (ready in about a minute, a clean quit in 11 s).",
+    platforms: { windows: true, linux: true },
+    install: { kind: "steamcmd", appId: 380870, anonymous: true, denCanInstall: true },
+    launch: {
+      kind: "java",
+      entry: "jre64\\bin\\java.exe",
+      help: "The game's bundled Java, run directly with its own JVM flags plus -cachedir=./zomboid-data and -adminpassword. Not StartServer64.bat, which passes on only two arguments, fixes the heap at 16 GB and ends in PAUSE.",
+    },
+    // DefaultPort, UDPPort, RCONPort and RCONPassword are written into
+    // servertest.ini before every start. PackRelay saw UDP 16261 + 16262.
+    ports: [
+      { field: "gamePort", purpose: "game", proto: "udp", default: 16261, public: true },
+      {
+        field: "queryPort",
+        purpose: "game",
+        proto: "udp",
+        offset: { from: "gamePort", by: 1 },
+        public: true,
+        note: "Project Zomboid's second UDP port (UDPPort), written as one above the game port. Forward both.",
+      },
+      {
+        field: "rconPort",
+        purpose: "rcon",
+        proto: "tcp",
+        default: 27015,
+        public: false,
+        note: "Project Zomboid's default, which the Steam client also uses on a machine someone plays on. Writing the port and a password into servertest.ini is what turns RCON on.",
+      },
+    ],
+    control: {
+      console: "rcon",
+      stop: "RCON `quit`, and it saves on the way out (11 s when PackRelay measured it). A kill if it's still up a minute later.",
+      players: "RCON `players`.",
+    },
+    saves: {
+      path: "zomboid-data",
+      backup: "zip",
+      note: "-cachedir keeps the world, database, logs and Server\\servertest.ini in zomboid-data, not the shared %USERPROFILE%\\Zomboid. Backups send RCON `save` first, then zip a copy with kitsuneden-zomboid.json into ../backups/projectzomboid.",
+    },
+    config: [
+      { file: "zomboid-data\\Server\\servertest.ini", format: "properties" },
+      { file: "kitsuneden-zomboid.json", format: "json" },
+    ],
+    connect: "Join Server → enter the address and game port, or find it in the public list when Public is on.",
+    steamClientAppId: 108600,
+    defaults: { steamAppId: 380870 },
+    gaps: [
+      "Not yet run through the Den. Once someone has installed it, started it, joined and stopped it, mark it verified.",
+      "The admin password and Java heap (2 to 4 GB) live in kitsuneden-zomboid.json, edited by hand. The admin password only takes effect when the world is first created.",
+      "The Config tab edits servertest.ini, which Project Zomboid writes on its first start. World rules (SandboxVars.lua) and Workshop mods are edited by hand.",
+      "A backup of a running server copies its open database. PackRelay captured one cleanly, but restoring one hasn't been tested.",
     ],
   },
 };

@@ -29,6 +29,12 @@ const FLAT_SECRET_KEYS: Record<ServerType, readonly string[]> = {
   palworld: ["AdminPassword"],
   hytale: [],
   enshrouded: [],
+  // Only a join password, which is meant to be handed to players.
+  valheim: [],
+  // The RCON password is inside Rcon, which getConfig never returns.
+  vrising: [],
+  // RCONPassword is a Den-owned key that getConfig never returns.
+  projectzomboid: [],
 };
 
 interface EnshroudedGroup {

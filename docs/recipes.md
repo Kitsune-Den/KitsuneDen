@@ -36,10 +36,13 @@ The Den does it differently:
 | Game | Tier | Install | Console | Backups | Ports (public / private) |
 |---|---|---|---|---|---|
 | Minecraft | verified | manual | RCON | zip (local only) | 25565 tcp / RCON 25575 |
-| 7 Days to Die | verified | SteamCMD 294420 (Den doesn't run it) | telnet | none | 26900 tcp+udp, query +2 udp / telnet 8081 |
+| 7 Days to Die | verified | SteamCMD 294420 (keeps branch and config) | telnet | zip | 26900 tcp+udp, query +2 udp / telnet 8081 |
 | Hytale | verified | Hytale launcher | none | script | 5520 udp |
 | Palworld | verified | SteamCMD 2394010 | RCON + REST | zip | 8211 udp / RCON 25575, REST 8212 |
 | Enshrouded | experimental | SteamCMD 2278520 | none | zip | 15637 udp |
+| Valheim | experimental | SteamCMD 896660 | none | zip | 2456 udp, query +1 udp |
+| V Rising | experimental | SteamCMD 1829350 | RCON | zip | 9876 udp, query +1 udp / RCON 25575 |
+| Project Zomboid | experimental | SteamCMD 380870 | RCON | zip | 16261 udp, +1 udp / RCON 27015 |
 
 ## What writing them turned up
 
@@ -48,8 +51,8 @@ Putting each game in one place showed some problems:
 1. ~~**Enshrouded's ports may be wrong.**~~ Fixed. Current Enshrouded listens on one UDP port, its config's `queryPort` (Keen's own example config has no `gamePort`, and PackRelay measured it on a live server). The Den used to write `queryPort` 15638 while showing players 15637. Server setup's Game Port is now written into `queryPort` before every start, and the start message says when that moves the port. Enshrouded stays `experimental` until the fix has been run through the Den on a live server.
 2. ~~**7D2D has no backups.**~~ Fixed without moving any world. The Den finds the save where the game keeps it (`UserDataFolder\Saves` if set, else `%APPDATA%\7DaysToDie\Saves`, then the world folder holding this server's `GameName`, which also covers random-gen worlds). It sends `saveworld` to a running server, copies the world with plain reads so files the game holds open still copy, and zips the copy with `serveradmin.xml` and the config. Random-gen map files (`GeneratedWorlds`) are left out; that's a named gap in the recipe.
 3. ~~**7D2D's query port (game + 2, UDP) isn't modelled.**~~ The recipe models it and the Networking card shows it.
-4. **7D2D has no SteamCMD update**, even though the app installs anonymously and Palworld and Enshrouded already have one.
-5. **Palworld and Minecraft both default RCON to 25575.** The example config gets around it with 25577, but nothing warns you if they clash.
+4. ~~**7D2D has no SteamCMD update.**~~ Fixed. It stays on the installed branch (the `betakey` in `steamapps\appmanifest_294420.acf`, passed back as `-beta`) and puts `serverconfig.xml` back afterwards, since `validate` resets it to the stock copy. PackRelay lost a server's port to that. The Update tab is now one `SteamUpdateManager` for Palworld, Enshrouded and 7D2D, and shows the branch.
+5. ~~**Palworld and Minecraft both default RCON to 25575.**~~ The Networking card now warns when they clash on one machine.
 6. **Hytale's live entry has no `gamePort`**, so the Den doesn't know the server is on UDP 5520.
 
 ## Next steps
@@ -60,5 +63,5 @@ Each of these can be its own PR:
 2. ~~**Adapters read recipes.**~~ Done: adapter fallbacks (ports, Steam app ids, start scripts, config files, the Minecraft jar, Hytale's process filter) come from `recipeDefault()`, and a test fails if an adapter hardcodes a port or app id again. Process names stay in the adapters: they're for detecting a running server, which recipes don't model.
 3. ~~**Networking card.**~~ Done: each server's Status tab lists its ports (protocol, purpose, forward or keep private, where the number came from) and warns when one collides with another server on the same machine. The logic is in `src/lib/networking.ts`.
 4. ~~**Recipe card in the picker.**~~ Done: Add Server picks the game from tiles (experimental games are marked), with a card showing the tier and its evidence, install, console, stop, backups, ports to forward, how players join and the known gaps.
-5. **Fix the gaps above.** Enshrouded's ports and 7D2D backups are done; 7D2D's SteamCMD update is next.
-6. **New games are a recipe plus an adapter.** Valheim, V Rising and Project Zomboid are the obvious next ones, and PackRelay has already measured their ports and quirks.
+5. **Fix the gaps above.** Enshrouded's ports, 7D2D backups and 7D2D updates are done. Hytale's missing `gamePort` is a one-line `servers.json` change.
+6. **New games are a recipe plus an adapter.** Valheim is the first: its settings live in `kitsuneden-valheim.json` (Config tab) and become launch flags in the order Valheim needs, following what PackRelay measured. V Rising is the second: its real settings file is kept, the Den only writing the ports and RCON before each start, and RCON `shutdown` gives it a clean stop. Project Zomboid is the third: the bundled Java run directly with the game's own JVM line, `servertest.ini` kept and patched in place, RCON `quit`, `save` and `players`. Valheim, V Rising and Project Zomboid share `src/lib/adapters/exe-server.ts` (finding the process by path, following the log, zip-a-copy backups), and all three are in the Add Server autofill.

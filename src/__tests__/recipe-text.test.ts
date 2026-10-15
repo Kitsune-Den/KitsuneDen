@@ -9,8 +9,19 @@ describe("recipe text", () => {
     );
   });
 
+  it("says the Den updates 7D2D now", () => {
+    expect(installText(RECIPES["7d2d"])).toBe(
+      "SteamCMD app 294420. The Den installs updates once you set the SteamCMD path."
+    );
+  });
+
   it("says when a Steam game has to be installed by hand", () => {
-    expect(installText(RECIPES["7d2d"])).toMatch(/^SteamCMD app 294420 \(anonymous login\)\. Install it yourself/);
+    // No game is in this state any more; the wording still has to hold up.
+    const byHand = {
+      ...RECIPES["7d2d"],
+      install: { kind: "steamcmd" as const, appId: 294420, anonymous: true, denCanInstall: false },
+    };
+    expect(installText(byHand)).toMatch(/^SteamCMD app 294420 \(anonymous login\)\. Install it yourself/);
   });
 
   it("names the launcher a game is copied from", () => {
