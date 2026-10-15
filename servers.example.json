@@ -64,8 +64,7 @@
       "configFile": "enshrouded_server.json",
       "steamCmdPath": "C:\\SteamCMD\\steamcmd.exe",
       "steamAppId": 2278520,
-      "gamePort": 15637,
-      "queryPort": 15638
+      "gamePort": 15637
     }
   ]
 }

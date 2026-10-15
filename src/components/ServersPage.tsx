@@ -5,7 +5,8 @@ import { useServer } from "@/contexts/ServerContext";
 import { Trash2, Pencil, Plus, FolderOpen, Sparkles, Loader, TriangleAlert, Info } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
 import { gameMeta, statusMeta } from "@/lib/game-meta";
-import { RECIPES, portDefault, recipeDefaults, recipeFor, type GameType, type RecipePort } from "@/lib/recipes";
+import { portDefault, recipeDefaults, recipeFor, type RecipePort } from "@/lib/recipes";
+import GamePicker from "./GamePicker";
 import { PORT_FIELDS, useServerAutofill } from "./servers/useServerAutofill";
 
 
@@ -58,14 +59,11 @@ const TYPE_FIELDS: Record<string, FieldDef[]> = {
     { key: "restApiPassword", label: "REST API Password", type: "password", hint: "Admin password for the REST API" },
   ],
   enshrouded: [
-    { key: "queryPort", label: "Query Port", type: "number", hint: "Steam query port" },
     { key: "configFile", label: "Config File", type: "text", hint: "Config filename" },
     { key: "startScript", label: "Start Script", type: "text", hint: "Optional bat file in the install directory. Falls back to launching enshrouded_server.exe directly." },
     { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe for updates" },
   ],
 };
-
-const GAME_TYPES = Object.keys(RECIPES) as GameType[];
 
 const PROTO_LABEL: Record<RecipePort["proto"], string> = { tcp: "TCP", udp: "UDP", "tcp+udp": "TCP and UDP" };
 
@@ -567,26 +565,15 @@ export default function ServersPage() {
         loading={addSaving}
       >
         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-          <div>
-            <label className="block text-[11px] text-den-text-muted font-medium mb-1">
-              Server Type
-            </label>
-            <select
-              value={addType}
-              onChange={(e) => {
-                // Keep the name and folder; autofill re-detects the rest for the new game.
-                const type = e.target.value;
-                setAddType(type);
-                setAddDraft((prev) => ({ name: prev.name ?? "", dir: prev.dir ?? "" }));
-                autofill.reset(type);
-              }}
-              className="w-full bg-den-base border border-den-border rounded-lg px-3 py-2 text-[13px] text-den-text focus:outline-none focus:border-den-cyan/50 transition-colors"
-            >
-              {GAME_TYPES.map((t) => (
-                <option key={t} value={t}>{gameMeta(t).label}</option>
-              ))}
-            </select>
-          </div>
+          <GamePicker
+            value={addType}
+            onChange={(type) => {
+              // Keep the name and folder; autofill re-detects the rest for the new game.
+              setAddType(type);
+              setAddDraft((prev) => ({ name: prev.name ?? "", dir: prev.dir ?? "" }));
+              autofill.reset(type);
+            }}
+          />
 
           <div className="text-[10px] font-bold text-den-text-dim tracking-widest pt-2 pb-1">
             CONNECTION

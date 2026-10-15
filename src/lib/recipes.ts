@@ -57,7 +57,7 @@ export type RecipeInstall =
 export interface GameRecipe {
   type: GameType;
   tier: RecipeTier;
-  /** What has been watched working, and where. */
+  /** What has been watched working, and where. Shown in the game picker. */
   evidence: string;
   /** Platforms the dedicated server itself ships for. The Den runs on Windows. */
   platforms: { windows: boolean; linux: boolean };
@@ -101,7 +101,7 @@ export const RECIPES: Record<GameType, GameRecipe> = {
   minecraft: {
     type: "minecraft",
     tier: "verified",
-    evidence: "Runs in the Den locally and as a remote server over RCON + SSH lifecycle.",
+    evidence: "Tested in the maintainers' own Den, locally and as a remote server over RCON and SSH.",
     platforms: { windows: true, linux: true },
     install: {
       kind: "manual",
@@ -145,7 +145,7 @@ export const RECIPES: Record<GameType, GameRecipe> = {
   "7d2d": {
     type: "7d2d",
     tier: "verified",
-    evidence: "Runs in the Den's own servers.json; the config, sandbox and admin editors are tested against 3.x.",
+    evidence: "Tested in the maintainers' own Den. The config, Sandbox and admin editors are tested against 3.x.",
     platforms: { windows: true, linux: true },
     install: { kind: "steamcmd", appId: 294420, anonymous: true, denCanInstall: false },
     launch: {
@@ -174,9 +174,9 @@ export const RECIPES: Record<GameType, GameRecipe> = {
       players: "Telnet `listplayers`, plus serveradmin.xml for admins, whitelist and bans.",
     },
     saves: {
-      path: "%APPDATA%\\7DaysToDie\\Saves",
-      backup: "none",
-      note: "Unless UserDataFolder is set in serverconfig.xml. PackRelay launches with -UserDataFolder=<instance>/UserData so the world lives with the server and backs up as one folder.",
+      path: "Saves\\<world>\\<GameName>",
+      backup: "zip",
+      note: "Saves is UserDataFolder\\Saves when serverconfig.xml sets UserDataFolder, else %APPDATA%\\7DaysToDie\\Saves. The world stays where it is: a backup runs `saveworld` over telnet, then zips a copy with serveradmin.xml and the server config into ../backups/7d2d.",
     },
     config: [
       { file: "serverconfig.xml", format: "xml" },
@@ -186,16 +186,15 @@ export const RECIPES: Record<GameType, GameRecipe> = {
     steamClientAppId: 251570,
     defaults: { configFile: "serverconfig.xml", modsDir: "Mods" },
     gaps: [
-      "No backups: the world lives in %APPDATA% by default, outside the server folder.",
+      "Backups leave out random-gen map files (GeneratedWorlds, often hundreds of MB). The game rebuilds them from the seed, but only reliably on the same game version.",
       "No SteamCMD update, though the app is anonymous and the other Steam games already have it.",
-      "The query port (game+2) isn't modelled, so firewall hints would be a port short.",
     ],
   },
 
   hytale: {
     type: "hytale",
     tier: "verified",
-    evidence: "Runs in the Den's own servers.json, with KitsuneCommand's database when the mod is installed.",
+    evidence: "Tested in the maintainers' own Den, with KitsuneCommand when the mod is installed.",
     platforms: { windows: true, linux: true },
     install: {
       kind: "launcher",
@@ -243,7 +242,7 @@ export const RECIPES: Record<GameType, GameRecipe> = {
   palworld: {
     type: "palworld",
     tier: "verified",
-    evidence: "Runs in the Den's own servers.json, with RCON, the REST API and SteamCMD updates.",
+    evidence: "Tested in the maintainers' own Den, with RCON, the REST API and SteamCMD updates.",
     platforms: { windows: true, linux: true },
     install: { kind: "steamcmd", appId: 2394010, anonymous: true, denCanInstall: true },
     launch: {
@@ -286,7 +285,7 @@ export const RECIPES: Record<GameType, GameRecipe> = {
   enshrouded: {
     type: "enshrouded",
     tier: "experimental",
-    evidence: "Runs in the Den's own servers.json. The port layout disagrees with PackRelay's measurement (see gaps).",
+    evidence: "Runs in the maintainers' own Den. Its single-port setup follows Keen's docs and a PackRelay measurement, and hasn't been run through the Den on a live server yet.",
     platforms: { windows: true, linux: false },
     install: { kind: "steamcmd", appId: 2278520, anonymous: true, denCanInstall: true },
     launch: {
@@ -294,15 +293,21 @@ export const RECIPES: Record<GameType, GameRecipe> = {
       entry: "start_enshrouded.bat",
       fallback: "enshrouded_server.exe",
     },
+    // One UDP port for joining and the server browser. Enshrouded's config
+    // names it `queryPort`; the separate `gamePort` key is gone. Sources:
+    // Keen's "Dedicated Server Configuration" article (updated 2025-02-21),
+    // whose example config has only "queryPort": 15637, and PackRelay's
+    // measurement of a v0.0.15.0 server: it bound and answered A2S on 15637,
+    // with 15636 silent. The Den keeps it in servers.json's gamePort, like
+    // every other game, and writes it into the config before each start.
     ports: [
-      { field: "gamePort", purpose: "game", proto: "udp", default: 15637, public: true },
       {
-        field: "queryPort",
-        purpose: "query",
+        field: "gamePort",
+        purpose: "game",
         proto: "udp",
-        default: 15638,
+        default: 15637,
         public: true,
-        note: "Unconfirmed: PackRelay measured one socket (15637) for joining and queries, so this one may go unused.",
+        note: "One port for joining and the server browser. Enshrouded's config calls it queryPort; the Den writes it there before every start.",
       },
     ],
     control: {
@@ -315,7 +320,7 @@ export const RECIPES: Record<GameType, GameRecipe> = {
     connect: "Join the server by IP with the address.",
     defaults: { steamAppId: 2278520, startScript: "start_enshrouded.bat", configFile: "enshrouded_server.json" },
     gaps: [
-      "Port layout: the Den writes gamePort 15637 + queryPort 15638 into enshrouded_server.json; PackRelay measured a single port on 15637. If PackRelay is right, 15638 is never bound and the firewall hint is wrong. Needs a check against a current build before we change anything.",
+      "The single-port setup hasn't been run through the Den on a live server yet. Once someone has started it, joined on the Game Port and stopped it, this can be marked verified.",
       "No remote console, so no live commands, and player presence is scraped from the log.",
     ],
   },

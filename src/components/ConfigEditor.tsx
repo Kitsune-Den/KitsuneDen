@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useServer } from "@/contexts/ServerContext";
+import { recipeDefault } from "@/lib/recipes";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { resolveDayNightConfig, reverseDayNightConfig } from "@/lib/day-night";
 import { setUnsaved } from "@/lib/unsaved";
@@ -147,8 +149,6 @@ export default function ConfigEditor() {
     name: "Server name shown in the Enshrouded server browser.",
     serverPassword: "Optional join password. Leave empty for no password (group passwords still apply).",
     slotCount: "Maximum players that can be online at once (1-16 supported).",
-    gamePort: "UDP port players connect to (default 15637). Forward this on the router.",
-    queryPort: "UDP port for Steam server queries (default 15638). Forward this on the router.",
     ip: "Bind address. Leave 0.0.0.0 to listen on all network interfaces.",
     saveDirectory: "Folder (relative to the install dir) where the world is saved.",
     logDirectory: "Folder (relative to the install dir) where logs are written.",
@@ -1291,11 +1291,11 @@ export default function ConfigEditor() {
 
   const enshroudedCoreKeys = ["name", "serverPassword", "slotCount", "ip"];
 
+  // Ports aren't edited here: Server setup's Game Port is written into
+  // queryPort before every start (syncPort), so an edit here wouldn't stick.
+  const enshroudedPortKeys = ["queryPort", "gamePort"];
+
   const enshroudedGroups = [
-    {
-      title: "Network",
-      keys: ["gamePort", "queryPort"],
-    },
     {
       title: "Storage",
       keys: ["saveDirectory", "logDirectory"],
@@ -1656,6 +1656,7 @@ export default function ConfigEditor() {
               (() => {
                 const usedKeys = new Set<string>([
                   ...enshroudedCoreKeys,
+                  ...enshroudedPortKeys,
                   ...enshroudedGroups.flatMap((group) => group.keys),
                 ]);
                 const remainingKeys = Object.keys(formValues)
@@ -1693,6 +1694,25 @@ export default function ConfigEditor() {
 
                     {/* Categorized Groups */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      <div className="bg-den-surface/40 border border-den-border rounded-xl p-4 space-y-2">
+                        <div className="text-[12px] uppercase tracking-widest text-den-text-dim font-semibold">
+                          Network
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="font-mono text-[15px] font-semibold text-den-text">
+                            {currentServer?.gamePort ?? recipeDefault("enshrouded", "gamePort")}
+                          </span>
+                          <span className="text-[12px] text-den-text-muted">UDP, for joining and the server browser</span>
+                        </div>
+                        <p className="text-[12px] text-den-text-dim leading-relaxed">
+                          Set as Game Port in{" "}
+                          <Link href="/manage" className="text-den-cyan hover:underline underline-offset-2">
+                            Server setup
+                          </Link>
+                          . The Den writes it into this file&apos;s <code className="font-mono">queryPort</code> before every
+                          start, so change it there rather than here.
+                        </p>
+                      </div>
                       {groups.map((group) => (
                         <div
                           key={group.title}

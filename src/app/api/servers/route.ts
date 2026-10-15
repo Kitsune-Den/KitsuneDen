@@ -174,11 +174,12 @@ async function writePortsToGameConfig(id: string, type: string, def: Record<stri
   try {
     const current = await adapter.getConfig();
     if (!current || Object.keys(current).length === 0) return null;
-    const changes: Record<string, string> = {};
+    const changes: Record<string, string | number> = {};
     for (const [field, key] of Object.entries(keys) as [PortField, string][]) {
       const port = def[field];
       if (typeof port !== "number" || !(key in current)) continue;
-      if (String(current[key]) !== String(port)) changes[key] = String(port);
+      // A JSON config's number stays a number; text formats get text.
+      if (String(current[key]) !== String(port)) changes[key] = typeof current[key] === "number" ? port : String(port);
     }
     if (Object.keys(changes).length === 0) return null;
     const saved = await adapter.saveConfig({ ...current, ...changes });

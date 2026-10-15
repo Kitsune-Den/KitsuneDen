@@ -25,10 +25,16 @@ import type {
   SevenDaysAdminApi,
 } from "./types";
 import { recipeDefault } from "../recipes";
+import { copyTree, findWorldSave, savesDir } from "../seven-days-saves";
 
 // Fallbacks for fields servers.json leaves unset, from the 7D2D recipe.
 const DEFAULT_TELNET_PORT = recipeDefault("7d2d", "telnetPort");
 const DEFAULT_CONFIG_FILE = recipeDefault("7d2d", "configFile");
+
+/** A big world zips slowly; Palworld's two minutes isn't enough. */
+const BACKUP_TIMEOUT_MS = 10 * 60_000;
+/** After `saveworld`, give the game a moment to finish writing. */
+const SAVE_SETTLE_MS = 3000;
 
 const MAX_LOG_LINES = 2000;
 const STOP_TIMEOUT_MS = 30_000;
@@ -384,7 +390,7 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
     hasRcon: false,
     hasMods: true,
     hasModPacks: false,
-    hasBackups: false,
+    hasBackups: true,
     hasWorlds: false,
     hasWarps: false,
     hasServerProperties: true,
@@ -869,16 +875,102 @@ export class SevenDaysAdapter implements ServerAdapter, SevenDaysAdminApi {
       path.join(this.def.dir, fileName),
       path.join(this.def.dir, "saves", fileName),
     ];
-    // Also check %APPDATA%/7DaysToDie/Saves/
-    const appData = process.env.APPDATA;
-    if (appData) {
-      candidates.push(path.join(appData, "7DaysToDie", "Saves", fileName));
-    }
+    // Where the game itself puts it: <UserDataFolder or %APPDATA%\7DaysToDie>\Saves
+    const saves = savesDir(this.def.dir, config);
+    if (saves) candidates.push(path.join(saves, fileName));
     for (const p of candidates) {
       if (fs.existsSync(p)) return p;
     }
     // Return the first candidate path even if it doesn't exist yet (for creation)
     return candidates[0];
+  }
+
+  // ---- Backups ----
+
+  private get backupRoot(): string {
+    return path.join(this.def.dir, "..", "backups", "7d2d");
+  }
+
+  async getBackups(): Promise<{ hourly: unknown[]; daily: unknown[] }> {
+    const backups: { hourly: unknown[]; daily: unknown[] } = { hourly: [], daily: [] };
+    for (const type of ["hourly", "daily"] as const) {
+      const dir = path.join(this.backupRoot, type);
+      if (!fs.existsSync(dir)) continue;
+      backups[type] = fs
+        .readdirSync(dir)
+        .filter((f) => f.endsWith(".zip"))
+        .map((f) => {
+          const stat = fs.statSync(path.join(dir, f));
+          return { name: f, size: formatBytes(stat.size), sizeBytes: stat.size, date: stat.mtime };
+        })
+        .sort((a, b) => b.date.getTime() - a.date.getTime());
+    }
+    return backups;
+  }
+
+  /**
+   * Zip the active world where it already lives (no move): ask a running
+   * server to `saveworld` first, copy the world plus serveradmin.xml and the
+   * server config into a staging folder, and zip the copy.
+   */
+  async runBackup(type: "hourly" | "daily"): Promise<ActionResult> {
+    const config = parseXmlConfig(this.configPath);
+    const saves = savesDir(this.def.dir, config);
+    const save = saves ? findWorldSave(saves, config) : null;
+    if (!saves || !save) {
+      const gameName = config.GameName || "My Game";
+      return {
+        success: false,
+        message: saves
+          ? `No save for game "${gameName}" in ${saves}. Has the server run this game yet?`
+          : "Couldn't work out where the world is saved: UserDataFolder isn't set and %APPDATA% isn't available.",
+      };
+    }
+
+    const notes: string[] = [];
+    const state = this.getState();
+    const running = !!state.process || state.status === "running" || (await this.isRunningExternally());
+    if (running) {
+      try {
+        await telnetCommand("127.0.0.1", this.telnetPort, this.telnetPassword, "saveworld");
+        await new Promise((r) => setTimeout(r, SAVE_SETTLE_MS));
+      } catch (e) {
+        notes.push(`Couldn't ask the server to save first (${(e as Error).message}), so this has the last autosave.`);
+      }
+    }
+
+    const backupDir = path.join(this.backupRoot, type);
+    const name = `7d2d-${new Date().toISOString().replace(/[:.]/g, "-")}.zip`;
+    const backupPath = path.join(backupDir, name);
+    const staging = fs.mkdtempSync(path.join(os.tmpdir(), "den-7d2d-backup-"));
+    try {
+      copyTree(save.dir, path.join(staging, save.world, save.gameName));
+      const adminFile = this.getAdminFilePath();
+      if (adminFile && fs.existsSync(adminFile)) {
+        fs.copyFileSync(adminFile, path.join(staging, path.basename(adminFile)));
+      }
+      if (fs.existsSync(this.configPath)) {
+        fs.copyFileSync(this.configPath, path.join(staging, path.basename(this.configPath)));
+      }
+
+      fs.mkdirSync(backupDir, { recursive: true });
+      const escapePs = (value: string) => value.replace(/'/g, "''");
+      const source = escapePs(path.join(staging, "*"));
+      await new Promise<void>((resolve, reject) => {
+        exec(
+          `powershell -NoProfile -Command "Compress-Archive -Path '${source}' -DestinationPath '${escapePs(backupPath)}' -Force"`,
+          { timeout: BACKUP_TIMEOUT_MS },
+          (err) => (err ? reject(err) : resolve())
+        );
+      });
+    } catch (e) {
+      return { success: false, message: `Backup failed: ${(e as Error).message}` };
+    } finally {
+      fs.rmSync(staging, { recursive: true, force: true });
+    }
+
+    this.addLog(`[Dashboard] Backup created: ${name} (${save.world}/${save.gameName})`);
+    return { success: true, message: [`Backup created: ${name}`, ...notes].join(" ") };
   }
 
   getAdminData(): AdminData {

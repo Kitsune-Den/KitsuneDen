@@ -125,7 +125,7 @@ Every spirit needs her doorways, and no two may share a number on the same machi
 | Palworld game | 8211 | UDP |
 | Palworld RCON | 25575 | TCP |
 | Palworld REST API | 8212 | TCP |
-| Enshrouded game / query | 15637 / 15638 | UDP |
+| Enshrouded game (joining and server browser) | 15637 | UDP |
 
 Notice that Minecraft RCON and Palworld RCON both default to **25575**. If both live on one machine, move one of them. A port conflict causes immediate distress: if two spirits claim the same gateway, one of them will not wake.
 

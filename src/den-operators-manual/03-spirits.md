@@ -102,7 +102,8 @@ Her admin file (`serveradmin.xml`) is editable from the dashboard: admins and pe
 | Commands | telnet on 127.0.0.1:`telnetPort` (default 8081) |
 | Status probe | TCP connect to the telnet port |
 | Config | `serverconfig.xml` (or `configFile`) |
-| Admin file | `adminFilePath`, else `AdminFileName` from the config, looked for in `dir`, `dir\saves`, and `%APPDATA%\7DaysToDie\Saves` |
+| Admin file | `adminFilePath`, else `AdminFileName` from the config, looked for in `dir`, `dir\saves`, and the game's Saves folder (`UserDataFolder\Saves` if set, else `%APPDATA%\7DaysToDie\Saves`) |
+| Backups | `saveworld` over telnet if running, then a zip of the world folder, `serveradmin.xml` and the config, in `<dir>\..\backups\7d2d\hourly\` or `daily\` |
 | Mods | `modsDir` (default `mods`); uploaded `.zip` files are extracted |
 | Memory | managed by the game, not the dashboard |
 | Journal | `logs\7d2d-server.log` |
@@ -165,7 +166,7 @@ If she has no `enshrouded_server.json` when you press Start, the dashboard write
 | Launch | `startScript` (default `start_enshrouded.bat`), else `enshrouded_server.exe` |
 | Commands | none |
 | Status | process list (she has no TCP port to probe) |
-| Ports | `gamePort` 15637, `queryPort` 15638 (both UDP) |
+| Ports | `gamePort` 15637, UDP: one port for joining and the server browser, written into her config's `queryPort` before each start |
 | Config | `enshrouded_server.json` (or `configFile`) |
 | Players | best-effort scrape of the in-memory log |
 | Backups | zips of `savegame\` in `<dir>\..\backups\enshrouded\hourly\` or `daily\` |
