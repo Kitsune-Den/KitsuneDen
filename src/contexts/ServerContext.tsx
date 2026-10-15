@@ -18,6 +18,10 @@ interface ServerInfo {
   loader?: string;
   version?: string;
   gamePort?: number;
+  queryPort?: number;
+  rconPort?: number;
+  telnetPort?: number;
+  restApiPort?: number;
   /** Set for Minecraft servers that live on another host. */
   rconHost?: string;
   /** Secret fields that are set server-side. Values are never sent to the browser. */

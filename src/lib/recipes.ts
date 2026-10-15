@@ -155,13 +155,16 @@ export const RECIPES: Record<GameType, GameRecipe> = {
     },
     ports: [
       { field: "gamePort", purpose: "game", proto: "tcp+udp", default: 26900, public: true },
+      // Measured by PackRelay on 3.2.0: ServerPort 26950 bound 26950 TCP+UDP
+      // and 26952 UDP, nothing on +1. Not a field in the Den's form: the game
+      // picks it from the game port, so there's nothing to set.
       {
         field: "queryPort",
         purpose: "query",
         proto: "udp",
         offset: { from: "gamePort", by: 2 },
         public: true,
-        note: "Measured by PackRelay on 3.2.0: ServerPort 26950 bound 26950 TCP+UDP and 26952 UDP, nothing on +1. Not in the Den's form yet.",
+        note: "The game opens this itself, two above the game port. Forward it too, or the server won't show in the in-game browser.",
       },
       { field: "telnetPort", purpose: "telnet", proto: "tcp", default: 8081, public: false },
     ],
@@ -332,6 +335,22 @@ export function portDefault(recipe: GameRecipe, field: PortField): number | unde
     return base === undefined ? undefined : base + p.offset.by;
   }
   return undefined;
+}
+
+/**
+ * The default an adapter falls back to when servers.json leaves a field unset.
+ * Adapters call this once, at import, so a recipe that loses a default an
+ * adapter needs fails the test suite instead of a live start.
+ */
+export function recipeDefault<K extends keyof ServerDefinition>(
+  type: GameType,
+  field: K
+): NonNullable<ServerDefinition[K]> {
+  const value = recipeDefaults(type)[field];
+  if (value === undefined || value === null) {
+    throw new Error(`The ${type} recipe has no default for ${String(field)}`);
+  }
+  return value as NonNullable<ServerDefinition[K]>;
 }
 
 /** What the Add Server form pre-fills: the recipe's defaults plus its port

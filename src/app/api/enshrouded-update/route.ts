@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdapter, getDefaultServerId } from "@/lib/adapters/adapter-registry";
+import { recipeDefault } from "@/lib/recipes";
 import { EnshroudedAdapter } from "@/lib/adapters/enshrouded-adapter";
 
 function getServerId(request: NextRequest): string {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     serverVersion: info.serverVersion,
-    steamAppId: adapter.def.steamAppId || 2278520,
+    steamAppId: adapter.def.steamAppId || recipeDefault("enshrouded", "steamAppId"),
     steamCmdConfigured: !!adapter.def.steamCmdPath,
   });
 }

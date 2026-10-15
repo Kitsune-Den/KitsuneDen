@@ -1,3 +1,4 @@
+import fs from "fs";
 import os from "os";
 import path from "path";
 import { describe, expect, it } from "vitest";
@@ -7,7 +8,7 @@ import { SevenDaysAdapter } from "../lib/adapters/seven-days-adapter";
 import { HytaleAdapter } from "../lib/adapters/hytale-adapter";
 import { PalworldAdapter } from "../lib/adapters/palworld-adapter";
 import { EnshroudedAdapter, defaultConfig } from "../lib/adapters/enshrouded-adapter";
-import { RECIPES, portDefault, recipeDefaults, recipeFor, type GameType } from "../lib/recipes";
+import { RECIPES, portDefault, recipeDefault, recipeDefaults, recipeFor, type GameType } from "../lib/recipes";
 
 /**
  * A recipe states what an adapter does. These tests keep the two honest:
@@ -89,5 +90,21 @@ describe("game recipes", () => {
   it("an unknown type has no recipe and no defaults", () => {
     expect(recipeFor("valheim")).toBeUndefined();
     expect(recipeDefaults("valheim")).toEqual({});
+  });
+
+  it("recipeDefault returns a recipe's value and refuses a missing one", () => {
+    expect(recipeDefault("7d2d", "telnetPort")).toBe(8081);
+    expect(recipeDefault("7d2d", "queryPort")).toBe(26902);
+    expect(() => recipeDefault("7d2d", "rconPort")).toThrow(/7d2d recipe has no default for rconPort/);
+  });
+
+  // Adapters take their fallbacks from the recipe. A bare number after `||`
+  // (a port, a Steam app id) means one has been restated by hand again.
+  it("adapters don't hardcode port or app id fallbacks", () => {
+    const adaptersDir = path.join(__dirname, "..", "lib", "adapters");
+    for (const file of fs.readdirSync(adaptersDir).filter((f) => f.endsWith("-adapter.ts"))) {
+      const source = fs.readFileSync(path.join(adaptersDir, file), "utf-8");
+      expect(source.match(/def\.\w+ \|\| \d{4,}/g), file).toBeNull();
+    }
   });
 });
