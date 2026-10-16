@@ -6,6 +6,7 @@ import type { ServerDefinition } from "./adapters/types";
 import { RECIPES, portDefault } from "./recipes";
 import { parseSettingsJson } from "./vrising-settings";
 import { INI_PATH, parseIni } from "./zomboid-settings";
+import { ARK_GAMES } from "./ark-settings";
 import { parseServerConfigXml } from "./seven-days-config";
 import { parseOptionSettings } from "./adapters/palworld-adapter";
 import { validatePathFields } from "./server-def-security";
@@ -30,7 +31,7 @@ import { validatePathFields } from "./server-def-security";
  * gameConfigSecrets() fills them in server-side when the server is saved.
  */
 
-export type GameType = "minecraft" | "7d2d" | "hytale" | "palworld" | "enshrouded" | "valheim" | "vrising" | "projectzomboid" | "rust";
+export type GameType = "minecraft" | "7d2d" | "hytale" | "palworld" | "enshrouded" | "valheim" | "vrising" | "projectzomboid" | "rust" | "ark-ase" | "ark-asa";
 export type PortField = "gamePort" | "rconPort" | "telnetPort" | "restApiPort" | "queryPort";
 type Protocol = "tcp" | "udp" | "both";
 
@@ -45,7 +46,7 @@ interface PortSpec {
 }
 
 /** Games whose install folder can be read. */
-const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded", "valheim", "vrising", "projectzomboid", "rust"];
+const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "enshrouded", "valheim", "vrising", "projectzomboid", "rust", "ark-ase", "ark-asa"];
 
 /**
  * How far apart to look when the usual port is taken, where that isn't just
@@ -54,6 +55,9 @@ const DETECT_GAMES: GameType[] = ["minecraft", "7d2d", "hytale", "palworld", "en
  */
 const PORT_STEP: Partial<Record<GameType, Partial<Record<PortField, number>>>> = {
   "7d2d": { gamePort: 10 },
+  // ARK also opens the game port + 1 (its raw socket), which no field models.
+  "ark-ase": { gamePort: 2 },
+  "ark-asa": { gamePort: 2 },
 };
 
 /**
@@ -564,6 +568,32 @@ function detectRust(dir: string, d: Detection) {
   if (!d.fields.name) d.fields.name = path.basename(dir);
 }
 
+/**
+ * Both ARKs take everything on the command line the Den builds from
+ * kitsuneden-ark.json, so there are no config ports to read.
+ */
+function detectArk(type: "ark-ase" | "ark-asa", dir: string, d: Detection) {
+  const game = ARK_GAMES[type === "ark-asa" ? "asa" : "ase"];
+  if (!exists(path.join(dir, ...game.exe.split("/")))) {
+    d.notes.push(`No ${path.basename(game.exe)} here yet. Once the SteamCMD path is set, the Update tab can install it.`);
+  }
+  const settings = readText(path.join(dir, "kitsuneden-ark.json"));
+  if (settings) {
+    try {
+      const c = JSON.parse(settings) as Record<string, unknown>;
+      if (typeof c.sessionName === "string" && c.sessionName.trim()) {
+        d.fields.name = c.sessionName;
+        d.nameFromConfig = true;
+      }
+    } catch {
+      d.notes.push("kitsuneden-ark.json isn't valid JSON, so it was skipped.");
+    }
+  }
+  const steam = findSteamCmd(dir);
+  if (steam) d.fields.steamCmdPath = steam;
+  if (!d.fields.name) d.fields.name = path.basename(dir);
+}
+
 export type DetectResult = { ok: true; detection: Detection } | { ok: false; error: string };
 
 /** Read what's already in an install folder. Never returns secret values. */
@@ -587,6 +617,7 @@ export function detectInstall(type: GameType, dir: string): DetectResult {
   else if (type === "vrising") detectVRising(dir, d);
   else if (type === "projectzomboid") detectProjectZomboid(dir, d);
   else if (type === "rust") detectRust(dir, d);
+  else if (type === "ark-ase" || type === "ark-asa") detectArk(type, dir, d);
   else detectHytale(dir, d);
   return { ok: true, detection: d };
 }

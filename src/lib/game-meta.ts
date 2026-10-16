@@ -4,7 +4,7 @@
  * Den ships no game artwork). One place, so every surface agrees.
  */
 
-export type GameIcon = "pickaxe" | "skull" | "castle" | "paw" | "flame" | "axe" | "droplet" | "biohazard" | "radiation" | "server";
+export type GameIcon = "pickaxe" | "skull" | "castle" | "paw" | "flame" | "axe" | "droplet" | "biohazard" | "radiation" | "footprints" | "bone" | "server";
 
 export interface GameMeta {
   label: string;
@@ -84,6 +84,20 @@ const GAME_META: Record<string, GameMeta> = {
     tag: "bg-orange-400/10 text-orange-600 border-orange-400/30",
     art: art("#6b3414", "#1c0f07", "rgba(251,146,60,0.3)"),
     icon: "radiation",
+  },
+  "ark-ase": {
+    label: "ARK: Survival Evolved",
+    short: "ARK SE",
+    tag: "bg-green-400/10 text-green-600 border-green-400/30",
+    art: art("#2f4a1c", "#0e170a", "rgba(134,239,172,0.28)"),
+    icon: "footprints",
+  },
+  "ark-asa": {
+    label: "ARK: Survival Ascended",
+    short: "ARK SA",
+    tag: "bg-cyan-400/10 text-cyan-600 border-cyan-400/30",
+    art: art("#16485a", "#071820", "rgba(103,232,249,0.3)"),
+    icon: "bone",
   },
 };
 

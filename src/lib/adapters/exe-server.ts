@@ -133,10 +133,10 @@ export function listZipBackups(root: string): { hourly: unknown[]; daily: unknow
  * Copy folders and files into a staging folder (plain reads, so files the
  * running game holds open still copy), zip the copy to `dest`, and always
  * remove the staging folder. `items` maps a source path to its name in the
- * zip; a folder's `skip` leaves out files by name (regenerable caches).
+ * zip; a folder's `skip` leaves out files and folders by name.
  */
 export async function zipCopy(
-  items: { from: string; as: string; skip?: (fileName: string) => boolean }[],
+  items: { from: string; as: string; skip?: (name: string) => boolean }[],
   dest: string,
   timeoutMs: number
 ): Promise<void> {

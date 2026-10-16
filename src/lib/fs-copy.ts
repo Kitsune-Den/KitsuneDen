@@ -12,13 +12,17 @@ import path from "path";
  * .NET's File.OpenRead, which shares read only, so they can fail on a file
  * the running game has open for writing. Node's reads share read, write and
  * delete. The Den zips this copy, never the live folder.
+ *
+ * `skip` leaves out files and folders by name (regenerable caches,
+ * single-player saves).
  */
-export function copyTree(src: string, dest: string, skip?: (fileName: string) => boolean): void {
+export function copyTree(src: string, dest: string, skip?: (name: string) => boolean): void {
   fs.mkdirSync(dest, { recursive: true });
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     const from = path.join(src, entry.name);
     const to = path.join(dest, entry.name);
+    if (skip?.(entry.name)) continue;
     if (entry.isDirectory()) copyTree(from, to, skip);
-    else if (entry.isFile() && !skip?.(entry.name)) fs.writeFileSync(to, fs.readFileSync(from));
+    else if (entry.isFile()) fs.writeFileSync(to, fs.readFileSync(from));
   }
 }

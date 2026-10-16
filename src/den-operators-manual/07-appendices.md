@@ -73,6 +73,9 @@ This chapter is for skimming. Keep it open in a tab and reach for whatever you n
 | Rust game | 28015 | UDP | `gamePort`, passed as `+server.port` |
 | Rust RCON | 28016 | TCP | `gamePort` + 1, passed as `+rcon.port`; also the status probe |
 | Rust query | 28017 | UDP | `gamePort` + 2, passed as `+server.queryport` |
+| ARK game | 7777 | UDP | `gamePort`, in the travel URL as `?Port=`; ARK also opens `gamePort` + 1 |
+| ARK query | 27016 | UDP | `queryPort` (`?QueryPort=`); keep it in 27015-27020 for ASE's LAN browser; ASA doesn't answer queries |
+| ARK RCON | 27020 | TCP | `rconPort` (`?RCONPort=`); also the status probe |
 | SSH (remote lifecycle) | 22 | TCP | `lifecycle.port` |
 
 ---
@@ -133,6 +136,7 @@ Every route except `/api/auth/*` needs a valid session. Server-aware routes take
 | `/api/vrising-update` | GET, POST | Branch and app id / SteamCMD install or update on the installed branch |
 | `/api/projectzomboid-update` | GET, POST | Branch and app id / SteamCMD install or update on the installed branch |
 | `/api/rust-update` | GET, POST | Branch and app id / SteamCMD install or update on the installed branch |
+| `/api/ark-update` | GET, POST | Both ARKs: branch and app id / SteamCMD install or update on the installed branch |
 | `/api/airdrops/settings` | GET, PUT | KitsuneCommand airdrop settings |
 | `/api/airdrops/loot-tables` | GET, POST, PUT, DELETE | Loot tables and entries |
 | `/api/airdrops/history` | GET | Recent drops (`?limit=`, default 50) |
@@ -274,6 +278,19 @@ Server settings live in `zomboid-data\Server\servertest.ini` (Config tab, after 
 | `steamAppId` | 258550 | Steam app id |
 
 Server name, map, world size, seed, slots and `identity` (the world's folder under `server\`) live in `kitsuneden-rust.json` (Config tab). Other convars go in `server\<identity>\cfg\server.cfg`.
+
+### ARK (`ark-ase`, `ark-asa`)
+
+| Field | Default | Description |
+|---|---|---|
+| `gamePort` | 7777 | UDP game port; ARK also opens the next port up |
+| `queryPort` | 27016 | UDP query port (27015-27020 for ASE's LAN browser) |
+| `rconPort` | 27020 | RCON port |
+| `rconPassword` | generated | ARK's admin password, also the RCON password; kept in `kitsuneden-ark.json` when not set here |
+| `steamCmdPath` | | `steamcmd.exe` for installs and updates |
+| `steamAppId` | 376030 / 2430930 | Steam app id (Evolved / Ascended) |
+
+Map, session name, join password and slots live in `kitsuneden-ark.json` (Config tab). Rates and other settings are in `ShooterGame\Saved\Config\WindowsServer\GameUserSettings.ini` and `Game.ini`, edited by hand; the command line wins over the ini.
 
 ### Top level
 

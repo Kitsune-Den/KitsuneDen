@@ -1,4 +1,4 @@
-import { Pickaxe, Skull, Castle, PawPrint, Flame, Axe, Droplet, Biohazard, Radiation, Server } from "lucide-react";
+import { Pickaxe, Skull, Castle, PawPrint, Flame, Axe, Droplet, Biohazard, Radiation, Footprints, Bone, Server } from "lucide-react";
 import { gameMeta, type GameIcon } from "@/lib/game-meta";
 
 const ICONS: Record<GameIcon, typeof Server> = {
@@ -11,6 +11,8 @@ const ICONS: Record<GameIcon, typeof Server> = {
   droplet: Droplet,
   biohazard: Biohazard,
   radiation: Radiation,
+  footprints: Footprints,
+  bone: Bone,
   server: Server,
 };
 

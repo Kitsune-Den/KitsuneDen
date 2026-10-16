@@ -106,6 +106,10 @@ export function getProbeTarget(
     case "rust":
       // RCON is the one TCP socket, at game + 1 (the recipe's layout).
       return { host: "127.0.0.1", port: (def.gamePort || recipeDefault("rust", "gamePort")) + 1 };
+    case "ark-ase":
+    case "ark-asa":
+      // RCON is the TCP socket; ARK answers Steam queries before it's playable.
+      return { host: "127.0.0.1", port: def.rconPort || recipeDefault(def.type, "rconPort") };
     case "vrising":
     case "projectzomboid":
       // RCON is the one TCP socket, and the Den turns it on every start.
@@ -151,7 +155,7 @@ export async function resolveServerStatus(
   // secondary signal — catches the case where the process is running but the
   // probe is inconclusive (or there's no probe target at all).
   const def = adapter.def;
-  if (def.type === "hytale" || def.type === "palworld" || def.type === "enshrouded" || def.type === "valheim" || def.type === "vrising" || def.type === "projectzomboid" || def.type === "rust") {
+  if (def.type === "hytale" || def.type === "palworld" || def.type === "enshrouded" || def.type === "valheim" || def.type === "vrising" || def.type === "projectzomboid" || def.type === "rust" || def.type === "ark-ase" || def.type === "ark-asa") {
     const stats = await adapter.getStats();
     if (stats.process) return "running";
     return "stopped";

@@ -37,6 +37,9 @@ const FLAT_SECRET_KEYS: Record<ServerType, readonly string[]> = {
   projectzomboid: [],
   // The RCON password is kept out of getConfig entirely.
   rust: [],
+  // The admin password is kept out of getConfig entirely.
+  "ark-ase": [],
+  "ark-asa": [],
 };
 
 interface EnshroudedGroup {

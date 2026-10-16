@@ -11,6 +11,7 @@ import { ValheimAdapter } from "./valheim-adapter";
 import { VRisingAdapter } from "./vrising-adapter";
 import { ProjectZomboidAdapter } from "./projectzomboid-adapter";
 import { RustAdapter } from "./rust-adapter";
+import { ArkAdapter } from "./ark-adapter";
 
 // Persist across Next.js HMR reloads
 const globalForRegistry = globalThis as unknown as {
@@ -68,6 +69,10 @@ function createAdapter(def: ServerDefinition): ServerAdapter {
       return new ProjectZomboidAdapter(def);
     case "rust":
       return new RustAdapter(def);
+    case "ark-ase":
+      return new ArkAdapter(def, "ase");
+    case "ark-asa":
+      return new ArkAdapter(def, "asa");
     default:
       throw new Error(`Unknown server type: ${def.type}`);
   }
