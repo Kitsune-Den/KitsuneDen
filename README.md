@@ -57,6 +57,8 @@ KitsuneDen treats your servers like living things. Each one gets its own persona
 | V Rising | `vrising` | 🧪 Experimental: new, not yet run through the Den (RCON commands; Windows only) |
 | Project Zomboid | `projectzomboid` | 🧪 Experimental: new, not yet run through the Den (RCON commands and player list) |
 | Rust | `rust` | 🧪 Experimental: new, not yet run through the Den (RCON commands and player list) |
+| ARK: Survival Evolved | `ark-ase` | 🧪 Experimental: new, not yet run through the Den (RCON commands and player list; writes no log) |
+| ARK: Survival Ascended | `ark-asa` | 🧪 Experimental: new, not yet run through the Den (RCON commands and player list; Windows only) |
 | Something else | - | 🔧 [Write an adapter](#adding-a-new-game) |
 
 ---
@@ -255,6 +257,19 @@ By default KitsuneDen reads and writes `servers.json` in the directory it's star
 
 > Server name, description, slots, map, world size, seed and the world's folder (`server.identity`) live in `kitsuneden-rust.json` in the server folder, edited on the Config tab and passed to `RustDedicated.exe` as `+convar` arguments at each start. The first start picks a random seed.
 > RCON runs in Rust's TCP mode (`+rcon.web 0`), which Rust logs as deprecated; stop sends `quit` (Rust saves on the way out) and backups send `server.save` first. Block the RCON port from the internet: Rust binds it on every interface.
+
+**`ark-ase`** / **`ark-asa`**: ARK: Survival Evolved / ARK: Survival Ascended
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `dir` | ✅ | Path to the server directory |
+| `gamePort` | Optional | UDP game port (default 7777). ARK also opens the next port up; forward both. |
+| `queryPort` | Optional | UDP query port (default 27016). On Survival Evolved players find the server by it, and it must stay between 27015 and 27020 for the in-game LAN browser. Survival Ascended doesn't answer Steam queries. |
+| `rconPort` | Optional | RCON port (default 27020) |
+| `rconPassword` | Optional | ARK's admin password, which is also the RCON password. Leave it out and the Den generates one. |
+| `steamCmdPath` | Optional | Path to steamcmd.exe, to install and update the server (Steam app 376030 for Evolved, 2430930 for Ascended) |
+
+> Map, session name, join password and slots live in `kitsuneden-ark.json` in the server folder (Config tab). At each start the Den builds ARK's one "travel URL" argument from them: map first, admin password last (Ascended reads everything after it into the password). Stop sends RCON `SaveWorld` then `DoExit`; backups send `SaveWorld` first and leave out the single-player save and the timestamped world copies ARK keeps. Survival Evolved writes no log at all, so its Console stays quiet while it loads; the Den checks RCON to know when it's up. Survival Ascended writes the admin password into its own log, which the Den redacts from the Console. Use an SSD for either.
 
 ### Remote Minecraft servers
 

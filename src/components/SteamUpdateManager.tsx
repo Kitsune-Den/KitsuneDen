@@ -22,6 +22,8 @@ const ENDPOINTS: Record<string, string> = {
   vrising: "/api/vrising-update",
   projectzomboid: "/api/projectzomboid-update",
   rust: "/api/rust-update",
+  "ark-ase": "/api/ark-update",
+  "ark-asa": "/api/ark-update",
 };
 
 /**

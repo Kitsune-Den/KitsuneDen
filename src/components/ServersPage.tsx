@@ -85,6 +85,19 @@ const TYPE_FIELDS: Record<string, FieldDef[]> = {
     { key: "rconPassword", label: "RCON Password", type: "password", hint: "Leave blank and the Den generates one in kitsuneden-rust.json" },
     { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe, to install and update the server" },
   ],
+  // Map, session name, join password and slots are on the Config tab (kitsuneden-ark.json).
+  "ark-ase": [
+    { key: "queryPort", label: "Query Port", type: "number", hint: "Steam query port, where players find the server" },
+    { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port" },
+    { key: "rconPassword", label: "Admin Password", type: "password", hint: "ARK's admin password, which is also the RCON password. Leave blank and the Den generates one." },
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe, to install and update the server" },
+  ],
+  "ark-asa": [
+    { key: "queryPort", label: "Query Port", type: "number", hint: "Query port (Ascended doesn't answer Steam queries, but it's set so servers don't collide)" },
+    { key: "rconPort", label: "RCON Port", type: "number", hint: "RCON port" },
+    { key: "rconPassword", label: "Admin Password", type: "password", hint: "ARK's admin password, which is also the RCON password. Leave blank and the Den generates one." },
+    { key: "steamCmdPath", label: "SteamCMD Path", type: "text", hint: "Full path to steamcmd.exe, to install and update the server" },
+  ],
 };
 
 const PROTO_LABEL: Record<RecipePort["proto"], string> = { tcp: "TCP", udp: "UDP", "tcp+udp": "TCP and UDP" };

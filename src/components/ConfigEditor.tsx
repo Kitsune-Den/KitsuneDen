@@ -5,6 +5,7 @@ import { useServer } from "@/contexts/ServerContext";
 import { recipeDefault } from "@/lib/recipes";
 import { MODIFIERS, PRESETS } from "@/lib/valheim-settings";
 import { DIFFICULTY_PRESETS, GAME_PRESETS } from "@/lib/vrising-settings";
+import { ARK_GAMES } from "@/lib/ark-settings";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { resolveDayNightConfig, reverseDayNightConfig } from "@/lib/day-night";
 import { setUnsaved } from "@/lib/unsaved";
@@ -172,6 +173,14 @@ export default function ConfigEditor() {
     crossplay: "Crossplay",
   };
 
+  const arkVariant = currentServer?.type === "ark-asa" ? "asa" : "ase";
+  const arkFieldHelp: Record<string, string> = {
+    map: `The map to load, first on the command line. For example: ${ARK_GAMES[arkVariant].mapExamples}.`,
+    sessionName: "Server name in the server list. No ? or \" (they'd break ARK's command line).",
+    serverPassword: "Join password. Leave empty for none. No spaces, ? or \".",
+    maxPlayers: "Player slots.",
+  };
+
   const rustFieldHelp: Record<string, string> = {
     hostname: "Server name in the server browser.",
     description: "Shown on the server's page in the browser.",
@@ -250,6 +259,7 @@ export default function ConfigEditor() {
     ...(currentServer?.type === "vrising" ? vrisingFieldHelp : {}),
     ...(currentServer?.type === "projectzomboid" ? zomboidFieldHelp : {}),
     ...(currentServer?.type === "rust" ? rustFieldHelp : {}),
+    ...(currentServer?.type === "ark-ase" || currentServer?.type === "ark-asa" ? arkFieldHelp : {}),
     ...(currentServer?.type === "hytale"
       ? {
           DisplayTmpTagsInStrings:
@@ -1449,6 +1459,9 @@ export default function ConfigEditor() {
         { title: "World folder", keys: ["identity"] },
       ],
     },
+    // The admin password isn't returned; ports are set in Server setup.
+    "ark-ase": { core: ["sessionName", "map", "serverPassword", "maxPlayers"], hidden: [], groups: [] },
+    "ark-asa": { core: ["sessionName", "map", "serverPassword", "maxPlayers"], hidden: [], groups: [] },
   };
   const layout = groupedLayouts[currentServer?.type ?? ""];
 
@@ -1559,6 +1572,8 @@ export default function ConfigEditor() {
                     ? "servertest.ini"
                     : currentServer?.type === "rust"
                     ? "kitsuneden-rust.json"
+                    : currentServer?.type === "ark-ase" || currentServer?.type === "ark-asa"
+                    ? "kitsuneden-ark.json"
                     : format === "properties"
                       ? "server.properties"
                       : "config.json"})

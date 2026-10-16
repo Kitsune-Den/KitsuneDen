@@ -12,6 +12,7 @@ import { ValheimAdapter } from "../lib/adapters/valheim-adapter";
 import { VRisingAdapter } from "../lib/adapters/vrising-adapter";
 import { ProjectZomboidAdapter } from "../lib/adapters/projectzomboid-adapter";
 import { RustAdapter } from "../lib/adapters/rust-adapter";
+import { ArkAdapter } from "../lib/adapters/ark-adapter";
 import { RECIPES, portDefault, recipeDefault, recipeDefaults, recipeFor, type GameType } from "../lib/recipes";
 
 /**
@@ -43,6 +44,10 @@ function adapterFor(type: GameType): ServerAdapter {
       return new ProjectZomboidAdapter(def);
     case "rust":
       return new RustAdapter(def);
+    case "ark-ase":
+      return new ArkAdapter(def, "ase");
+    case "ark-asa":
+      return new ArkAdapter(def, "asa");
   }
 }
 
@@ -101,8 +106,8 @@ describe("game recipes", () => {
   });
 
   it("an unknown type has no recipe and no defaults", () => {
-    expect(recipeFor("ark")).toBeUndefined();
-    expect(recipeDefaults("ark")).toEqual({});
+    expect(recipeFor("conanexiles")).toBeUndefined();
+    expect(recipeDefaults("conanexiles")).toEqual({});
   });
 
   it("recipeDefault returns a recipe's value and refuses a missing one", () => {

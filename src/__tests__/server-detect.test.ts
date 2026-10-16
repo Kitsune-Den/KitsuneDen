@@ -91,6 +91,15 @@ describe("advisePorts", () => {
     expect(ports.rconPort).toBeUndefined();
   });
 
+  it("steps a second ARK past the first one's raw-socket port", async () => {
+    // ARK opens game + 1 too, so a second server goes to 7779, not 7778.
+    const owners = portOwners([def({ name: "Island", type: "ark-ase", gamePort: 7777, queryPort: 27016, rconPort: 27020 })]);
+    const ports = await advisePorts("ark-asa", {}, owners, allFree);
+    expect(ports.gamePort).toMatchObject({ value: 7779, status: "adjusted" });
+    expect(ports.queryPort).toMatchObject({ value: 27017, status: "adjusted" });
+    expect(ports.rconPort).toMatchObject({ value: 27021, status: "adjusted" });
+  });
+
   it("moves Enshrouded's one port to the next free one", async () => {
     // One UDP port for joining and queries (its config's queryPort).
     const owners = portOwners([def({ name: "Shroud", type: "enshrouded", gamePort: 15637 })]);
@@ -274,6 +283,8 @@ describe("PORT_SPECS", () => {
       vrising: ["gamePort 9876 udp step 2 span 2", "rconPort 25575 tcp step 1 span 1"],
       projectzomboid: ["gamePort 16261 udp step 2 span 2", "rconPort 27015 tcp step 1 span 1"],
       rust: ["gamePort 28015 both step 3 span 3"],
+      "ark-ase": ["gamePort 7777 udp step 2 span 1", "queryPort 27016 udp step 1 span 1", "rconPort 27020 tcp step 1 span 1"],
+      "ark-asa": ["gamePort 7777 udp step 2 span 1", "queryPort 27016 udp step 1 span 1", "rconPort 27020 tcp step 1 span 1"],
     });
   });
 });

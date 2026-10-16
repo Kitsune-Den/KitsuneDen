@@ -553,6 +553,121 @@ export const RECIPES: Record<GameType, GameRecipe> = {
       "Other convars (server.cfg), wipes and Oxide/uMod plugins are handled by hand. Changing the identity points the server at a new, empty world.",
     ],
   },
+
+  // ARK: Survival Evolved, as PackRelay measured it on Windows and Linux.
+  // Shared ARK mechanics are in src/lib/ark-settings.ts.
+  "ark-ase": {
+    type: "ark-ase",
+    tier: "experimental",
+    evidence: "New in the Den and not yet run through it. Its launch, ports and RCON follow PackRelay, which has run ARK: Survival Evolved on Windows and Linux (a clean SaveWorld + DoExit in 3.2 s).",
+    platforms: { windows: true, linux: true },
+    install: { kind: "steamcmd", appId: 376030, anonymous: true, denCanInstall: true },
+    launch: {
+      kind: "exe",
+      entry: "ShooterGame\\Binaries\\Win64\\ShooterGameServer.exe",
+      help: "Started with one travel-URL argument (map first, then session name, ports, RCON, max players, admin password last) plus -server -log, built from kitsuneden-ark.json. Without a map ARK sits on its lobby map forever.",
+    },
+    ports: [
+      {
+        field: "gamePort",
+        purpose: "game",
+        proto: "udp",
+        default: 7777,
+        public: true,
+        note: "ARK also opens the next port up (7778) for its raw socket. Forward both.",
+      },
+      {
+        field: "queryPort",
+        purpose: "query",
+        proto: "udp",
+        default: 27016,
+        public: true,
+        note: "Players find the server by this port. Keep it between 27015 and 27020, or the in-game LAN browser won't see it.",
+      },
+      { field: "rconPort", purpose: "rcon", proto: "tcp", default: 27020, public: false },
+    ],
+    control: {
+      console: "rcon",
+      stop: "RCON `SaveWorld` then `DoExit` (3.2 s when PackRelay measured it). A kill if it's still up a minute later.",
+      players: "RCON `ListPlayers`.",
+    },
+    saves: {
+      path: "ShooterGame\\Saved",
+      backup: "zip",
+      note: "Worlds are ShooterGame\\Saved\\SavedArks\\<map>.ark. Backups send `SaveWorld` first, then zip a copy of ShooterGame\\Saved without the single-player save and the ~20 timestamped generations ARK keeps, with kitsuneden-ark.json, into ../backups/ark-ase.",
+    },
+    config: [
+      { file: "kitsuneden-ark.json", format: "json" },
+      { file: "ShooterGame\\Saved\\Config\\WindowsServer\\GameUserSettings.ini", format: "properties" },
+      { file: "ShooterGame\\Saved\\Config\\WindowsServer\\Game.ini", format: "properties" },
+    ],
+    connect: "Join ARK → find it by name in the server list, or the LAN tab on the same network. Forward the game port, the one above it, and the query port.",
+    steamClientAppId: 346110,
+    defaults: { steamAppId: 376030 },
+    gaps: [
+      "Not yet run through the Den. Once someone has installed it, started it, joined and stopped it, mark it verified.",
+      "ARK: Survival Evolved writes no log at all, so the Console stays quiet while it loads; readiness comes from RCON.",
+      "Rates and other settings (GameUserSettings.ini, Game.ini), mods and clusters are edited by hand. Put the server on an SSD: PackRelay saw a 35-minute first start and crashes from a USB hard drive.",
+    ],
+  },
+
+  // ARK: Survival Ascended, as PackRelay measured it on Windows. Where a
+  // fact was only measured on ASE, the note says so.
+  "ark-asa": {
+    type: "ark-asa",
+    tier: "experimental",
+    evidence: "New in the Den and not yet run through it. Its launch and RCON follow PackRelay, which has run ARK: Survival Ascended on Windows (ready in 86 s on first boot, a clean SaveWorld + DoExit in about 2 s).",
+    platforms: { windows: true, linux: false },
+    install: { kind: "steamcmd", appId: 2430930, anonymous: true, denCanInstall: true },
+    launch: {
+      kind: "exe",
+      entry: "ShooterGame\\Binaries\\Win64\\ArkAscendedServer.exe",
+      help: "Started with one travel-URL argument (map first, admin password last: ASA reads everything after ?ServerAdminPassword= into the password) plus -server -log -WinLiveMaxPlayers, built from kitsuneden-ark.json. Without a map it idles and binds no port.",
+    },
+    ports: [
+      {
+        field: "gamePort",
+        purpose: "game",
+        proto: "udp",
+        default: 7777,
+        public: true,
+        note: "Forward this and the next port up (7778). Passing the game port in the travel URL is measured on ARK: Survival Evolved, not yet on Ascended.",
+      },
+      {
+        field: "queryPort",
+        purpose: "query",
+        proto: "udp",
+        default: 27016,
+        public: false,
+        note: "Ascended answers no Steam query (it has its own server list), so there's no need to forward it. The Den still sets it so two servers don't collide.",
+      },
+      { field: "rconPort", purpose: "rcon", proto: "tcp", default: 27020, public: false },
+    ],
+    control: {
+      console: "rcon",
+      stop: "RCON `SaveWorld` then `DoExit` (1.4 to 2.1 s when PackRelay measured it). A kill if it's still up a minute later.",
+      players: "RCON `ListPlayers`.",
+    },
+    saves: {
+      path: "ShooterGame\\Saved",
+      backup: "zip",
+      note: "Worlds are ShooterGame\\Saved\\SavedArks\\<map>\\<map>.ark. Backups send `SaveWorld` first, then zip a copy of ShooterGame\\Saved without the single-player save and the timestamped .ark/.arkrbf rollbacks (about 184 MB after 35 minutes), with kitsuneden-ark.json, into ../backups/ark-asa.",
+    },
+    config: [
+      { file: "kitsuneden-ark.json", format: "json" },
+      { file: "ShooterGame\\Saved\\Config\\WindowsServer\\GameUserSettings.ini", format: "properties" },
+      { file: "ShooterGame\\Saved\\Config\\WindowsServer\\Game.ini", format: "properties" },
+    ],
+    connect: "Join Game → search the session name in the unofficial server list. Forward the game port and the one above it.",
+    steamClientAppId: 2399830,
+    defaults: { steamAppId: 2430930 },
+    gaps: [
+      "Not yet run through the Den. Once someone has installed it, started it, joined and stopped it, mark it verified.",
+      "The travel URL's ?Port= and -WinLiveMaxPlayers aren't measured on Ascended yet; if a server binds 7777 regardless or caps players differently, that's where to look.",
+      "Ascended writes the admin password into its log; the Den redacts it from the Console, but ShooterGame.log on disk still has it.",
+      "Rates and other settings (GameUserSettings.ini, Game.ini), mods and clusters are edited by hand. It needs about 10 GB of RAM and an SSD.",
+    ],
+  },
 };
 
 export function recipeFor(type: string | undefined): GameRecipe | undefined {
